@@ -3,16 +3,15 @@
 
 
     export let sendValueFunc;
-    export let options;
+    export let layoutData;
 
     export function valueUpdated(value)
     {
-        console.log("valueUpdated", value);
+        // console.log("valueUpdated", value);
     }
 
 </script>
 
-<!-- slider -->
 <input type="range" class="{$$restProps.class || ''}" disabled="{$editMode}" min="0.1" max="1.2" step="0.0001" on:input={e => sendValueFunc(e.target.value)} />
 
 <style>

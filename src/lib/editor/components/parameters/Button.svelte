@@ -1,18 +1,23 @@
 <script>
     import { editMode } from "$lib/editor/store";
+    import { onMount } from "svelte";
 
 
     export let sendValueFunc;
-    export let options;
+    export let layoutData;
+
+    onMount(() => {
+        // console.log("Button mounted", layoutData);
+    });
 
     export function valueUpdated(value)
     {
-        console.log("valueUpdated", value);
+        // console.log("valueUpdated", value);
     }
 
 </script>
 
-<button class="{$$restProps.class || ''}" disabled="{$editMode}" on:click={() => sendValueFunc("trigger")}>{options.label}</button>
+<button class="{$$restProps.class || ''}" disabled="{$editMode}" on:click={() => sendValueFunc("trigger")}>{layoutData.options?.label}</button>
 
 <style>
     
@@ -24,8 +29,9 @@
         color: #ccc;
         border: none;
         border-radius: 4px;
-e       box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
         transition: background-color 0.2s;
+        user-select: none;
     }
      
     button:not([disabled]):hover {
