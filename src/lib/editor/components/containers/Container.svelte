@@ -1,7 +1,7 @@
 <script>
     import { onMount } from "svelte";
     import UIComponent from "../UIComponent.svelte";
-    import { Layouts } from "$lib/editor/store";
+    import { Layouts, editMode } from "$lib/editor/store";
     export let layoutData = {};
 
     onMount(() => {
@@ -24,7 +24,7 @@
 </script>
 
 <div
-    class="ui-container layout-{layoutData.options?.layout || 'free'}"
+    class="ui-container layout-{layoutData.options?.layout || 'free'} {$editMode?"editing":""}"
     style={css}
 >
     {#if layoutData.children}
@@ -51,6 +51,11 @@
         height: 100%;
         gap: var(--gap, 5px);
         box-sizing: border-box;
+    }
+
+    .ui-container.editing
+    {
+        gap: calc(var(--gap, 5px) - 5px);
     }
 
     .ui-container.layout-free {
@@ -97,20 +102,27 @@
     {
         background-color: rgba(255, 255, 255, 0.2);
         width: 5px;
-        height: 100%;
-        flex-basis:10px;
+        height: 5px;
+        flex:0 0 2epx;
         display: flex;
         align-items: center;
         justify-content: center;
         margin: auto;
+        display:none;
     }
 
-    .layout-horitontal .layout-resizer
+    .ui-container.editing > .layout-resizer
     {
+        display: flex;
+    }
+
+    .layout-horizontal > .layout-resizer
+    {
+        height:30%;
         cursor: ew-resize;
     }
 
-    .layout-vertical .layout-resizer
+    .layout-vertical > .layout-resizer
     {
         width:30%;
         cursor: ns-resize;

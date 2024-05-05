@@ -6,9 +6,7 @@
     export let sendValueFunc;
     export let layoutData;
 
-    onMount(() => {
-        // console.log("Button mounted", layoutData);
-    });
+    
 
     export function valueUpdated(value)
     {

@@ -1,10 +1,11 @@
 <script>
-    import { editMode, selectedComponents } from "$lib/editor/store";
+    import { editMode, outlinerOpen, selectedComponents } from "$lib/editor/store";
     import { layout, getComponentWithId } from "$lib/editor/store";
     import { onMount } from "svelte";
     import { onDestroy } from "svelte";
+    import TreeView from "./TreeView.svelte";
 
-    let inspector;
+    let outliner;
     let components = [];
 
     selectedComponents.subscribe((value) => {
@@ -18,15 +19,15 @@
     });
 </script>
 
-<div bind:this={inspector} class="inspector {$editMode ? 'editing' : 'hidden'}">
-    <div class="inspector-content" >
-        <h1>{components.length > 0? components.map((comp) => { return comp.options.label}) : "No Item selected"}</h1>
-        <pre>{JSON.stringify(components.length > 0?components.map((comp) => { return comp}):$layout, null, 2)}</pre>
+<div bind:this={outliner} class="outliner {($editMode && $outlinerOpen) ? 'open' : 'closed'}">
+    <div class="outliner-content" >
+        <h1>Outliner</h1>
+        <TreeView bind:tree={$layout.main} />
     </div>
 </div>
 
 <style>
-    .inspector {
+    .outliner {
         height: 100%;
         color: #ccc;
         overflow-x: hidden;
@@ -37,17 +38,17 @@
         transition: flex-basis 0.3s ease;
     }
 
-    .inspector.overlay {
+    .outliner.overlay {
         position: absolute;
         background-color: rgba(0, 0, 0, 0.5);
     }
 
-    .inspector.editing {
+    .outliner.open {
         position: relative;
         flex-basis: 400px;
     }
 
-    .inspector .inspector-content {
+    .outliner .outliner-content {
         padding:10px;
         box-sizing: border-box;
         width: 300px;
