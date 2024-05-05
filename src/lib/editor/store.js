@@ -4,8 +4,9 @@ import Slider from './components/parameters/Slider.svelte';
 import Button from './components/parameters/Button.svelte';
 
 export const selectedComponents = writable([]);
-export const editMode = writable(false);
+export const editMode = writable(true);
 export const outlinerOpen = writable(true);
+export const draggingComp = writable(null);
 
 export const Layouts = Object.freeze({
     FREE: 'free',
@@ -14,13 +15,23 @@ export const Layouts = Object.freeze({
     GRID: "grid"
 });
 
+export const ComponentTypes = Object.freeze({
+    "container": {name:"Container", type: Container},
+    "slider": {name:"Slider", type: Slider},
+    "button": {name:"Button", type: Button},
+    "rotary": {name:"Rotary", type: Slider},
+    "select": {name:"Select", type: Slider},
+    "padxy": {name:"Pad XY", type: Slider},
+    "padxyz": {name:"Pad XYZ", type: Slider}
+});
+
 
 export const layout = writable(
     {
         main:
         {
             id: "main",
-            type: Container,
+            type: "container",
             options: {
                 label: "Main",
                 layout: Layouts.HORIZONTAL,
@@ -32,7 +43,7 @@ export const layout = writable(
             children:
                 [
                     {
-                        type: Container,
+                        type: "container",
                         id: "container1",
                         options: {
                             label: "Container 1",
@@ -44,7 +55,7 @@ export const layout = writable(
                         },
                         children: [
                             {
-                                type: Container,
+                                type: "container",
                                 id: "container1.1",
                                 options: {
                                     label: "Container 1.1",
@@ -57,7 +68,7 @@ export const layout = writable(
                                 },
                                 children: [
                                     {
-                                        type: Button,
+                                        type: "button",
                                         id: "button1.1",
                                         options: {
                                             label: "Button 1.1",
@@ -72,7 +83,7 @@ export const layout = writable(
 
                                     },
                                     {
-                                        type: Slider,
+                                        type: "slider",
                                         id: "slider1.1",
                                         options: {
                                             label: "Slider 1.1",
@@ -88,7 +99,7 @@ export const layout = writable(
                                 ]
                             },
                             {
-                                type: Button,
+                                type: "button",
                                 id: "button1",
                                 options: {
                                     label: "Button 1",
@@ -99,7 +110,7 @@ export const layout = writable(
                                 }
                             },
                             {
-                                type: Slider,
+                                type: "slider",
                                 id: "slider1",
                                 options: {
                                     label: "Slider 1",
@@ -111,7 +122,7 @@ export const layout = writable(
                         ]
                     },
                     {
-                        type: Container,
+                        type: "container",
                         id: "container2",
                         options: {
                             label: "Container 2",
@@ -124,21 +135,21 @@ export const layout = writable(
                         },
                         children: [
                             {
-                                type: Button,
+                                type: "button",
                                 id: "button2",
                                 options: {
                                     label: "Button 2"
                                 }
                             },
                             {
-                                type: Button,
+                                type: "button",
                                 id: "button3",
                                 options: {
                                     label: "Button 3"
                                 }
                             },
                             {
-                                type: Slider,
+                                type: "slider",
                                 id: "slider2",
                                 options: {
                                     label: "Slider 2"
@@ -155,7 +166,6 @@ export function getComponentWithId(id) {
 }
 
 function getComponentWithIdRecursive(component, id) {
-    console.log("Checking component: " + component.id + " for id: " + id);
     if (component.id == id) {
         return component;
     }

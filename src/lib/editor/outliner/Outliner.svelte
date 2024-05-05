@@ -15,7 +15,6 @@
         }
 
         components = value.map((id) => {return getComponentWithId(id)});
-        console.log(components);
     });
 </script>
 
@@ -32,10 +31,10 @@
         color: #ccc;
         overflow-x: hidden;
         background-color: #333;
-        /* transform: translateX(100%); */
-        box-shadow: -10px 0 10px rgba(0, 0, 0, 0.3);
+        box-shadow: 10px 0 10px rgba(0, 0, 0, 0.3);
         flex: 0 0 0px;
         transition: flex-basis 0.3s ease;
+        z-index: 1;
     }
 
     .outliner.overlay {
@@ -45,19 +44,27 @@
 
     .outliner.open {
         position: relative;
-        flex-basis: 400px;
+        flex-basis: 200px;
     }
 
     .outliner .outliner-content {
         padding:10px;
         box-sizing: border-box;
-        width: 300px;
+        width: 200px;
         height: 100%;
+        transform:translateX(-100%);
+        transition: transform 0.3s ease;
+        user-select: none;
+    }
+
+    .outliner.open .outliner-content {
+        transform:translateX(0);
     }
 
     h1 {
         font-size: 1.5em;
         margin: 0 0 10px 0;
+        text-align: center;
     }
 
     pre {

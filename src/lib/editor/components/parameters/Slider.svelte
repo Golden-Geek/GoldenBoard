@@ -1,40 +1,45 @@
 <script>
     import { editMode } from "$lib/editor/store";
 
-
     export let sendValueFunc;
     export let layoutData;
 
-    export function valueUpdated(value)
-    {
+    export function valueUpdated(value) {
         // console.log("valueUpdated", value);
     }
-
 </script>
 
-<input type="range" class="{$$restProps.class || ''}" disabled="{$editMode}" min="0.1" max="1.2" step="0.0001" on:input={e => sendValueFunc(e.target.value)} />
+
+<input
+    type="range"
+    class={$$restProps.class || ""}
+    disabled={$editMode}
+    min="{layoutData.options.minValue?layoutData.options.minValue:0}"
+    max="{layoutData.options.maxValue?layoutData.options.maxValue:1}"
+    step="0.0001"
+    on:input={(e) => sendValueFunc(e.target.value)}
+/>
 
 <style>
-    
     /* cool dark theme slider with round corners, shadows and hover behaviour*/
-    input[type=range] {
+    input[type="range"] {
         -webkit-appearance: none;
-        width:100%;
+        width: 100%;
         height: 10px;
         border-radius: 5px;
         background: #333;
         outline: none;
         opacity: 0.7;
-        -webkit-transition: .2s;
-        transition: opacity .2s;
+        -webkit-transition: 0.2s;
+        transition: opacity 0.2s;
         box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
     }
 
-    input[type=range]:not([disabled]):hover {
+    input[type="range"]:not([disabled]):hover {
         opacity: 1;
     }
 
-    input[type=range]:not([disabled])::-webkit-slider-thumb {
+    input[type="range"]:not([disabled])::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
         width: 20px;
@@ -43,6 +48,4 @@
         background: #ccc;
         cursor: pointer;
     }
-
-
 </style>

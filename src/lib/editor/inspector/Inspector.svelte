@@ -14,7 +14,6 @@
         }
 
         components = value.map((id) => {return getComponentWithId(id)});
-        console.log(components);
     });
 </script>
 
@@ -50,7 +49,7 @@
     .inspector .inspector-content {
         padding:10px;
         box-sizing: border-box;
-        width: 300px;
+        width: 400px;
         height: 100%;
     }
 

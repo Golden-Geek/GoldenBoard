@@ -1,6 +1,12 @@
 <script>
     import { onMount } from "svelte";
-    import { editMode, selectComponent, selectedComponents } from "../store";
+    import {
+        ComponentTypes,
+        draggingComp,
+        editMode,
+        selectComponent,
+        selectedComponents,
+    } from "../store";
     import Container from "./containers/Container.svelte";
     import { v4 as uuidv4 } from "uuid";
 
@@ -17,9 +23,11 @@
     }
 
     let css = "";
-    $: container = layoutData.type == Container;
+    let compType = ComponentTypes[layoutData.type];
+    $: container = compType?.type == Container;
     $: selected = $selectedComponents.includes(layoutData.id);
     $: editing = $editMode;
+    $: dragging = $draggingComp?.id == layoutData.id;
 
     if (layoutData.options?.style) {
         css =
@@ -37,10 +45,11 @@
     class:editing
     class:selected
     class:container
+    class:dragging
     style={css}
 >
     <svelte:component
-        this={layoutData.type}
+        this={compType.type}
         class="ui-component"
         bind:this={comp}
         bind:layoutData
@@ -50,6 +59,15 @@
     <div
         class="edit-overlay"
         on:click={(e) => selectComponent(layoutData.id, e.ctrlKey)}
+        draggable="true"
+        ,
+        on:dragstart={(e) =>
+            draggingComp.set({
+                type: "component",
+                id: layoutData.id,
+                comp: layoutData,
+            })}
+        on:dragend={(e) => draggingComp.set(null)}
     >
         {layoutData.label}
     </div>
@@ -64,8 +82,6 @@
         --height: initial;
         --size: initial;
         --shrink: initial;
-
-        border: 1px solid rgba(155, 15, 125, 0.4);
 
         top: var(--y, 0);
         left: var(--x, 0);
@@ -82,6 +98,7 @@
         position: relative;
 
         box-sizing: border-box;
+        user-select: none;
     }
 
     .ui-component-wrapper.editing {
@@ -105,7 +122,7 @@
 
     .ui-component-wrapper.editing > .edit-overlay {
         display: block;
-        border: solid 1px red;
+        /* border: solid 1px red; */
     }
 
     .ui-component-wrapper.container.editing > .edit-overlay {
@@ -126,8 +143,16 @@
     }
 
     .ui-component-wrapper.container.selected > .edit-overlay {
-        border-color: rgba(225, 18, 156, 0.879);
+        /* border-color: rgba(225, 18, 156, 0.879);e */
         background-color: rgba(141, 9, 97, 0.1);
-        display:block;
+        display: block;
+    }
+
+    .ui-component-wrapper.dragging {
+        opacity: 0;
+        flex-basis:0px;
+        width: 0px;
+        transition: opacity .2s ease, width .2s ease, flex-basis .2s ease;
+        /* visibility: hidden; */
     }
 </style>

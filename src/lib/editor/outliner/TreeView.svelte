@@ -48,14 +48,15 @@
     ul {
         margin: 0;
         list-style: none;
-        padding-left: 1.2rem;
+        padding-left: .5rem;
         user-select: none;
-        margin: 2px 0;
+        font-size: 12px;
+        /* margin: 2px 0; */
     }
 
     span.label {
         display: inline-block;
-        padding: 10px;
+        padding: 6px;
         border-radius: 5px;
     }
 
