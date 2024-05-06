@@ -1,5 +1,5 @@
 <script>
-    import { editMode, selectedComponents } from "$lib/editor/store";
+    import { editMode, inspectorOpen, selectedComponents } from "$lib/editor/store";
     import { layout, getComponentWithId } from "$lib/editor/store";
     import { onMount } from "svelte";
     import { onDestroy } from "svelte";
@@ -17,10 +17,10 @@
     });
 </script>
 
-<div bind:this={inspector} class="inspector {$editMode ? 'editing' : 'hidden'}">
+<div bind:this={inspector} class="inspector {$editMode && $inspectorOpen ? 'editing' : 'hidden'}">
     <div class="inspector-content" >
         <h1>{components.length > 0? components.map((comp) => { return comp.options.label}) : "No Item selected"}</h1>
-        <pre>{JSON.stringify(components.length > 0?components.map((comp) => { return comp}):$layout, null, 2)}</pre>
+        <!-- <pre>{JSON.stringify(components.length > 0?components.map((comp) => { return comp}):$layout, null, 2)}</pre> -->
     </div>
 </div>
 

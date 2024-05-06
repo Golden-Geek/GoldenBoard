@@ -1,4 +1,6 @@
 <script>
+// @ts-nocheck
+
     import { editMode } from "$lib/editor/store";
     import { onMount } from "svelte";
 

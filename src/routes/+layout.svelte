@@ -5,6 +5,7 @@
   import ComponentToolBox from "$lib/editor/toolbox/ComponentToolBox.svelte";
   import {
     editMode,
+    inspectorOpen,
     outlinerOpen,
     selectedComponents,
   } from "$lib/editor/store";
@@ -18,6 +19,11 @@
       case "o":
         outlinerOpen.set(!$outlinerOpen);
         break;
+
+      case "i":
+        inspectorOpen.set(!$inspectorOpen);
+        break;
+        
       case "Escape":
         selectedComponents.set([]);
     }
@@ -28,7 +34,7 @@
   <Outliner />
   <div class="main-center">
     <div class="content">
-      <UIComponent bind:layoutData={$layout.main} />
+      <UIComponent bind:layoutData={$layout.main} isMain={true} />
     </div>
     <ComponentToolBox />
   </div>
@@ -75,4 +81,5 @@
     flex-grow: 1;
     overflow: auto;
   }
+
 </style>

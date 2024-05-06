@@ -1,14 +1,26 @@
 <script>
     import { onMount } from "svelte";
     import UIComponent from "../UIComponent.svelte";
-    import { Layouts, draggingComp, editMode } from "$lib/editor/store";
-    export let layoutData = {};
+    import { Layouts, editMode } from "$lib/editor/store";
+    import { flip } from "svelte/animate";
+    import {
+        dndzone,
+        SHADOW_ITEM_MARKER_PROPERTY_NAME,
+        TRIGGERS,
+    } from "svelte-dnd-action";
 
-    onMount(() => {
-        // console.log("Container mounted", layoutData.options?.label);
-    });
+    export let sendValueFunc;
+    export let layoutData;
+    let containerElem;
+
+    let children = layoutData.children;
+    let isFreeLayout = layoutData.options?.layout == Layouts.FREE;
 
     let css = "";
+    const flipDurationMs = 300;
+
+    let mouseX = 0,
+        mouseY = 0;
 
     if (layoutData.options?.style) {
         css =
@@ -20,29 +32,91 @@
 
     if (layoutData.options?.customCSS) css += layoutData.options.customCSS;
 
-    let hasResizer =
-        layoutData.options?.layout == Layouts.HORIZONTAL ||
-        layoutData.options?.layout == Layouts.VERTICAL;
+    let hasResizer = false;
+    // layoutData.options?.layout == Layouts.HORIZONTAL ||
+    // layoutData.options?.layout == Layouts.VERTICAL;
+
+    function handleDndConsider(e) {
+        if ((e.detail.info.trigger = "draggedOverIndex")) {
+            if (isFreeLayout) {
+                setXY(e);
+            }
+        }
+        children = e.detail.items;
+    }
+
+    function handleDndFinalize(e) {
+        setXY(e);
+        children = e.detail.items;
+        layoutData.children = children;
+    }
+
+    function setXY(e) {
+        let item = e.detail.items.find((c) => c.id == e.detail.info.id);
+        if (item != null) {
+            if (item.options.style == null) item.options.style = {};
+
+            let w = item.options.style.width ? parseInt(item.options.style.width.replace(/px|%/,'')) : 100;
+            let h = item.options.style.height ? parseInt(item.options.style.height.replace(/px|%/,'')) : 50;
+            item.options.style.left = mouseX - w / 2 + "px";
+            item.options.style.top = mouseY - h / 2 + "px";
+        }
+    }
+
+    function handleMouseMove(e) {
+        if (isFreeLayout) {
+            mouseX = e.clientX - containerElem.getBoundingClientRect().left;
+            mouseY = e.clientY - containerElem.getBoundingClientRect().top;
+        }
+    }
 </script>
 
-<div
-    class="ui-container layout-{layoutData.options?.layout || 'free'} {$editMode
-        ? 'editing'
-        : ''}"
+<section
+    bind:this={containerElem}
+    use:dndzone={{
+        items: children,
+        flipDurationMs,
+        dragDisabled: !$editMode,
+        centreDraggedOnCursor: true,
+    }}
+    on:consider={handleDndConsider}
+    on:finalize={handleDndFinalize}
+    class="{$$restProps.class || ''} ui-container layout-{layoutData.options
+        ?.layout || 'free'} {$editMode ? 'editing' : ''}"
     style={css}
 >
     {#if layoutData.children}
-        {#each layoutData.children as child, index}
-            {#if hasResizer && index > 0}
-                <div
-                    class="layout-resizer"
-                />
-            {/if}
-
-            <UIComponent layoutData={child} />
+        {#each children as item (item.id)}
+            <div
+                class="dnd-wrapper"
+               
+                style="{isFreeLayout && item.options?.style?.left
+                    ? '--left:' + item.options.style.left + ';'
+                    : ''}
+                    {isFreeLayout && item.options?.style?.top
+                    ? '--top:' + item.options.style.top + ';'
+                    : ''}
+                    {isFreeLayout && item.options?.style?.width
+                    ? '--width:' + item.options.style.width + ';'
+                    : ''}
+                    {isFreeLayout && item.options?.style?.height
+                    ? '--height:' + item.options.style.height + ';'
+                    : ''}
+                    {!isFreeLayout && item.options?.style?.size
+                    ? '--size:' + item.options.style.size + ';'
+                    : ''}
+                    {!isFreeLayout && item.options?.style?.shrink
+                    ? '--shrink:' + item.options.style.shrink + ';'
+                    : ''}"
+                animate:flip={{ duration: flipDurationMs }}
+            >
+                <UIComponent layoutData={item} />
+            </div>
         {/each}
     {/if}
-</div>
+</section>
+
+<svelte:window on:mousemove={handleMouseMove} />
 
 <style>
     .ui-container {
@@ -57,10 +131,15 @@
         height: 100%;
         gap: var(--gap, 5px);
         box-sizing: border-box;
+        cursor: initial;
+        transition:
+            padding 0.3s ease,
+            ease,
+            gap 0.3s ease;
     }
-
-    .ui-container.editing {
-        gap: calc(var(--gap, 5px) - 5px);
+    e .ui-container.editing {
+        gap: calc(var(--gap, 5px) + 10px);
+        padding: 20px;
     }
 
     .ui-container.layout-free {
@@ -83,7 +162,7 @@
 
     .ui-container.layout-grid {
         --grid-layout-gap: var(--gap, 10px);
-        --grid-column-count: 2;
+        --grid-column-count: 4;
         --grid-item--min-width: 100px;
 
         --gap-count: calc(var(--grid-column-count) - 1);
@@ -103,7 +182,31 @@
         grid-gap: var(--grid-layout-gap);
     }
 
-    .layout-resizer {
+    .dnd-wrapper {
+        display: block;
+        --left: initial;
+        --top: initial;
+        --width: initial;
+        --height: initial;
+        --size: initial;
+        --shrink: initial;
+
+        left: var(--left, 0);
+        top: var(--top, 0);
+        width: var(--width, 100%);
+        height: var(--height, 100%);
+
+        flex-basis: var(--size, initial);
+        flex-shrink: var(--shrink, initial);
+    }
+
+    .ui-container.layout-free > .dnd-wrapper {
+        position: absolute;
+        width: var(--width, 100px);
+        height: var(--height, 50px);
+    }
+
+    /* .layout-resizer {
         background-color: rgba(255, 255, 255, 0.2);
         width: 5px;
         height: 5px;
@@ -113,9 +216,9 @@
         justify-content: center;
         margin: auto;
         display: none;
-    }
+    } */
 
-    .ui-container.editing > .layout-resizer {
+    /* .ui-container.editing > .layout-resizer {
         display: flex;
     }
 
@@ -127,5 +230,5 @@
     .layout-vertical > .layout-resizer {
         width: 30%;
         cursor: ns-resize;
-    }
+    } */
 </style>

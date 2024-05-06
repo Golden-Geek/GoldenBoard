@@ -35,7 +35,7 @@
             <span class="label" class:selected on:click={(e) => selectComponent(id, e.ctrlKey)}>
                 {label}
             </span>
-            {#if expanded}
+            {#if expanded && children != null}
                 {#each children as child}
                     <svelte:self tree={child} />
                 {/each}

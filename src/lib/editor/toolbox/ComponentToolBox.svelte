@@ -1,7 +1,6 @@
 <script>
     import {
         ComponentTypes,
-        draggingComp,
         editMode,
         selectedComponents,
     } from "$lib/editor/store";
@@ -19,13 +18,7 @@
     <div class="comptoolbox-content">
         <ul>
             {#each Object.entries(ComponentTypes) as [id, comp]}
-                <li
-                    on:dragenter={(e) => draggingComp.set({
-                        type: "tool",
-                        id: id,
-                        comp: comp,
-                    })}
-                >
+                <li>
                     {comp.name}
                 </li>
             {/each}

@@ -5,8 +5,8 @@ import Button from './components/parameters/Button.svelte';
 
 export const selectedComponents = writable([]);
 export const editMode = writable(true);
+export const inspectorOpen = writable(true);
 export const outlinerOpen = writable(true);
-export const draggingComp = writable(null);
 
 export const Layouts = Object.freeze({
     FREE: 'free',
@@ -62,7 +62,7 @@ export const layout = writable(
                                     layout: Layouts.FREE,
                                     style:
                                     {
-                                        size: '200px',
+                                        size: '400px',
                                         shrink: '0'
                                     }
                                 },
@@ -74,8 +74,8 @@ export const layout = writable(
                                             label: "Button 1.1",
                                             style:
                                             {
-                                                x: '10%',
-                                                y: '10px',
+                                                left: '10%',
+                                                top: '10px',
                                                 width: '80%',
                                                 height: '50px'
                                             }
@@ -89,8 +89,8 @@ export const layout = writable(
                                             label: "Slider 1.1",
                                             style:
                                             {
-                                                x: '150px',
-                                                y: '80px',
+                                                left: '150px',
+                                                top: '80px',
                                                 width: '100px',
                                                 height: '20px'
                                             }

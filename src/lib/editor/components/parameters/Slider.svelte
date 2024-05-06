@@ -23,14 +23,13 @@
 <style>
     /* cool dark theme slider with round corners, shadows and hover behaviour*/
     input[type="range"] {
-        -webkit-appearance: none;
+        appearance: none;
         width: 100%;
         height: 10px;
         border-radius: 5px;
         background: #333;
         outline: none;
         opacity: 0.7;
-        -webkit-transition: 0.2s;
         transition: opacity 0.2s;
         box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
     }
