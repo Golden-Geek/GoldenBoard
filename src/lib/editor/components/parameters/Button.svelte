@@ -30,7 +30,7 @@
         border: none;
         border-radius: 4px;
         box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-        transition: background-color 0.2s;
+        transition: background-color 0.2s ease-out;
         user-select: none;
     }
      
@@ -44,7 +44,9 @@
 
     button:not([disabled]):active {
         box-shadow: none;
-        transform: translateY(1px);
+        background-color: rgb(162, 70, 23);
+        transition: background-color 0s ease-out;
+        transform: translateY(2px);
     }
 
 </style>

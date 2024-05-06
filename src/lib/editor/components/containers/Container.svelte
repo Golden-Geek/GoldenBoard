@@ -163,7 +163,7 @@
     .ui-container.layout-grid {
         --grid-layout-gap: var(--gap, 10px);
         --grid-column-count: 4;
-        --grid-item--min-width: 100px;
+        --grid-item--min-width: 200px;
 
         --gap-count: calc(var(--grid-column-count) - 1);
         --total-gap-width: calc(var(--gap-count) * var(--grid-layout-gap));
