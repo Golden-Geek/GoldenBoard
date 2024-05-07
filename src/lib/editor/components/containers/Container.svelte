@@ -7,7 +7,6 @@
         editMode,
         layout,
         startUpdateComponent,
-        updateComponent,
         finishUpdateComponent,
     } from "$lib/editor/store";
     import { flip } from "svelte/animate";
@@ -161,7 +160,7 @@
     .ui-container.dnd-dragging {
         gap: calc(var(--gap, 5px) + 10px);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        /* padding: 20px; */
+        padding: 20px;
     }
 
     

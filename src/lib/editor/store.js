@@ -199,17 +199,6 @@ export const startUpdateComponent = () => {
     startLayout = JSON.parse(JSON.stringify(get(layout)));
 }
 
-export const updateComponent = (id, newData) => {
-    // if (tempLayout == null) startUpdateComponent();
-
-    // let component = getComponentWithId(get(layout).main, id);
-    // if (component) {
-    //     Object.assign(component, newData);
-    // } else {
-    //     console.warn("Component not found", id);
-    // }
-}
-
 export const finishUpdateComponent = () => {
     if (startLayout == null) {
         console.warn("No start layout found");
