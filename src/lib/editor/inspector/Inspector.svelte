@@ -45,28 +45,30 @@
             <h1>
                 {components.length > 0
                     ? components.map((comp) => {
-                          return comp.options?.label;
+                          return comp?.options?.label;
                       })
                     : "No Item selected"}
             </h1>
             {#if components.length > 0}
                 {#each components as comp}
-                    <div class="main-props">
-                        <h2>Properties</h2>
-                        <PropertyEditor
-                            bind:compPropParent={comp}
-                            propertyName="id"
-                            property={{ type: "string" }}
-                        />
+                    {#if comp != null}
+                        <div class="main-props">
+                            <h2>Properties</h2>
+                            <PropertyEditor
+                                bind:compPropParent={comp}
+                                propertyName="id"
+                                property={{ type: "string" }}
+                            />
 
-                        <PropertyEditorContainer
-                            compPropParent={comp.options}
-                            name="Options"
-                            propertyContainer={ComponentTypes[comp.type]
-                                .options}
-                        />
-                    </div>
-                    <hr />
+                            <PropertyEditorContainer
+                                compPropParent={comp.options}
+                                name="Options"
+                                propertyContainer={ComponentTypes[comp.type]
+                                    .options}
+                            />
+                        </div>
+                        <hr />
+                    {/if}
                 {/each}
             {/if}
             <pre>{JSON.stringify($layout, null, 2)}</pre>
