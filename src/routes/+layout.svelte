@@ -10,33 +10,48 @@
     selectedComponents,
     undo,
   } from "$lib/editor/store";
-  import { layout, } from "$lib/editor/store";
+  import { layout } from "$lib/editor/store";
   import { onMount } from "svelte";
-  import { get } from 'svelte/store';
+  import { get } from "svelte/store";
 
   onMount(() => {
     // layoutSave.set({ ...$layout });
   });
 
-  function onKeyDown(event) {
-    switch (event.key) {
+  function onKeyDown(e) {
+    switch (e.key) {
       case "e":
-        editMode.set(!$editMode);
+        if (e.ctrlKey) {
+          editMode.set(!$editMode);
+          e.preventDefault();
+        }
         break;
       case "o":
-        outlinerOpen.set(!$outlinerOpen);
+        if (e.ctrlKey) {
+          outlinerOpen.set(!$outlinerOpen);
+          e.preventDefault();
+        }
         break;
 
       case "z":
-        undo.undo();
+        if (e.ctrlKey) {
+          undo.undo();
+          e.preventDefault();
+        }
         break;
 
       case "y":
-        undo.redo();
+        if (e.ctrlKey) {
+          undo.redo();
+          e.preventDefault();
+        }
         break;
 
       case "i":
-        inspectorOpen.set(!$inspectorOpen);
+        if (e.ctrlKey) {
+          inspectorOpen.set(!$inspectorOpen);
+          e.preventDefault();
+        }
         break;
 
       case "Escape":
@@ -50,7 +65,7 @@
   <div class="main-center">
     <div class="content">
       {#key $layout.main}
-      <UIComponent layoutData={$layout.main} isMain={true} />
+        <UIComponent layoutData={$layout.main} isMain={true} />
       {/key}
     </div>
     <ComponentToolBox />

@@ -2,16 +2,20 @@
     import { onMount } from "svelte";
     import {
         ComponentTypes,
+        Layouts,
         editMode,
+        finishUpdateComponent,
         selectComponent,
         selectedComponents,
+        startUpdateComponent,
     } from "../store";
     import Container from "./containers/Container.svelte";
-    import { v4 as uuidv4 } from "uuid";
-    import { flip } from "svelte/animate";
 
     export let isMain = false;
     export let layoutData;
+    export let parentLayout = null;
+
+    let wrapper;
     let comp;
 
     if (layoutData.id == null)
@@ -27,6 +31,8 @@
     $: selected = $selectedComponents.includes(layoutData.id);
     $: editing = $editMode;
 
+    let resizing = false;
+
     if (layoutData.options?.style) {
         css =
             Object.entries(layoutData.options?.style)
@@ -36,36 +42,70 @@
     }
 
     if (layoutData.options?.customCSS) css += layoutData.options.customCSS;
+
+    let observer = new ResizeObserver(function (entries) {
+        if (entries[0].target == wrapper) {
+            layoutData.options.style.width =
+                entries[0].contentRect.width + "px";
+            layoutData.options.style.height =
+                entries[0].contentRect.height + "px";
+        }
+    });
+
+    function handleMouseDown(e) {
+        if (!$editMode) return;
+        if (e.target == wrapper) {
+            resizing = true;
+            observer.observe(wrapper);
+            startUpdateComponent();
+            e.stopPropagation();
+        }
+    }
+
+    function handleMouseUp(e) {
+        if (resizing) {
+            resizing = false;
+            observer.unobserve(wrapper);
+            finishUpdateComponent();
+        }
+    }
 </script>
 
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-    class="ui-component-wrapper {isMain?'main':''}"
+    bind:this={wrapper}
+    class="ui-component-wrapper {isMain ? 'main' : ''} {parentLayout ==
+    Layouts.FREE
+        ? 'resizable'
+        : ''}"
     class:editing
     class:selected
     class:container
     style={css}
+    on:mousedown={handleMouseDown}
+    on:mouseup={handleMouseUp}
 >
     <svelte:component
-        bind:this={comp}
         this={compType.type}
+        bind:this={comp}
         class="ui-component"
         {layoutData}
         sendValueFunc={(val) => sendValueCallback(val)}
     />
 
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-        class="edit-overlay"
-        on:click={(e) => selectComponent(layoutData.id, e.ctrlKey)} >
-    </div>
+    {#if $editMode && !container}
+        <div
+            class="edit-overlay"
+            on:click={(e) => selectComponent(layoutData.id, e.ctrlKey)}
+        ></div>
+    {/if}
 </div>
 
 <style>
     /* ui-component sets the dimensions, svelte:component should take the whole size and  edit overlay should be on top of it with the same size */
     .ui-component-wrapper {
-        width:100%;
-        height:100%;
+        width: 100%;
+        height: 100%;
 
         display: flex;
         justify-content: center;
@@ -76,18 +116,9 @@
         box-sizing: border-box;
         user-select: none;
 
-        transition:padding 0.3s ease;
-    }
-
-    .ui-component-wrapper.editing.main
-    {
-        padding:20px;
-    }
-
-    .ui-component-wrapper.editing {
-        /* resize: both; */
-        /* overflow: auto;e */
-        /* padding:10px; */
+        transition:
+            padding 0.3s ease,
+            border 0.2s ease;
     }
 
     .edit-overlay {
@@ -96,39 +127,56 @@
         left: 0;
         width: 100%;
         height: 100%;
-        /* background-color: rgba(0, 0, 0, 0.05); */
         justify-content: center;
         align-items: center;
-        display: none;
+        display: block;
         font-size: 2em;
         box-sizing: border-box;
     }
 
-    .ui-component-wrapper.editing > .edit-overlay {
-        display: block;
-        /* border: solid 1px red; */
+    /* editing */
+    .ui-component-wrapper.editing {
+        border: solid 1px rgba(255, 255, 255, 0.1);
     }
 
-    .ui-component-wrapper.container.editing > .edit-overlay {
-        display: none;
+    .ui-component-wrapper.editing.selected {
+        border: solid 1px rgba(42, 210, 23, 0.447);
     }
 
-    .ui-component-wrapper.selected > .edit-overlay {
-        border: solid 1px rgb(0, 255, 89);
+    .ui-component-wrapper.editing:not(.container):hover,  :global(.ui-component-wrapper.editing.container:has(> .ui-container.direct-over)) {
+        border: solid 1px rgba(216, 168, 11, 0.719)  !important;
     }
 
-    .ui-component-wrapper.editing > .edit-overlay:hover {
-        border: solid 1px rgba(255, 0, 183, 0.777);
+   
+
+    .ui-component-wrapper.editing.resizable {
+        resize: both;
+        overflow: hidden;
+    }
+
+    .edit-overlay {
+        /* transition: background-color 0.2s ease; */
+    }
+
+    .ui-component-wrapper.editing:hover > .edit-overlay {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    /*
+    .ui-component-wrapper.editing:hover > .edit-overlay {
+        outline: solid 1px rgba(255, 0, 183, 0.777);
         background-color: rgba(209, 36, 177, 0.195);
     }
 
-    .ui-component-wrapper.editing.selected > .edit-overlay:hover {
-        background-color: rgba(0, 255, 34, 0.1);
+    .ui-component-wrapper.editing:hover{
+        outline: solid 1px rgba(255, 0, 183, 0.3);
     }
 
-    .ui-component-wrapper.container.selected > .edit-overlay {
-        /* border-color: rgba(225, 18, 156, 0.879);e */
-        background-color: rgba(141, 9, 97, 0.1);
-        display: block;
+    .ui-component-wrapper.editing.selected > .edit-overlay {
+        outline: solid 1px rgb(0, 255, 89);
     }
+
+    .ui-component-wrapper.editing.selected:hover > .edit-overlay {
+        background-color: rgba(0, 255, 34, 0.1);
+    } */
 </style>

@@ -8,7 +8,6 @@
     export let sendValueFunc;
     export let layoutData;
 
-    
 
     export function valueUpdated(value)
     {
@@ -17,7 +16,7 @@
 
 </script>
 
-<button class="{$$restProps.class || ''}" disabled="{$editMode}" on:click={() => sendValueFunc("trigger")}>{layoutData.options?.label}</button>
+<button class="{$$restProps.class || ''}" disabled="{$editMode}" on:click={() => sendValueFunc("trigger")}>{layoutData?.options?.label}</button>
 
 <style>
     

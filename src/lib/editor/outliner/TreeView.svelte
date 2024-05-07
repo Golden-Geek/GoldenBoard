@@ -11,7 +11,7 @@
     //	import { slide } from 'svelte/transition'
     export let tree;
     const { id, options, children } = tree;
-    const { label } = options;
+    const { label } = options?.label ? options : { label: "[" + id + "]" };
 
     let expanded = _expansionState[label] || true;
     const toggleExpansion = () => {
@@ -19,8 +19,6 @@
     };
     $: arrowDown = expanded;
     $: selected = $selectedComponents.includes(id);
-
-    
 </script>
 
 <ul>
@@ -32,7 +30,11 @@
                     >&#x25b6</span
                 >
             {/if}
-            <span class="label" class:selected on:click={(e) => selectComponent(id, e.ctrlKey)}>
+            <span
+                class="label"
+                class:selected
+                on:click={(e) => selectComponent(id, e.ctrlKey)}
+            >
                 {label}
             </span>
             {#if expanded && children != null}
@@ -48,7 +50,7 @@
     ul {
         margin: 0;
         list-style: none;
-        padding-left: .5rem;
+        padding-left: 0.5rem;
         user-select: none;
         font-size: 12px;
         /* margin: 2px 0; */

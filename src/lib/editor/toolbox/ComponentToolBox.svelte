@@ -2,28 +2,82 @@
     import {
         ComponentTypes,
         editMode,
+        finishUpdateComponent,
+        getUniqueID,
         selectedComponents,
+        startUpdateComponent,
     } from "$lib/editor/store";
+
     import { layout, getComponentWithId } from "$lib/editor/store";
     import { onMount } from "svelte";
     import { onDestroy } from "svelte";
+    import { flip } from "svelte/animate";
+    import {
+        dndzone,
+        SHADOW_ITEM_MARKER_PROPERTY_NAME,
+        TRIGGERS,
+    } from "svelte-dnd-action";
 
-    let comptoolbox;
+    let toolboxList;
+    let flipDurationMs = 150;
+
+    function handleDndConsider(e) {
+        if (e.detail.info.trigger == TRIGGERS.DRAG_STARTED) {
+            console.log("drag started", e);
+            startUpdateComponent();
+        }
+        // tools = generateTools();
+    }
+
+    function handleDndFinalize(e) {
+        console.log("drag finalized", e);
+        tools = generateTools();
+        finishUpdateComponent();
+    }
+
+    let tools = generateTools();
+
+    function generateTools() {
+        let result = [];
+        Object.entries(ComponentTypes).forEach((element) => {
+            result.push({
+                id: getUniqueID(element[0]),
+                type: element[0],
+                tool: true,
+                options: { label: element[1].name },
+            });
+        });
+        return result;
+    }
 </script>
 
-<div
-    bind:this={comptoolbox}
-    class="comptoolbox {$editMode ? 'editing' : 'hidden'}"
->
-    <div class="comptoolbox-content">
-        <ul>
-            {#each Object.entries(ComponentTypes) as [id, comp]}
-                <li>
-                    {comp.name}
-                </li>
+<div class="comptoolbox {$editMode ? 'editing' : 'hidden'}">
+    <section
+        bind:this={toolboxList}
+        use:dndzone={{
+            items: tools,
+            flipDurationMs,
+            dragDisabled: !$editMode,
+            centreDraggedOnCursor: true,
+            dropTargetClasses: ["dnd-dragging"],
+            dropTargetStyle: {},
+            dropFromOthersDisabled: true,
+        }}
+        on:consider={handleDndConsider}
+        on:finalize={handleDndFinalize}
+        class="comptoolbox-content"
+    >
+        {#key tools}
+            {#each tools as item (item.id)}
+                <div
+                    class="toolbox-item"
+                    animate:flip={{ duration: flipDurationMs }}
+                >
+                    {item.options.label}
+                </div>
             {/each}
-        </ul>
-    </div>
+        {/key}
+    </section>
 </div>
 
 <style>
@@ -57,15 +111,7 @@
         justify-content: center;
     }
 
-    .comptoolbox-content ul {
-        display: flex;
-        height: 100%;
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    .comptoolbox-content li {
+    .comptoolbox-content .toolbox-item {
         margin-right: 10px;
         cursor: grab;
         background-color: #ccc;

@@ -8,6 +8,7 @@
         layout,
         startUpdateComponent,
         finishUpdateComponent,
+        selectComponent,
     } from "$lib/editor/store";
     import { flip } from "svelte/animate";
     import {
@@ -21,15 +22,21 @@
     // export let sendValueFunc; //to avoid warning
 
     //layout
-    export let layoutData ;
+    export let layoutData;
 
     let containerElem;
+    if (!layoutData.children) layoutData.children = [];
+    if (!layoutData.options) layoutData.options = {};
+    if (!layoutData.options.layout) layoutData.options.layout = Layouts.FREE;
+
     let children = layoutData.children;
-    let isFreeLayout = layoutData.options?.layout == Layouts.FREE;
+    let isFreeLayout = layoutData.options.layout == Layouts.FREE;
     let css = "";
 
+    let directOver = "";
+
     //Dragging
-    const flipDurationMs = 300;
+    const flipDurationMs = 100;
     let mouseX = 0,
         mouseY = 0;
 
@@ -58,12 +65,19 @@
 
     function handleDndFinalize(e) {
         let setUndo = e.srcElement == $dragContainerSource; //last event to fire is this one
-        if(isFreeLayout) setXY(e);
+        if (isFreeLayout) setXY(e);
 
-        children = e.detail.items;
+        let tool = e.detail.items.find((c) => c.tool);
+
+        children = e.detail.items.map((i) => {
+            i.tool = undefined;
+            return i;
+        });
         layoutData.children = children;
-        
+
         if (setUndo) finishUpdateComponent();
+
+        if (tool) selectComponent(tool.id);
     }
 
     function setXY(e) {
@@ -82,6 +96,12 @@
         }
     }
 
+    function handleMouseDown(e) {
+        if (!$editMode) return;
+        if (e.target == containerElem)
+            selectComponent(layoutData.id, e.ctrlKey);
+    }
+
     function handleMouseMove(e) {
         if (isFreeLayout) {
             mouseX = e.clientX - containerElem.getBoundingClientRect().left;
@@ -97,13 +117,17 @@
         flipDurationMs,
         dragDisabled: !$editMode,
         centreDraggedOnCursor: true,
-        dropTargetClasses:['dnd-dragging'],
-        dropTargetStyle :{}
+        dropTargetClasses: ["dnd-dragging"],
+        dropTargetStyle: {},
     }}
+    on:click={handleMouseDown}
+    on:mousemove={(e) =>
+        (directOver = e.target == containerElem ? "direct-over" : "")}
+    on:mouseleave={(e) => (directOver = "")}
     on:consider={handleDndConsider}
     on:finalize={handleDndFinalize}
     class="{$$restProps.class || ''} ui-container layout-{layoutData.options
-        ?.layout || 'free'} {$editMode ? 'editing' : ''}"
+        .layout} {$editMode ? 'editing' : ''} {directOver}"
     style={css}
 >
     {#if layoutData.children}
@@ -130,7 +154,10 @@
                     : ''}"
                 animate:flip={{ duration: flipDurationMs }}
             >
-                <UIComponent layoutData={item} />
+                <UIComponent
+                    layoutData={item}
+                    parentLayout={layoutData.options?.layout}
+                />
             </div>
         {/each}
     {/if}
@@ -153,17 +180,16 @@
         cursor: initial;
         border: 1px solid rgba(255, 255, 255, 0);
         transition:
-            border 0.3s ease,
-            padding 0.3s ease,
-            gap 0.3s ease;
-    }
-    .ui-container.dnd-dragging {
-        gap: calc(var(--gap, 5px) + 10px);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        padding: 20px;
+            border 0.2s ease,
+            padding 0.2s ease,
+            gap 0.2s ease;
     }
 
-    
+    .ui-container.dnd-dragging {
+        gap: calc(var(--gap, 5px) + 10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 20px;
+    }
 
     .ui-container.layout-free {
         overflow: auto;
@@ -213,30 +239,4 @@
         width: var(--width, 100px);
         height: var(--height, 50px);
     }
-
-    /* .layout-resizer {
-        background-color: rgba(255, 255, 255, 0.2);
-        width: 5px;
-        height: 5px;
-        flex: 0 0 2epx;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: auto;
-        display: none;
-    } */
-
-    /* .ui-container.editing > .layout-resizer {
-        display: flex;
-    }
-
-    .layout-horizontal > .layout-resizer {
-        height: 30%;
-        cursor: ew-resize;
-    }
-
-    .layout-vertical > .layout-resizer {
-        width: 30%;
-        cursor: ns-resize;
-    } */
 </style>
