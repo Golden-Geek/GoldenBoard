@@ -49,7 +49,7 @@
         bind:this={comp}
         this={compType.type}
         class="ui-component"
-        bind:layoutData
+        {layoutData}
         sendValueFunc={(val) => sendValueCallback(val)}
     />
 
@@ -87,7 +87,7 @@
     .ui-component-wrapper.editing {
         /* resize: both; */
         /* overflow: auto;e */
-        padding:10px;
+        /* padding:10px; */
     }
 
     .edit-overlay {

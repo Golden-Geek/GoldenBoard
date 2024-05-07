@@ -21,7 +21,9 @@
 <div bind:this={outliner} class="outliner {($editMode && $outlinerOpen) ? 'open' : 'closed'}">
     <div class="outliner-content" >
         <h1>Outliner</h1>
-        <TreeView bind:tree={$layout.main} />
+        {#key $layout}
+        <TreeView tree={$layout.main} />
+        {/key}
     </div>
 </div>
 

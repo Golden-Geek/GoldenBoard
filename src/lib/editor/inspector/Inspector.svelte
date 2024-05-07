@@ -13,14 +13,14 @@
             return;
         }
 
-        components = value.map((id) => {return getComponentWithId(id)});
+        components = value.map((id) => {return getComponentWithId($layout.main, id)});
     });
 </script>
 
 <div bind:this={inspector} class="inspector {$editMode && $inspectorOpen ? 'editing' : 'hidden'}">
     <div class="inspector-content" >
         <h1>{components.length > 0? components.map((comp) => { return comp.options.label}) : "No Item selected"}</h1>
-        <!-- <pre>{JSON.stringify(components.length > 0?components.map((comp) => { return comp}):$layout, null, 2)}</pre> -->
+        <pre>{JSON.stringify(components.length > 0?components.map((comp) => { return comp}):$layout, null, 2)}</pre>
     </div>
 </div>
 

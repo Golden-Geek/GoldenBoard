@@ -1,24 +1,36 @@
 <script>
     import { onMount } from "svelte";
     import UIComponent from "../UIComponent.svelte";
-    import { Layouts, editMode } from "$lib/editor/store";
+    import {
+        Layouts,
+        dragContainerSource,
+        editMode,
+        layout,
+        startUpdateComponent,
+        updateComponent,
+        finishUpdateComponent,
+    } from "$lib/editor/store";
     import { flip } from "svelte/animate";
     import {
         dndzone,
         SHADOW_ITEM_MARKER_PROPERTY_NAME,
         TRIGGERS,
     } from "svelte-dnd-action";
+    import { SetAction } from "@gira-de/svelte-undo";
+    import { writable } from "svelte/store";
 
-    export let sendValueFunc;
-    export let layoutData;
+    export let sendValueFunc; //to avoid warning
+
+    //layout
+    export let layoutData ;
+
     let containerElem;
-
     let children = layoutData.children;
     let isFreeLayout = layoutData.options?.layout == Layouts.FREE;
-
     let css = "";
-    const flipDurationMs = 300;
 
+    //Dragging
+    const flipDurationMs = 300;
     let mouseX = 0,
         mouseY = 0;
 
@@ -32,12 +44,12 @@
 
     if (layoutData.options?.customCSS) css += layoutData.options.customCSS;
 
-    let hasResizer = false;
-    // layoutData.options?.layout == Layouts.HORIZONTAL ||
-    // layoutData.options?.layout == Layouts.VERTICAL;
-
     function handleDndConsider(e) {
-        if ((e.detail.info.trigger = "draggedOverIndex")) {
+        if (e.detail.info.trigger == TRIGGERS.DRAG_STARTED) {
+            dragContainerSource.set(e.srcElement);
+            startUpdateComponent();
+        }
+        if ((e.detail.info.trigger = TRIGGERS.DRAGGED_OVER_INDEX)) {
             if (isFreeLayout) {
                 setXY(e);
             }
@@ -46,9 +58,13 @@
     }
 
     function handleDndFinalize(e) {
-        setXY(e);
+        let setUndo = e.srcElement == $dragContainerSource; //last event to fire is this one
+        if(isFreeLayout) setXY(e);
+
         children = e.detail.items;
         layoutData.children = children;
+        
+        if (setUndo) finishUpdateComponent();
     }
 
     function setXY(e) {
@@ -56,8 +72,12 @@
         if (item != null) {
             if (item.options.style == null) item.options.style = {};
 
-            let w = item.options.style.width ? parseInt(item.options.style.width.replace(/px|%/,'')) : 100;
-            let h = item.options.style.height ? parseInt(item.options.style.height.replace(/px|%/,'')) : 50;
+            let w = item.options.style.width
+                ? parseInt(item.options.style.width.replace(/px|%/, ""))
+                : 100;
+            let h = item.options.style.height
+                ? parseInt(item.options.style.height.replace(/px|%/, ""))
+                : 50;
             item.options.style.left = mouseX - w / 2 + "px";
             item.options.style.top = mouseY - h / 2 + "px";
         }
@@ -89,7 +109,6 @@
         {#each children as item (item.id)}
             <div
                 class="dnd-wrapper"
-               
                 style="{isFreeLayout && item.options?.style?.left
                     ? '--left:' + item.options.style.left + ';'
                     : ''}
@@ -134,10 +153,9 @@
         cursor: initial;
         transition:
             padding 0.3s ease,
-            ease,
-            gap 0.3s ease;
+            e gap 0.3s ease;
     }
-    e .ui-container.editing {
+    .ui-container.editing {
         gap: calc(var(--gap, 5px) + 10px);
         padding: 20px;
     }
@@ -161,25 +179,10 @@
     }
 
     .ui-container.layout-grid {
-        --grid-layout-gap: var(--gap, 10px);
-        --grid-column-count: 4;
-        --grid-item--min-width: 200px;
-
-        --gap-count: calc(var(--grid-column-count) - 1);
-        --total-gap-width: calc(var(--gap-count) * var(--grid-layout-gap));
-        --grid-item--max-width: calc(
-            (100% - var(--total-gap-width)) / var(--grid-column-count)
-        );
-
         display: grid;
-        grid-template-columns: repeat(
-            auto-fill,
-            minmax(
-                max(var(--grid-item--min-width), var(--grid-item--max-width)),
-                1fr
-            )
-        );
-        grid-gap: var(--grid-layout-gap);
+        grid-template-columns: repeat(2, 1fr);
+        grid-gap: var(--gap, 5px);
+        transition: grid-gap 0.3s ease;
     }
 
     .dnd-wrapper {

@@ -2,11 +2,14 @@ import { get, writable } from 'svelte/store';
 import Container from './components/containers/Container.svelte';
 import Slider from './components/parameters/Slider.svelte';
 import Button from './components/parameters/Button.svelte';
+import { SetAction, transactionCtrl, undoStack } from '@gira-de/svelte-undo';
 
 export const selectedComponents = writable([]);
 export const editMode = writable(true);
 export const inspectorOpen = writable(true);
 export const outlinerOpen = writable(true);
+
+export const dragContainerSource = writable(null);
 
 export const Layouts = Object.freeze({
     FREE: 'free',
@@ -16,15 +19,17 @@ export const Layouts = Object.freeze({
 });
 
 export const ComponentTypes = Object.freeze({
-    "container": {name:"Container", type: Container},
-    "slider": {name:"Slider", type: Slider},
-    "button": {name:"Button", type: Button},
-    "rotary": {name:"Rotary", type: Slider},
-    "select": {name:"Select", type: Slider},
-    "padxy": {name:"Pad XY", type: Slider},
-    "padxyz": {name:"Pad XYZ", type: Slider}
+    "container": { name: "Container", type: Container },
+    "slider": { name: "Slider", type: Slider },
+    "button": { name: "Button", type: Button },
+    "rotary": { name: "Rotary", type: Slider },
+    "select": { name: "Select", type: Slider },
+    "padxy": { name: "Pad XY", type: Slider },
+    "padxyz": { name: "Pad XYZ", type: Slider }
 });
 
+export const undo = new undoStack("Undo stack init");
+export let startLayout = null;
 
 export const layout = writable(
     {
@@ -129,7 +134,7 @@ export const layout = writable(
                             layout: Layouts.GRID,
                             style:
                             {
-                                gap: '20px'
+                                // gap: '5px'
                             },
                             customCSS: "background-color: #a26555; padding: 20px; border-radius: 10px;"
                         },
@@ -161,23 +166,63 @@ export const layout = writable(
         }
     });
 
-export function getComponentWithId(id) {
-    return getComponentWithIdRecursive(get(layout).main, id);
-}
-
-function getComponentWithIdRecursive(component, id) {
+export const getComponentWithId = (component, id, recursive = true) => {
     if (component.id == id) {
         return component;
     }
-    else if (component.children) {
+    else if (recursive && component.children) {
         for (let i = 0; i < component.children.length; i++) {
-            let result = getComponentWithIdRecursive(component.children[i], id);
+            let result = getComponentWithId(component.children[i], id, true);
             if (result) {
                 return result;
             }
         }
     }
     return null;
+}
+
+
+export const getParentWithChildId = (component, childId) => {
+    if (component.children) {
+        for (let i = 0; i < component.children.length; i++) {
+            if (component.children[i].id == childId) return component;
+            let result = getParentWithChildId(component.children[i], id);
+            if (result) {
+                return result;
+            }
+        }
+    }
+    return null;
+}
+
+export const startUpdateComponent = () => {
+    startLayout = JSON.parse(JSON.stringify(get(layout)));
+}
+
+export const updateComponent = (id, newData) => {
+    // if (tempLayout == null) startUpdateComponent();
+
+    // let component = getComponentWithId(get(layout).main, id);
+    // if (component) {
+    //     Object.assign(component, newData);
+    // } else {
+    //     console.warn("Component not found", id);
+    // }
+}
+
+export const finishUpdateComponent = () => {
+    if (startLayout == null) {
+        console.warn("No start layout found");
+        return;
+    }
+
+    let newLayout = JSON.parse(JSON.stringify(get(layout)));
+    get(layout).main = startLayout.main;
+
+    let a = new SetAction(layout, newLayout, "Update components");
+    a.apply();
+    undo.push(a);
+    startLayout = null;
 }
 
 export const selectComponent = (id, addRemoveMode) => {

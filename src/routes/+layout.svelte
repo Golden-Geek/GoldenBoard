@@ -8,8 +8,15 @@
     inspectorOpen,
     outlinerOpen,
     selectedComponents,
+    undo,
   } from "$lib/editor/store";
-  import { layout } from "$lib/editor/store";
+  import { layout, } from "$lib/editor/store";
+  import { onMount } from "svelte";
+  import { get } from 'svelte/store';
+
+  onMount(() => {
+    // layoutSave.set({ ...$layout });
+  });
 
   function onKeyDown(event) {
     switch (event.key) {
@@ -20,10 +27,18 @@
         outlinerOpen.set(!$outlinerOpen);
         break;
 
+      case "z":
+        undo.undo();
+        break;
+
+      case "y":
+        undo.redo();
+        break;
+
       case "i":
         inspectorOpen.set(!$inspectorOpen);
         break;
-        
+
       case "Escape":
         selectedComponents.set([]);
     }
@@ -34,7 +49,9 @@
   <Outliner />
   <div class="main-center">
     <div class="content">
-      <UIComponent bind:layoutData={$layout.main} isMain={true} />
+      {#key $layout.main}
+      <UIComponent layoutData={$layout.main} isMain={true} />
+      {/key}
     </div>
     <ComponentToolBox />
   </div>
@@ -68,12 +85,11 @@
     transition: width 0.3s ease;
   }
 
-  .main-center
-  {
-    display:flex;
+  .main-center {
+    display: flex;
     flex-direction: column;
     flex-grow: 1;
-    height:100%;
+    height: 100%;
     overflow: auto;
   }
 
@@ -81,5 +97,4 @@
     flex-grow: 1;
     overflow: auto;
   }
-
 </style>
