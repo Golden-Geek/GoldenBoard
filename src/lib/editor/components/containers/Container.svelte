@@ -19,7 +19,7 @@
     import { SetAction } from "@gira-de/svelte-undo";
     import { writable } from "svelte/store";
 
-    export let sendValueFunc; //to avoid warning
+    // export let sendValueFunc; //to avoid warning
 
     //layout
     export let layoutData ;
@@ -98,6 +98,8 @@
         flipDurationMs,
         dragDisabled: !$editMode,
         centreDraggedOnCursor: true,
+        dropTargetClasses:['dnd-dragging'],
+        dropTargetStyle :{}
     }}
     on:consider={handleDndConsider}
     on:finalize={handleDndFinalize}
@@ -143,7 +145,6 @@
         --gap: initial;
 
         background-color: rgba(255, 255, 255, 0.05);
-        /* border: 1px solid rgba(255, 255, 255, 0.2); */
         position: relative;
         padding: 5px;
         width: 100%;
@@ -151,14 +152,19 @@
         gap: var(--gap, 5px);
         box-sizing: border-box;
         cursor: initial;
+        border: 1px solid rgba(255, 255, 255, 0);
         transition:
+            border 0.3s ease,
             padding 0.3s ease,
-            e gap 0.3s ease;
+            gap 0.3s ease;
     }
-    .ui-container.editing {
+    .ui-container.dnd-dragging {
         gap: calc(var(--gap, 5px) + 10px);
-        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        /* padding: 20px; */
     }
+
+    
 
     .ui-container.layout-free {
         overflow: auto;
