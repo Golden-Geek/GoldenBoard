@@ -25,8 +25,6 @@
     export let layoutData;
 
     let containerElem;
-    if (!layoutData.children) layoutData.children = [];
-    if (!layoutData.options) layoutData.options = {};
     if (!layoutData.options.layout) layoutData.options.layout = Layouts.FREE;
 
     let children = layoutData.children;
@@ -211,7 +209,7 @@
 
     .ui-container.layout-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         grid-gap: var(--gap, 5px);
         transition: grid-gap 0.3s ease;
     }

@@ -5,6 +5,7 @@
         Layouts,
         editMode,
         finishUpdateComponent,
+        layout,
         selectComponent,
         selectedComponents,
         startUpdateComponent,
@@ -33,14 +34,15 @@
 
     let resizing = false;
 
-    if (layoutData.options?.style) {
-        css =
-            Object.entries(layoutData.options?.style)
-                .map(([key, value]) => `--${key}:${value}`)
-                .join(";") + ";";
-    } else {
-    }
+    if (!layoutData.children) layoutData.children = [];
+    if (!layoutData.options) layoutData.options = {};
+    if(!layoutData.options.style) layoutData.options.style = layoutData.options.style = {};
 
+    css =
+        Object.entries(layoutData.options.style)
+            .map(([key, value]) => `--${key}:${value}`)
+            .join(";") + ";";
+   
     if (layoutData.options?.customCSS) css += layoutData.options.customCSS;
 
     let observer = new ResizeObserver(function (entries) {
@@ -117,6 +119,7 @@
         user-select: none;
 
         transition:
+            transform 1s ease,
             padding 0.3s ease,
             border 0.2s ease;
     }
@@ -143,11 +146,14 @@
         border: solid 1px rgba(42, 210, 23, 0.447);
     }
 
-    .ui-component-wrapper.editing:not(.container):hover,  :global(.ui-component-wrapper.editing.container:has(> .ui-container.direct-over)) {
-        border: solid 1px rgba(216, 168, 11, 0.719)  !important;
+    .ui-component-wrapper.editing:not(.container):hover,
+    :global(
+            .ui-component-wrapper.editing.container:has(
+                    > .ui-container.direct-over
+                )
+        ) {
+        border: solid 1px rgba(216, 168, 11, 0.719) !important;
     }
-
-   
 
     .ui-component-wrapper.editing.resizable {
         resize: both;

@@ -10,7 +10,7 @@
     <div class="title">{name}</div>
     {#each Object.entries(propertyContainer) as [key, value]}
         {#if value.type}
-            <PropertyEditor
+             <PropertyEditor
                 {compPropParent}
                 propertyName={key}
                 property={value}
@@ -18,7 +18,7 @@
         {:else}
             <svelte:self
                 name={key}
-                compPropParent:{compPropParent[key]}
+                compPropParent={compPropParent[key]}
                 propertyContainer={value}
             />
         {/if}

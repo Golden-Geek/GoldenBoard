@@ -9,6 +9,8 @@ import Pad from './components/parameters/Pad.svelte';
 import Toggle from './components/parameters/Toggle.svelte';
 import SelectPropertyEditor from './inspector/editors/SelectPropertyEditor.svelte';
 import StringPropertyEditor from './inspector/editors/StringPropertyEditor.svelte';
+import Stepper from './components/parameters/Stepper.svelte';
+import IntPropertyEditor from './inspector/editors/IntPropertyEditor.svelte';
 
 export const selectedComponents = writable([]);
 export const editMode = writable(true);
@@ -36,7 +38,8 @@ export const ComponentTypes = Object.freeze({
             style:
             {
                 gap: {
-                    type: "css-size"
+                    type: "css-size",
+                    default: "5px"
                 }
             }
         }
@@ -51,7 +54,9 @@ export const ComponentTypes = Object.freeze({
 
 export const PropertyEditorTypes = Object.freeze({
     "select": SelectPropertyEditor,
-    "string": StringPropertyEditor
+    "string": StringPropertyEditor,
+    "css-size": IntPropertyEditor 
+
 });
 
 export const undo = new undoStack("Undo stack init");
@@ -61,7 +66,7 @@ export const layout = writable(
         main:
         {
             id: "main",
-            type: "container"
+            type: "container",
         }
     });
 
