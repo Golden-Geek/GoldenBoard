@@ -8,15 +8,21 @@
     export let sendValueFunc;
     export let layoutData;
 
+    export let button;
 
     export function valueUpdated(value)
     {
-        // console.log("valueUpdated", value);
+        button.classList.add("active");
+        setTimeout(() => {
+            button.classList.remove("active");
+        }, 10);
+
     }
 
 </script>
 
-<button class="{$$restProps.class || ''}" disabled="{$editMode}" on:click={() => sendValueFunc("trigger")}>{layoutData?.options?.label}</button>
+<button bind:this={button} class="{$$restProps.class || ''}" disabled="{$editMode}" on:mousedown={() => sendValueFunc()}>{layoutData?.options?.label}</button>
+
 
 <style>
     
@@ -35,13 +41,10 @@
      
     button:not([disabled]):hover {
          cursor: pointer;
-    }
-
-    button:not([disabled]):hover {
         background-color: #3a3a3a;
     }
 
-    button:not([disabled]):active {
+    button:not([disabled]).active {
         box-shadow: none;
         background-color: rgb(162, 70, 23);
         transition: background-color 0s ease-out;

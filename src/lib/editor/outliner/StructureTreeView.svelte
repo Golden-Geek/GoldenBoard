@@ -28,7 +28,7 @@
         EXTENDED_TYPE,
     } = tree;
 
-    let expanded = _expansionState[DESCRIPTION] || true;
+    let expanded = _expansionState[DESCRIPTION] || id=="root";
     const toggleExpansion = () => {
         expanded = _expansionState[DESCRIPTION] = !expanded;
     };
@@ -42,6 +42,8 @@
     generateControllablesAndContainers();
 
     function generateControllablesAndContainers() {
+        controllables = [];
+        containers = [];
         if (CONTENTS == null) return;
         Object.entries(CONTENTS).forEach((element) => {
             if (element[1].CONTENTS != null) {
@@ -56,14 +58,13 @@
                 });
             } else {
                 let t = getComponentTypeForOSCType(element[1].TYPE);
-                console.log(t);
                 controllables.push({
                     id: getUniqueID(element[0]),
                     type: t,
                     tool: true,
                     options: {
                         label: element[1].DESCRIPTION,
-                        linkedNode: element[1],
+                        linkedNode: element[1].FULL_PATH,
                     },
                 });
             }
@@ -72,14 +73,12 @@
 
     function handleDndConsider(e) {
         if (e.detail.info.trigger == TRIGGERS.DRAG_STARTED) {
-            console.log("drag started", e);
             startUpdateComponent();
         }
         // tools = generateTools();
     }
 
     function handleDndFinalize(e) {
-        console.log("drag finalized", e);
         generateControllablesAndContainers();
         finishUpdateComponent();
     }

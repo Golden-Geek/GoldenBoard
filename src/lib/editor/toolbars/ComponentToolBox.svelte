@@ -23,14 +23,12 @@
 
     function handleDndConsider(e) {
         if (e.detail.info.trigger == TRIGGERS.DRAG_STARTED) {
-            console.log("drag started", e);
             startUpdateComponent();
         }
         // tools = generateTools();
     }
 
     function handleDndFinalize(e) {
-        console.log("drag finalized", e);
         tools = generateTools();
         finishUpdateComponent();
     }

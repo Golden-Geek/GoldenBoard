@@ -130,6 +130,10 @@ export class ControlStructure {
       case 'F':
         argsArray = [{ type: valArray[0] ? 'T' : 'F', value: valArray[0] }];
         break;
+
+      case 'N':
+        argsArray = [];
+        break;
       default:
         console.warn('Unhandled data type in ControlStructure.updateValue:', type);
     }

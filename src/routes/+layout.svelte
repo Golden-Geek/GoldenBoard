@@ -12,8 +12,7 @@
 <script>
   import UIComponent from "$lib/editor/components/UIComponent.svelte";
   import Inspector from "$lib/editor/inspector/Inspector.svelte";
-  import Outliner from "$lib/editor/outliner/Outliner.svelte";
-  import ComponentToolBox from "$lib/editor/toolbox/ComponentToolBox.svelte";
+  import ComponentToolBox from "$lib/editor/toolbars/ComponentToolBox.svelte";
   import {
     editMode,
     inspectorOpen,
@@ -22,7 +21,8 @@
     undo,
   } from "$lib/editor/store";
   import { layout } from "$lib/editor/store";
-    import StructureOutliner from "../lib/editor/outliner/StructureOutliner.svelte";
+    import TopBar from "$lib/editor/toolbars/TopBar.svelte";
+    import OutlinersPanel from "$lib/editor/outliner/OutlinersPanel.svelte";
 
 
   function onKeyDown(e) {
@@ -69,11 +69,9 @@
 </script>
 
 <div class="main">
-  <div class="outliners">
-    <Outliner />
-    <StructureOutliner />
-  </div>
+    <OutlinersPanel />
   <div class="main-center">
+    <TopBar />
     <div class="content">
       {#key $layout.main}
         <UIComponent layoutData={$layout.main} isMain={true} />

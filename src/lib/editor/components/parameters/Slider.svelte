@@ -3,17 +3,23 @@
 
     export let sendValueFunc;
     export let layoutData;
+    export let linkedNode = layoutData.options.linkedNode;
+    export let slider;
 
     export function valueUpdated(value) {
+        slider.value = value;
         // console.log("valueUpdated", value);
     }
 </script>
 
 
+<span class="label">{ layoutData.options.label }</span>
 <input
+    bind:this={slider}
     type="range"
     class={$$restProps.class || ""}
     disabled={$editMode}
+    value="{layoutData.value}"
     min="{layoutData.options.minValue?layoutData.options.minValue:0}"
     max="{layoutData.options.maxValue?layoutData.options.maxValue:1}"
     step="0.0001"

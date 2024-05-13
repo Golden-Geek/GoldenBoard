@@ -1,5 +1,5 @@
 <script>
-    import { onMount } from "svelte";
+    import { onDestroy, onMount } from "svelte";
     import {
         ComponentTypes,
         Layouts,
@@ -11,6 +11,7 @@
         startUpdateComponent,
     } from "../store";
     import Container from "./containers/Container.svelte";
+    import { Parameter, ParametersManager } from "$lib/oscquery/Parameter";
 
     export let isMain = false;
     export let layoutData;
@@ -23,7 +24,8 @@
         console.warn("UIComponent", "No id provided for component");
 
     function sendValueCallback(value = null) {
-        comp.valueUpdated(value);
+        if (param) param.sendValue(value);
+        comp.valueUpdated();
     }
 
     let css = "";
@@ -36,13 +38,23 @@
 
     if (!layoutData.children) layoutData.children = [];
     if (!layoutData.options) layoutData.options = {};
-    if(!layoutData.options.style) layoutData.options.style = layoutData.options.style = {};
+    if (!layoutData.options.style)
+        layoutData.options.style = layoutData.options.style = {};
+
+    let param = null;
+    if (layoutData.options?.linkedNode) {
+        param = new Parameter(layoutData.options.linkedNode, (param, val) => {
+            if (comp != null) {
+                comp.valueUpdated(val);
+            }
+        });
+    }
 
     css =
         Object.entries(layoutData.options.style)
             .map(([key, value]) => `--${key}:${value}`)
             .join(";") + ";";
-   
+
     if (layoutData.options?.customCSS) css += layoutData.options.customCSS;
 
     let observer = new ResizeObserver(function (entries) {
@@ -71,6 +83,10 @@
             finishUpdateComponent();
         }
     }
+
+    onDestroy(() => {
+        if (param) param.unregister();
+    });
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->

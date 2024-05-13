@@ -6,7 +6,6 @@
     export let compPropParent;
     
     export let value = parseInt(compPropParent[propertyName] || property.default);
-    console.log(compPropParent, propertyName, property);
 
 
     function handleStartEditing() {
