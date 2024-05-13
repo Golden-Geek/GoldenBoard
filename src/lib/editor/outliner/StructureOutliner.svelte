@@ -1,28 +1,29 @@
 <script>
-    import { editMode, outlinerOpen, selectedComponents } from "$lib/editor/store";
-    import { layout, getComponentWithId } from "$lib/editor/store";
     import { onMount } from "svelte";
     import { onDestroy } from "svelte";
-    import TreeView from "./TreeView.svelte";
+    import TreeView from "./StructureTreeView.svelte";
+    import controlStructure from "$lib/oscquery/oscquery";
+    import { editMode, outlinerOpen } from "../store";
 
     let outliner;
-    let components = [];
 
-    selectedComponents.subscribe((value) => {
-        if (value.length == 0) {
-            components = [];
-            return;
-        }
+    let structureObject = null;
 
-        components = value.map((id) => {return getComponentWithId(id)});
+    controlStructure.subscribeToStructureUpdates("/", true, () => {
+        structureObject = controlStructure.structureObject;
     });
 </script>
 
-<div bind:this={outliner} class="outliner {($editMode && $outlinerOpen) ? 'open' : 'closed'}">
-    <div class="outliner-content" >
-        <h1>Outliner</h1>
-        {#key $layout}
-        <TreeView tree={$layout.main} />
+<div
+    bind:this={outliner}
+    class="outliner {$editMode && $outlinerOpen ? 'open' : 'closed'}"
+>
+    <div class="outliner-content">
+        <h1>Structure Outliner</h1>
+        {#key structureObject}
+            {#if structureObject}
+                <TreeView tree={structureObject} />
+            {/if}
         {/key}
     </div>
 </div>
@@ -50,17 +51,17 @@
     }
 
     .outliner .outliner-content {
-        padding:10px;
+        padding: 10px;
         box-sizing: border-box;
         width: 300px;
         height: 100%;
-        transform:translateX(-100%);
+        transform: translateX(-100%);
         transition: transform 0.3s ease;
         user-select: none;
     }
 
     .outliner.open .outliner-content {
-        transform:translateX(0);
+        transform: translateX(0);
     }
 
     h1 {

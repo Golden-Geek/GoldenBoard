@@ -1,3 +1,14 @@
+<script context="module">
+  import controlStructure from "$lib/oscquery/oscquery";
+
+  controlStructure.oscQueryClient.connect(
+    "http://127.0.0.1:42000",
+    () => {
+      console.log("Connected to OSCQuery Server");
+    },
+  );
+</script>
+
 <script>
   import UIComponent from "$lib/editor/components/UIComponent.svelte";
   import Inspector from "$lib/editor/inspector/Inspector.svelte";
@@ -11,19 +22,15 @@
     undo,
   } from "$lib/editor/store";
   import { layout } from "$lib/editor/store";
-  import { onMount } from "svelte";
-  import { get } from "svelte/store";
+    import StructureOutliner from "../lib/editor/outliner/StructureOutliner.svelte";
 
-  onMount(() => {
-    // layoutSave.set({ ...$layout });
-  });
 
   function onKeyDown(e) {
     switch (e.key) {
       case "e":
         if (e.ctrlKey) {
           editMode.set(!$editMode);
-          if(!$editMode) selectedComponents.set([]);
+          if (!$editMode) selectedComponents.set([]);
           e.preventDefault();
         }
         break;
@@ -56,13 +63,16 @@
         break;
 
       case "Escape":
-      if ($editMode) selectedComponents.set([]);
+        if ($editMode) selectedComponents.set([]);
     }
   }
 </script>
 
 <div class="main">
-  <Outliner />
+  <div class="outliners">
+    <Outliner />
+    <StructureOutliner />
+  </div>
   <div class="main-center">
     <div class="content">
       {#key $layout.main}

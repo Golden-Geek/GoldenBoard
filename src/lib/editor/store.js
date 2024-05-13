@@ -42,20 +42,30 @@ export const ComponentTypes = Object.freeze({
                     default: "5px"
                 }
             }
-        }
+        }, oscTypes: []
     },
-    "slider": { name: "Slider", type: Slider, options: {} },
-    "button": { name: "Button", type: Button, options: {} },
-    "toggle": { name: "Toggle", type: Toggle, options: {} },
-    "rotary": { name: "Rotary", type: Rotary, options: {} },
-    "select": { name: "Select", type: Select, options: {} },
-    "pad": { name: "Pad", type: Pad, options: {} },
+    "slider": { name: "Slider", type: Slider, options: {}, oscTypes: ["f"] },
+    "button": { name: "Button", type: Button, options: {}, oscTypes: ["N", "I"] },
+    "toggle": { name: "Toggle", type: Toggle, options: {}, oscTypes: ["T", "F"] },
+    "rotary": { name: "Rotary", type: Rotary, options: {}, oscTypes: [] },
+    "select": { name: "Select", type: Select, options: {}, oscTypes: [] },
+    "pad": { name: "Pad", type: Pad, options: {}, oscTypes: ["ff", "fff"] }
 });
+
+export const getComponentTypeForOSCType = (type) => {
+    let result = "[unknown]";
+    Object.entries(ComponentTypes).forEach((elem) => {
+        if (elem[1].oscTypes.includes(type)) {
+            result = elem[0];
+        }
+    });
+    return result;
+};
 
 export const PropertyEditorTypes = Object.freeze({
     "select": SelectPropertyEditor,
     "string": StringPropertyEditor,
-    "css-size": IntPropertyEditor 
+    "css-size": IntPropertyEditor
 
 });
 

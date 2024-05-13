@@ -1,7 +1,6 @@
 import * as osc from 'osc';
 import { hostInfoStore, websocketConnectionStatusStore } from './store';
 import { get } from 'svelte/store';
-import { afterUpdate } from 'svelte';
 
 // TODO: add an observer pattern to handle the callbacks ?
 // TODO: handle the PATH_*

@@ -1,7 +1,6 @@
-import { Vector2, Vector3 } from '@babylonjs/core';
 import { OSCQueryClient } from './OSCQueryClient';
 import { ParametersManager } from './Parameter';
-import { isDefined, convertColor } from '../utils';
+import { isDefined } from './utils';
 
 // data structure storing the control paths
 export class ControlStructure {
@@ -354,15 +353,15 @@ export class ControlStructure {
         break;
 
       case 'r':
-        return convertColor(controlStructureNode.VALUE[0]);
+        return controlStructureNode.VALUE[0];
       case 'fff':
-        return new Vector3(
+        return [
           controlStructureNode.VALUE[0],
           controlStructureNode.VALUE[1],
           controlStructureNode.VALUE[2]
-        );
+        ];
       case 'ff':
-        return new Vector2(controlStructureNode.VALUE[0], controlStructureNode.VALUE[1]);
+        return [controlStructureNode.VALUE[0], controlStructureNode.VALUE[1]];
       case 'f':
       case 'i':
         return Number(controlStructureNode.VALUE[0]);
