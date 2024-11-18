@@ -1,8 +1,8 @@
 <script>
-    let { name, parent, property } = $props();
+    let { name, comp, property } = $props();
 </script>
 
-<input type="text" bind:value={parent[name]} />
+<input type="text" bind:value={comp[name]} />
 
 
 <style>

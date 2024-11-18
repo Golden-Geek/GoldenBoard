@@ -1,14 +1,14 @@
 <script>
     import { propertyEditors } from "$lib/editor/editor.svelte";
 
-    let { name, parent, property } = $props();
+    let { name, comp, property } = $props();
 
     let PropEditor = propertyEditors[property.type];
 </script>
 
 <div class="property-editor">
     <span class="propname"> {name}</span>
-    <div class="propedit"><PropEditor {parent} {property} {name} /></div>
+    <div class="propedit"><PropEditor {comp} {property} {name} /></div>
 </div>
 
 <style>

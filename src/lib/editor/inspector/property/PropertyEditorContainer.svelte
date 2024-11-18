@@ -2,16 +2,16 @@
     import { componentTypes, propertyEditors } from "$lib/editor/editor.svelte";
     import PropertyEditor from "./PropertyEditor.svelte";
 
-    let { name, parent, properties } = $props();
+    let { name, comp, properties } = $props();
 </script>
 
 <div class="prop-container">
     <div class="title">{name}</div>
     {#each Object.entries(properties) as [key, value]}
         {#if value.type}
-            <PropertyEditor name={key} {parent} property={value} />
+            <PropertyEditor name={key} {comp} property={value} />
         {:else}
-            <svelte:self name={key} parent={parent[key]} properties={value} />
+            <svelte:self name={key} comp={comp[key]} properties={value} />
         {/if}
     {/each}
 </div>

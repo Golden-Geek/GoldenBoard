@@ -1,5 +1,5 @@
 <script>
-    let { name, parent, property } = $props();
+    let { name, comp, property } = $props();
 </script>
 
 <div class="slider-container">
@@ -7,9 +7,9 @@
         type="range"
         min={property.min}
         max={property.max}
-        bind:value={parent[name]}
+        bind:value={comp[name]}
     />
-    <span class="label">{parent[name]}</span>
+    <span class="label">{comp[name]}</span>
 </div>
 
 <style>

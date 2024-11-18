@@ -1,3 +1,6 @@
+<script context="module">
+  export const ssr = false
+</script>
 <script>
   import "$lib/global.css";
 

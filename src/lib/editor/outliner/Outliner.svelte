@@ -15,6 +15,7 @@
     class:open={editorState.editMode && editorState.outlinerOpen}
 >
     <h1>Outliner</h1>
+    {#key editorState.selectedBoard}
     <select class="boardSelector" bind:value={editorState.selectedBoard}>
         {#each boardData.boards as board}
             <option value={board}
@@ -22,6 +23,7 @@
             >
         {/each}
     </select>
+    {/key}
 
     <div class="outliner">
         <div class="outliner-content">

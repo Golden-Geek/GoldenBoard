@@ -7,7 +7,7 @@
     let editingLabel = $state(false);
 
     $effect(() => {
-        if (editingLabel) {
+        if (comp?.options?.label && editingLabel) {
             const labelElement = document.querySelector(".comp-label");
             if (labelElement) {
                 labelElement.contentEditable = true;
@@ -30,18 +30,30 @@
     <h1>Inspector</h1>
 
     {#if comp != null}
-        <p class="comp-title">
-            <span class="comp-label">{comp.options.label}</span>
+        <p class="comp-header">
+            <span class="comp-label">{comp.options?.label || comp.id}</span>
             <span
                 class="comp-label-edit"
                 onclick={(editingLabel = !editingLabel)}>🖍️</span
             >
+
+            {#if comp.type != "container"}
+                <div class="comp-type-swap">
+                    <select bind:value={comp.type}>
+                        {#each Object.keys(componentTypes) as type}
+                            {#if type != "container"}
+                                <option value={type}>{type}</option>
+                            {/if}
+                        {/each}
+                    </select>
+                </div>
+            {/if}
         </p>
         <div class="inspector-content">
             <div class="main-props">
                 <PropertyEditor
                     name="id"
-                    parent={comp}
+                    {comp}
                     property={{
                         type: "string",
                     }}
@@ -50,7 +62,7 @@
                 {#key comp}
                     <PropertyEditorContainer
                         name="Options"
-                        parent={comp.options}
+                        comp={comp.options}
                         properties={componentTypes[comp.type].options}
                     />
                 {/key}
@@ -93,24 +105,28 @@
         text-align: center;
     }
 
-    .comp-title {
+    .comp-header {
         text-align: center;
     }
 
     .comp-label {
-        padding:0 1em;
+        padding: 0 1em;
     }
-    .comp-label:focus-visible
-    {
+    .comp-label:focus-visible {
         background-color: #202020;
         color: #ccc;
         outline: 1px solid #575757;
         border-radius: 3px;
-        
     }
 
     .comp-label-edit {
         cursor: pointer;
+    }
+
+    .comp-type-swap {
+        margin-left: 1em;
+        display: inline-block;
+        text-align: center;
     }
 
     .inspector .inspector-content {

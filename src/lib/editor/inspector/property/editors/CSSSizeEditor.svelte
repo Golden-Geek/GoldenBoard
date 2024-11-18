@@ -1,14 +1,14 @@
 <script>
-    let { name, parent, property } = $props();
+    let { name, comp, property } = $props();
 
-    let value = $state(parent[name]?.replace(/[^\d.]/g, ""));
-    let unit = $state(parent[name]?.replace(/[\d.]/g, ""));
+    let value = $state(comp[name]?.replace(/[^\d.]/g, ""));
+    let unit = $state(comp[name]?.replace(/[\d.]/g, ""));
     $effect(() => {
         if(!value || !unit) {
-            delete parent[name];
+            delete comp[name];
                 return;
         }
-        parent[name] =  value + unit;
+        comp[name] =  value + unit;
     });
 </script>
 

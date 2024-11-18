@@ -10,7 +10,7 @@ export const boardData = $state(
                     options:
                     {
                         label: "Board 1",
-                        layout: layoutTypes.FREE,
+                        layout: layoutTypes.HORIZONTAL,
                         style:
                         {
                             'gap': '10px'

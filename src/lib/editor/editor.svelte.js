@@ -1,4 +1,4 @@
-import UIContainer from "./components/containers/UIContainer.svelte";
+import Container from "./components/containers/Container.svelte";
 import Button from "./components/parameters/Button.svelte";
 import Slider from "./components/parameters/Slider.svelte";
 import Toggle from "./components/parameters/Toggle.svelte";
@@ -42,7 +42,7 @@ export const propertyEditors = {
 
 export const componentTypes = {
     "container": {
-        name: "Container", type: UIContainer,
+        name: "Container", type: Container,
         options: {
             layout: {
                 type: "select",
