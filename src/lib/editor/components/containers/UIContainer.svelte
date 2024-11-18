@@ -1,15 +1,15 @@
 <script>
 </script>
 
-<div class="button">
+<div class="ui-container">
 
 
 </div>
 
 
 <style>
-    .button {
-        background-color: #aa3302;
+    .ui-container {
+        background-color: #333;
         color: #ccc;
         height: 100%;
         overflow-x: hidden;
