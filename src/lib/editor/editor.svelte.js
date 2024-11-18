@@ -11,6 +11,7 @@ import SelectPropertyEditor from "./inspector/property/editors/SelectPropertyEdi
 import IntPropertyEditor from "./inspector/property/editors/IntPropertyEditor.svelte";
 import SliderPropertyEditor from "./inspector/property/editors/SliderPropertyEditor.svelte";
 import CssSizeEditor from "./inspector/property/editors/CSSSizeEditor.svelte";
+import Stepper from "./components/parameters/Stepper.svelte";
 
 
 export const editorState = $state(
@@ -58,7 +59,8 @@ export const componentTypes = {
         }, oscTypes: []
         , icon: "📦"
     },
-    "slider": { name: "Slider", type: Slider, options: { test: { type: "number", default: "3px" } }, oscTypes: ["f"], icon: "🎚️" },
+    "slider": { name: "Slider", type: Slider, options: {}, oscTypes: ["f"], icon: "🎚️" },
+    "stepper": { name: "Stepper", type: Stepper, options: {}, oscTypes: ["i"], icon: "➕" },
     "button": { name: "Button", type: Button, options: {}, oscTypes: ["N", "I"], icon: "🔘" },
     "toggle": { name: "Toggle", type: Toggle, options: {}, oscTypes: ["T", "F"], icon: "🔄" },
     "rotary": { name: "Rotary", type: Rotary, options: {}, oscTypes: [], icon: "🎛️" },
