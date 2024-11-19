@@ -5,7 +5,7 @@
 
     $effect(() => {
         if (editorState.selectedBoard == null) {
-            editorState.selectedBoard = boardData.boards[0];
+            editorState.selectedBoard = boardData.boards?boardData.boards[0]:null;
         }
     });
 </script>

@@ -15,7 +15,6 @@
     let expanded = $state(expansionState[label] || true);
     let selected = $derived(editorState.selectedComponents.includes(data));
     let icon = $derived(componentTypes[data.type].icon);
-
 </script>
 
 <ul>
@@ -86,8 +85,10 @@
 
     .selected {
         background-color: #6ba33a;
-        color:#222;
-        transition: background-color 200ms, color 200ms;
+        color: #222;
+        transition:
+            background-color 200ms,
+            color 200ms;
     }
 
     .arrow {

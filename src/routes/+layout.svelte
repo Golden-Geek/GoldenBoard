@@ -1,6 +1,7 @@
 <script context="module">
-  export const ssr = false
+  export const ssr = false;
 </script>
+
 <script>
   import "$lib/global.css";
 
@@ -10,7 +11,7 @@
   import BoardEditor from "$lib/editor/board/BoardEditor.svelte";
 
   import { editorState } from "$lib/editor/editor.svelte.js";
-    import { boardData } from "$lib/boards.svelte";
+  import { boardData } from "$lib/boards.svelte";
 
   function onKeyDown(e) {
     switch (e.key) {
@@ -35,29 +36,25 @@
         }
         break;
 
-      // case "z":
-      //   if (e.ctrlKey && editorState.editMode) {
-      //     undo.undo();
-      //     e.preventDefault();
-      //   }
-      // break;
+      case "z":
+        if (e.ctrlKey && editorState.editMode) {
+          // undo();
+          e.preventDefault();
+        }
+        break;
 
-      // case "y":
-      //   if (e.ctrlKey && editorState.editMode) {
-      //     undo.redo();
-      //     e.preventDefault();
-      //   }
-      // break;
+      case "y":
+        if (e.ctrlKey && editorState.editMode) {
+          // redo();
+          e.preventDefault();
+        }
+        break;
 
       case "Escape":
         if (editorState.editMode) editorState.selectedComponents = [];
     }
-
   }
-
 </script>
-
-
 
 <div class="main">
   <OutlinersPanel />
@@ -76,7 +73,6 @@
 <svelte:window on:keydown={onKeyDown} />
 
 <style>
-
   .main {
     display: flex;
     flex-direction: row;
