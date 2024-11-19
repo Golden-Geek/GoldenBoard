@@ -6,10 +6,10 @@
     let board = $derived(editorState.selectedBoard);
 </script>
 
-{#if editorState.selectedBoard}
+{#if board}
     <div class="board">
         <div class="main">
-            <UIComponent comp={editorState.selectedBoard} isMain={true} />
+            <UIComponent comp={board} isMain={true} />
         </div>
         <ComponentToolbar />
     </div>
@@ -31,5 +31,4 @@
         display: flex;
         overflow: auto;
     }
-
 </style>
