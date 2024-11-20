@@ -185,7 +185,6 @@ export const removeComponent = (parent, comp) => {
     }
 
     if(!parent.children) return;
-    console.log(parent.children.includes(comp))
     parent.children = parent.children.filter(child => comp !== child);
     parent.children.forEach(child => removeComponent(child, comp));
 };
