@@ -20,6 +20,7 @@ export const editorState = $state(
         inspectorOpen: true,
         outlinerOpen: true,
         selectedBoard: null,
+        dragContainerSource: null
     }
 );
 
@@ -27,8 +28,7 @@ export const layoutTypes = {
     FREE: "free",
     HORIZONTAL: "horizontal",
     VERTICAL: "vertical",
-    GRID: "grid",
-    CUSTOM: "custom"
+    GRID: "grid"
 };
 
 export const propertyEditors = {

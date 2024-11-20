@@ -9,76 +9,9 @@
 
     let css = $derived((comp.options?.style?Object.entries(comp.options?.style)?.map(([key, value]) => `--${key}:${value}`).join(";") + ";":"") +  comp.options?.customCSS || "");
 
-    let wrapperElement;
-    let parameter; //for syncing with oscquery
-
-    // let wrapper;
-    // let comp;
-
-    // if (layoutData.id == null)
-    //     console.warn("UIComponent", "No id provided for component");
-
-    // function sendValueCallback(value = null) {
-    //     if (param) param.sendValue(value);
-    //     comp.valueUpdated();
-    // }
-
-    // let css = "";
-    // let compType = ComponentTypes[layoutData.type];
-    // $: container = compType?.type == Container;
-    // $: selected = $selectedComponents.includes(layoutData.id);
-    // $: editing = $editMode;
-
-    // let resizing = false;
-
-    // if (!layoutData.children) layoutData.children = [];
-    // if (!layoutData.options) layoutData.options = {};
-    // if (!layoutData.options.style)
-    //     layoutData.options.style = layoutData.options.style = {};
-
-    // let param = null;
-    // if (layoutData.options?.linkedNode) {
-    //     param = new Parameter(layoutData.options.linkedNode, (param, val) => {
-    //         if (comp != null) {
-    //             comp.valueUpdated(val);
-    //         }
-    //     });
-    // }
-
-
-    // let observer = new ResizeObserver(function (entries) {
-    //     if (entries[0].target == wrapper) {
-    //         layoutData.options.style.width =
-    //             entries[0].contentRect.width + "px";
-    //         layoutData.options.style.height =
-    //             entries[0].contentRect.height + "px";
-    //     }
-    // });
-
-    // function handleMouseDown(e) {
-    //     if (!$editMode) return;
-    //     if (e.target == wrapper) {
-    //         resizing = true;
-    //         observer.observe(wrapper);
-    //         startUpdateComponent();
-    //         e.stopPropagation();
-    //     }
-    // }
-
-    // function handleMouseUp(e) {
-    //     if (resizing) {
-    //         resizing = false;
-    //         observer.unobserve(wrapper);
-    //         finishUpdateComponent();
-    //     }
-    // }
-
-    // onDestroy(() => {
-    //     if (param) param.unregister();
-    // });
+    let wrapperElement;    
 </script>
 
-<!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
     bind:this={wrapperElement}
     class="ui-component-wrapper {isMain ? 'main' : ''} {!isMain &&
