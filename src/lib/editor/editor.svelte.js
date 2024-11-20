@@ -22,7 +22,8 @@ export const editorState = $state({
 });
 
 export const dragDropState = $state({
-    dragContainerSource: null
+    dragContainerSource: null,
+    dragExpandedGaps: false
 });
 
 export const layoutTypes = {

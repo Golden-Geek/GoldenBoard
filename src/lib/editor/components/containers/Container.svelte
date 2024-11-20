@@ -27,9 +27,22 @@
     let mouseX = 0,
         mouseY = 0;
 
+    let isDraggingOver = false;
+
     function handleDndConsider(e) {
+        if (
+            e.detail.info.trigger == TRIGGERS.DRAG_STARTED ||
+            e.detail.info.trigger == TRIGGERS.DRAGGED_ENTERED
+        ) {
+            isDraggingOver = true;
+        } else if (e.detail.info.trigger == TRIGGERS.DRAGGED_LEFT) {
+            isDraggingOver = false;
+            editorState.dragExpandedGaps = true;
+        }
+
         if (e.detail.info.trigger == TRIGGERS.DRAG_STARTED) {
             dragDropState.dragContainerSource = comp.id;
+            editorState.dragExpandedGaps = false;
         }
 
         if ((e.detail.info.trigger = TRIGGERS.DRAGGED_OVER_INDEX)) {
@@ -44,11 +57,14 @@
         let sameElement = comp.id == dragDropState.dragContainerSource; //last event to fire is this one
         if (isFreeLayout) setXY(e);
         comp.children = $state.snapshot(e.detail.items);
+        isDraggingOver = false;
+        editorState.dragExpandedGaps = false;
     }
 
     function setXY(e) {
         let item = e.detail.items.find((c) => c.id == e.detail.info.id);
         if (item != null) {
+            if (item.options == null) item.options = {};
             if (item.options.style == null) item.options.style = {};
 
             let w = item.options.style.width
@@ -69,13 +85,11 @@
     }
 
     function handleMouseMove(e) {
-        if (isFreeLayout) {
+        if (isFreeLayout && isDraggingOver) {
             mouseX = e.clientX - containerDiv.getBoundingClientRect().left;
             mouseY = e.clientY - containerDiv.getBoundingClientRect().top;
         }
     }
-
-    
 </script>
 
 <div
@@ -85,6 +99,7 @@
     class="ui-container layout-{layout}"
     class:editing={editorState.editMode}
     class:direct-over={directOver}
+    class:dragExpandedGaps={editorState.dragExpandedGaps}
     onmousemove={(e) => (directOver = e.target == containerDiv)}
     onmouseleave={(e) => (directOver = false)}
     onclick={handleMouseDown}
@@ -94,7 +109,8 @@
         items: $state.snapshot(comp.children),
         flipDurationMs,
         dragDisabled: !editorState.editMode,
-        centreDraggedOnCursor: true,
+        morphDisabled: true,
+        centreDraggedOnCursor: layout != layoutTypes.FREE,
         dropTargetClasses: ["dnd-dragging"],
         dropTargetStyle: {},
     }}
@@ -103,6 +119,9 @@
         {#each comp.children as item (item.id)}
             <div
                 class="dnd-wrapper"
+                data-is-dnd-shadow-item-hint={item[
+                    SHADOW_ITEM_MARKER_PROPERTY_NAME
+                ]}
                 style={isFreeLayout
                     ? Object.entries(item.options?.style)
                           .map(([key, value]) => `--${key}:${value}`)
@@ -138,7 +157,7 @@
             gap 0.2s ease;
     }
 
-    .ui-container.dnd-dragging {
+    .ui-container.dnd-dragging.dragExpandedGaps {
         gap: calc(var(--gap, 5px) + 10px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         padding: 20px;

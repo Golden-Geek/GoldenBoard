@@ -1,10 +1,6 @@
 <script>
     import { componentTypes, editorState, layoutTypes } from "../editor.svelte";
-    // import { v4 as uuidv4 } from "uuid";
-
     let { comp, parentComp, isMain = false } = $props();
-
-    // if (!comp.uuid) comp.uuid = uuidv4();
 
     let selected = $derived(editorState.selectedComponents.includes(comp));
     let isContainer = $derived(comp.type == "container");
