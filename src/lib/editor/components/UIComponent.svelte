@@ -15,8 +15,6 @@
     );
 
     let wrapperElement;
-
-   
 </script>
 
 <div
@@ -28,8 +26,9 @@
     class:editing={editorState.editMode}
     class:selected
     class:container={isContainer}
+    style={isContainer ? "" : css}
 >
-    <CompElement class="ui-component" {comp} {parentComp} style={css} />
+    <CompElement class="ui-component" {comp} {parentComp} {css} />
 
     {#if editorState.editMode && !isContainer}
         <div

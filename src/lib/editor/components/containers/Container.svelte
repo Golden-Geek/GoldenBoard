@@ -16,7 +16,7 @@
     } from "svelte-dnd-action";
     import { v4 as uuidv4 } from "uuid";
 
-    let { comp, parentComp } = $props();
+    let { comp, parentComp, css } = $props();
     let layout = $derived(comp.options?.layout || layoutTypes.FREE);
     let isFreeLayout = $derived(layout == layoutTypes.FREE);
     let directOver = $state(false);
@@ -92,7 +92,7 @@
     }
 </script>
 
-<div
+<section
     bind:this={containerDiv}
     role="region"
     aria-label="Container {comp.id}"
@@ -109,11 +109,12 @@
         items: $state.snapshot(comp.children),
         flipDurationMs,
         dragDisabled: !editorState.editMode,
-        morphDisabled: true,
+        morphDisabled: false,
         centreDraggedOnCursor: layout != layoutTypes.FREE,
         dropTargetClasses: ["dnd-dragging"],
         dropTargetStyle: {},
     }}
+    style={css}
 >
     {#if comp.children}
         {#each comp.children as item (item.id)}
@@ -133,7 +134,7 @@
             </div>
         {/each}
     {/if}
-</div>
+</section>
 
 <svelte:window onmousemove={handleMouseMove} />
 
