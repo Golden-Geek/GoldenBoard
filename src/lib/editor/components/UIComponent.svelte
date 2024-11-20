@@ -1,15 +1,26 @@
 <script>
     import { componentTypes, editorState, layoutTypes } from "../editor.svelte";
+    // import { v4 as uuidv4 } from "uuid";
 
     let { comp, parentComp, isMain = false } = $props();
+
+    // if (!comp.uuid) comp.uuid = uuidv4();
+
     let selected = $derived(editorState.selectedComponents.includes(comp));
     let isContainer = $derived(comp.type == "container");
     let CompElement = $derived(componentTypes[comp.type].type);
 
+    let css = $derived(
+        (comp.options?.style
+            ? Object.entries(comp.options?.style)
+                  ?.map(([key, value]) => `--${key}:${value}`)
+                  .join(";") + ";"
+            : "") + comp.options?.customCSS || "",
+    );
 
-    let css = $derived((comp.options?.style?Object.entries(comp.options?.style)?.map(([key, value]) => `--${key}:${value}`).join(";") + ";":"") +  comp.options?.customCSS || "");
+    let wrapperElement;
 
-    let wrapperElement;    
+   
 </script>
 
 <div
@@ -21,9 +32,8 @@
     class:editing={editorState.editMode}
     class:selected
     class:container={isContainer}
-    style:css
 >
-    <CompElement class="ui-component" {comp} {parameter} />
+    <CompElement class="ui-component" {comp} {parentComp} style={css} />
 
     {#if editorState.editMode && !isContainer}
         <div
@@ -33,12 +43,6 @@
             onclick={(e) => {
                 if (e.ctrlKey) editorState.selectedComponents.push(comp);
                 else editorState.selectedComponents = [comp];
-            }}
-            onkeydown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    if (e.ctrlKey) editorState.selectedComponents.push(comp);
-                    else editorState.selectedComponents = [comp];
-                }
             }}
         ></div>
     {/if}

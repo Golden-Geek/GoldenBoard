@@ -11,7 +11,7 @@
   import BoardEditor from "$lib/editor/board/BoardEditor.svelte";
 
   import { editorState } from "$lib/editor/editor.svelte.js";
-  import { boardData } from "$lib/boards.svelte";
+    import { removeComponent } from "$lib/boards.svelte";
 
   function onKeyDown(e) {
     switch (e.key) {
@@ -49,9 +49,17 @@
           e.preventDefault();
         }
         break;
-
+        
       case "Escape":
         if (editorState.editMode) editorState.selectedComponents = [];
+        e.preventDefault();
+        break;
+
+      case "Delete":
+        if(editorState.editMode) {
+          editorState.selectedComponents.forEach(comp => removeComponent(null, comp));
+          e.preventDefault();
+        }
     }
   }
 </script>
@@ -70,7 +78,7 @@
 
 <slot />
 
-<svelte:window on:keydown={onKeyDown} />
+<svelte:window onkeydowncapture={onKeyDown} />
 
 <style>
   .main {

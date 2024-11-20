@@ -13,16 +13,17 @@ import SliderPropertyEditor from "./inspector/property/editors/SliderPropertyEdi
 import CssSizeEditor from "./inspector/property/editors/CSSSizeEditor.svelte";
 import Stepper from "./components/parameters/Stepper.svelte";
 
-export const editorState = $state(
-    {
-        selectedComponents: [],
-        editMode: true,
-        inspectorOpen: true,
-        outlinerOpen: true,
-        selectedBoard: null,
-        dragContainerSource: null
-    }
-);
+export const editorState = $state({
+    selectedComponents: [],
+    editMode: true,
+    inspectorOpen: true,
+    outlinerOpen: true,
+    selectedBoard: null,
+});
+
+export const dragDropState = $state({
+    dragContainerSource: null
+});
 
 export const layoutTypes = {
     FREE: "free",

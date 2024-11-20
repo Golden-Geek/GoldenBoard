@@ -1,4 +1,5 @@
 import { layoutTypes } from "./editor/editor.svelte";
+import { v4 as uuidv4 } from "uuid";
 
 export let boardData = $state({ boards: [] });
 export let demoBoards =
@@ -74,6 +75,11 @@ export let demoBoards =
                                 ]
                             },
                             {
+                                type: "container",
+                                id: "emptyContainer",
+                                children: []
+                            },
+                            {
                                 type: "button",
                                 id: "button1",
                                 options: {
@@ -140,13 +146,48 @@ export let demoBoards =
             type: "container",
             options:
             {
+                layout: "horizontal",
                 label: "Board 2",
             },
             children:
                 [
 
+                    {
+                        type: "button",
+                        id: "button4",
+                        options: {
+                            label: "Button 4"
+                        }
+                    },
+                    {
+                        type: "button",
+                        id: "button5",
+                        options: {
+                            label: "Button 5"
+                        }
+                    },
+                    {
+                        type: "slider",
+                        id: "slider3",
+                        options: {
+                            label: "Slider 3"
+                        }
+                    }
                 ]
         }
     ];
+
+export const removeComponent = (parent, comp) => {
+    if(parent == null)
+    {
+        boardData.boards.forEach(board => removeComponent(board, comp));
+        return;
+    }
+
+    if(!parent.children) return;
+    console.log(parent.children.includes(comp))
+    parent.children = parent.children.filter(child => comp !== child);
+    parent.children.forEach(child => removeComponent(child, comp));
+};
 
 boardData.boards = demoBoards;

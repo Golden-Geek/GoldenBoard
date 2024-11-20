@@ -60,11 +60,13 @@
                 />
 
                 {#key comp}
-                    <PropertyEditorContainer
-                        name="Options"
-                        comp={comp.options}
-                        properties={componentTypes[comp.type].options}
-                    />
+                    {#if comp.options}
+                        <PropertyEditorContainer
+                            name="Options"
+                            comp={comp.options}
+                            properties={componentTypes[comp.type].options}
+                        />
+                    {/if}
                 {/key}
             </div>
         </div>

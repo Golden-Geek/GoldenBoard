@@ -1,5 +1,9 @@
 <script>
-    import { editorState, layoutTypes } from "$lib/editor/editor.svelte";
+    import {
+        dragDropState,
+        editorState,
+        layoutTypes,
+    } from "$lib/editor/editor.svelte";
     import { flip } from "svelte/animate";
     import UIComponent from "../UIComponent.svelte";
 
@@ -7,11 +11,13 @@
     import {
         dndzone,
         SHADOW_ITEM_MARKER_PROPERTY_NAME,
+        SHADOW_PLACEHOLDER_ITEM_ID,
         TRIGGERS,
     } from "svelte-dnd-action";
+    import { v4 as uuidv4 } from "uuid";
 
-    let { comp } = $props();
-    let layout = $derived(comp.options.layout);
+    let { comp, parentComp } = $props();
+    let layout = $derived(comp.options?.layout || layoutTypes.FREE);
     let isFreeLayout = $derived(layout == layoutTypes.FREE);
     let directOver = $state(false);
     let containerDiv;
@@ -23,32 +29,21 @@
 
     function handleDndConsider(e) {
         if (e.detail.info.trigger == TRIGGERS.DRAG_STARTED) {
-            dragContainerSource.set(e.srcElement);
-            startUpdateComponent();
+            dragDropState.dragContainerSource = comp.id;
         }
+
         if ((e.detail.info.trigger = TRIGGERS.DRAGGED_OVER_INDEX)) {
-            if (isFreeLayout) {
-                setXY(e);
-            }
+            if (isFreeLayout) setXY(e);
         }
-        comp.children = e.detail.items;
+
+        if (comp.id != SHADOW_PLACEHOLDER_ITEM_ID)
+            comp.children = $state.snapshot(e.detail.items);
     }
 
     function handleDndFinalize(e) {
-        let setUndo = e.srcElement == editorState.dragContainerSource; //last event to fire is this one
+        let sameElement = comp.id == dragDropState.dragContainerSource; //last event to fire is this one
         if (isFreeLayout) setXY(e);
-
-        let tool = e.detail.items.find((c) => c.tool);
-
-        children = e.detail.items.map((i) => {
-            i.tool = undefined;
-            return i;
-        });
-        comp.children = children;
-
-        if (setUndo) finishUpdateComponent();
-
-        if (tool) selectComponent(tool.id);
+        comp.children = $state.snapshot(e.detail.items);
     }
 
     function setXY(e) {
@@ -79,20 +74,9 @@
             mouseY = e.clientY - containerDiv.getBoundingClientRect().top;
         }
     }
+
+    
 </script>
-
-<!-- <section
-    bind:this={containerElem}
-   
-
-     on:mousemove={(e) =>
-        (directOver = e.target == containerElem ? "direct-over" : "")}
-    on:mouseleave={(e) => (directOver = "")}
-
-    class="{$$restProps.class || ''} ui-container layout-{layoutData.options
-        .layout} {$editMode ? 'editing' : ''} {directOver}"
-    style={css}
-> -->
 
 <div
     bind:this={containerDiv}
@@ -107,7 +91,7 @@
     onconsider={handleDndConsider}
     onfinalize={handleDndFinalize}
     use:dndzone={{
-        items: comp.children,
+        items: $state.snapshot(comp.children),
         flipDurationMs,
         dragDisabled: !editorState.editMode,
         centreDraggedOnCursor: true,
@@ -118,7 +102,7 @@
     {#if comp.children}
         {#each comp.children as item (item.id)}
             <div
-                class="comp-wrapper"
+                class="dnd-wrapper"
                 style={isFreeLayout
                     ? Object.entries(item.options?.style)
                           .map(([key, value]) => `--${key}:${value}`)
@@ -131,8 +115,6 @@
         {/each}
     {/if}
 </div>
-
-<!--</section>-->
 
 <svelte:window onmousemove={handleMouseMove} />
 
@@ -187,7 +169,7 @@
         transition: grid-gap 0.3s ease;
     }
 
-    .comp-wrapper {
+    .dnd-wrapper {
         display: block;
         --left: initial;
         --top: initial;
