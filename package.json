@@ -21,6 +21,12 @@
 	},
 	"dependencies": {
 		"@sveltejs/adapter-static": "^3.0.6",
-		"uuid": "^11.0.3"
+		"osc": "^2.4.5",
+		"uuid": "^11.0.3",
+		"buffer": "^6.0.3",
+		"events": "^3.3.0",
+		"long": "^5.2.3",
+		"slip": "^1.0.2",
+		"stream": "^0.0.2"
 	}
 }

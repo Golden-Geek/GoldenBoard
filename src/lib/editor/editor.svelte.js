@@ -13,12 +13,14 @@ import SliderPropertyEditor from "./inspector/property/editors/SliderPropertyEdi
 import CssSizeEditor from "./inspector/property/editors/CSSSizeEditor.svelte";
 import Stepper from "./components/parameters/Stepper.svelte";
 
+
 export const editorState = $state({
     selectedComponents: [],
     editMode: true,
     inspectorOpen: true,
-    outlinerOpen: true,
+    leftPanelOpen: true,
     selectedBoard: null,
+    selectedServer: null
 });
 
 export const dragDropState = $state({

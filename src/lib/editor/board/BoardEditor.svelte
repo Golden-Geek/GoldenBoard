@@ -19,8 +19,8 @@
     .board {
         flex-grow: 1;
         display: flex;
-        height: 100%;
         flex-direction: column;
+        height: 100%;
         background-color: #333;
         overflow: hidden;
         background-color: #222;
@@ -29,6 +29,7 @@
     .main {
         flex-grow: 1;
         display: flex;
+        height:100%;
         overflow: auto;
     }
 </style>

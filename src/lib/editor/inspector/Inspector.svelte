@@ -1,25 +1,34 @@
 <script>
     import { componentTypes, editorState } from "$lib/editor/editor.svelte.js";
+    import { preventDefault } from "svelte/legacy";
     import PropertyEditor from "./property/PropertyEditor.svelte";
     import PropertyEditorContainer from "./property/PropertyEditorContainer.svelte";
 
     let comp = $derived(editorState.selectedComponents[0]);
-    let editingLabel = $state(false);
+    let editingLabel = false;
+    let labelElement;
 
-    $effect(() => {
+    function toggleEditingLabel() {
+        editingLabel = !editingLabel;
         if (comp?.options?.label && editingLabel) {
-            const labelElement = document.querySelector(".comp-label");
             if (labelElement) {
                 labelElement.contentEditable = true;
                 labelElement.focus();
                 labelElement.addEventListener("blur", () => {
-                    comp.options.label = labelElement.textContent;
-                    editingLabel = false;
-                    labelElement.contentEditable = false;
+                    saveLabel();
                 });
             }
+        } else {
+            saveLabel();
         }
-    });
+    }
+
+    function saveLabel() {
+        if (labelElement) {
+            labelElement.contentEditable = false;
+            comp.options.label = labelElement.innerText;
+        }
+    }
 </script>
 
 <div
@@ -31,11 +40,10 @@
 
     {#if comp != null}
         <p class="comp-header">
-            <span class="comp-label">{comp.options?.label || comp.id}</span>
-            <span
-                class="comp-label-edit"
-                onclick={(editingLabel = !editingLabel)}>🖍️</span
+            <span class="comp-label" bind:this={labelElement} onkeydown={e => {if(e.key === "Enter") {saveLabel(); e.preventDefault();}}}
+                >{comp.options?.label || comp.id}</span
             >
+            <span class="comp-label-edit" onclick={toggleEditingLabel}>🖍️</span>
 
             {#if comp.type != "container"}
                 <div class="comp-type-swap">
