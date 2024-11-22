@@ -2,9 +2,13 @@
     import { editorState } from "$lib/editor/editor.svelte";
     import { onMount } from "svelte";
 
-    let { comp, parameter, classes, css } = $props();
+    let { comp, parameter, classes, css, updateValue } = $props();
     let active = $state(false);
 
+    export function setValue(value) {
+        active = true;
+        setTimeout(() => (active = false), 10);
+    }
 </script>
 
 <button
@@ -13,8 +17,7 @@
     style={css}
     disabled={editorState.editMode}
     onclick={(e) => {
-        active = true;
-        setTimeout(() => (active = false), 10);
+        updateValue();
     }}
 >
     {comp?.options?.label || comp.id}

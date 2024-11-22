@@ -146,26 +146,13 @@ export let demoBoards =
             type: "container",
             options:
             {
-                layout: "horizontal",
+                layout: "vertical",
                 label: "Board 2",
             },
             children:
                 [
 
-                    {
-                        type: "button",
-                        id: "button4",
-                        options: {
-                            label: "Button 4"
-                        }
-                    },
-                    {
-                        type: "button",
-                        id: "button5",
-                        options: {
-                            label: "Button 5"
-                        }
-                    },
+                    
                     {
                         type: "slider",
                         id: "slider3",
@@ -189,4 +176,4 @@ export const removeComponent = (parent, comp) => {
     parent.children.forEach(child => removeComponent(child, comp));
 };
 
-boardData.boards = demoBoards;
+boardData.boards = [demoBoards[1]];

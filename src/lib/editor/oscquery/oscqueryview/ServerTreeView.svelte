@@ -1,11 +1,10 @@
 <script>
     import ServerTreeViewItem from "./ServerTreeViewItem.svelte";
     let { server = null } = $props();
-
 </script>
 
 {#if server}
-    {#if server.hasData()}
-        <ServerTreeViewItem node={server.data} />
+    {#if server.structureReady}
+        <ServerTreeViewItem node={server.data} {server} />
     {/if}
 {/if}

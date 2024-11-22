@@ -1,21 +1,28 @@
 <script>
     import { onMount } from "svelte";
 
+    let { comp, parameter, classes, css, updateValue } = $props();
+    let checked = $state(parameter.getValue());
 
-    let { comp, parameter, classes, css } = $props();
-    let checked = $state(false);
-    
+    export function setValue(value) {
+        checked = value;
+    }
 </script>
+
 <span class="label"> {comp.options?.label || comp.id} </span>
-<input type="checkbox" class={classes} style={css} bind:checked />
+<input
+    type="checkbox"
+    class={classes}
+    style={css}
+    bind:checked
+    onchange={() => updateValue(checked)}
+/>
 
 <style>
-  
-  .label
-  {
-    color: #ccc;
-    font-size: 0.8em;
-  }
+    .label {
+        color: #ccc;
+        font-size: 0.8em;
+    }
 
     input[type="checkbox"] {
         appearance: none;
@@ -37,5 +44,4 @@
     input[type="checkbox"]:checked {
         background: #34b661;
     }
-
 </style>

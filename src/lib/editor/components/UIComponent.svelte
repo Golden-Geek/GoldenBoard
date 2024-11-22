@@ -15,6 +15,26 @@
     );
 
     let wrapperElement;
+
+
+    let linkedNode = $derived(
+        comp.options?.linkedNodes?.length > 0
+            ? comp.options.linkedNodes[0]
+            : null,
+    );
+
+    let parameter;
+    let linkedValue = $state([]);
+    let compDiv;
+    if (linkedNode) {
+        parameter = linkedNode.server.createParameter(linkedNode.address, (value) => {
+           compDiv.setValue(value)
+        } );
+    }
+
+    function updateValue(value) {
+        if (parameter)  parameter.setValue(value);
+    }
 </script>
 
 <div
@@ -28,7 +48,7 @@
     class:container={isContainer}
     style={isContainer ? "" : css}
 >
-    <CompElement class="ui-component" {comp} {parentComp} {css} />
+    <CompElement bind:this={compDiv} class="ui-component" {comp} {parentComp} {css} {updateValue} {parameter}/>
 
     {#if editorState.editMode && !isContainer}
         <div

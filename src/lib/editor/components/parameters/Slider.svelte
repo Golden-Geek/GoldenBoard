@@ -1,7 +1,25 @@
 <script>
     import { editorState } from "$lib/editor/editor.svelte";
 
-    let { comp, parameter, classes, css } = $props();
+    let { comp, parameter, classes, css, updateValue } = $props();
+
+    let val = $state(parameter?.getValue());
+
+    let minVal = comp.options?.minValue
+        ? comp.options.minValue
+        : parameter?.node.RANGE[0].MIN
+          ? parameter?.node.RANGE[0].MIN
+          : 0;
+    let maxVal = comp.options?.maxValue
+        ? comp.options.maxValue
+        : parameter?.node.RANGE[0].MAX
+          ? parameter?.node.RANGE[0].MAX
+          : 1;
+
+    export function setValue(value) {
+        console.log("value");
+        val = value;
+    }
 </script>
 
 <span class="label">{comp.options?.label || comp.id}</span>
@@ -10,11 +28,14 @@
     class={classes}
     style={css}
     disabled={editorState.editMode}
-    value={comp.value}
-    min={comp.options?.minValue ? comp.options.minValue : 0}
-    max={comp.options?.maxValue ? comp.options.maxValue : 1}
+    bind:value={val}
+    min={minVal}
+    max={maxVal}
     step="0.0001"
-/> 
+    oninput={(e) => {
+        updateValue(e.target.value);
+    }}
+/>
 
 <style>
     /* cool dark theme slider with round corners, shadows and hover behaviour*/

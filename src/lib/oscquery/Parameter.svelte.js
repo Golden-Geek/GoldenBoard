@@ -1,7 +1,11 @@
+import { OSCQueryOSCTypes } from "./oscquery.svelte";
+
 export class Parameter {
-    client;
+    client
     node;
     valueChangedCallback;
+    isComplex;
+    isTrigger;
 
     constructor(client, node, valueChangedCallback) {
         this.client = client;
@@ -13,7 +17,9 @@ export class Parameter {
             this.node = node;
         }
 
-        console.log(this.node);
+        this.isTrigger = this.node.TYPE == "N" || this.node.TYPE == "I";
+        this.isComplex = !this.isTrigger && this.node.VALUE.length > 1;
+
         this.client.addNodeListener(this.node.FULL_PATH, (e) => this.nodeUpdated(e));
     }
 
@@ -51,7 +57,7 @@ export class Parameter {
     //Events from client
     valueChanged(value) {
         // console.log("Value changed: ", value);
-        if (this.valueChangedCallback) this.valueChangedCallback(value);
+        if (this.valueChangedCallback) this.valueChangedCallback(this.getValue());
     }
 
     rangeChanged(min, max) {
@@ -70,20 +76,38 @@ export class Parameter {
         console.log("Address changed: ", address);
     }
 
+    getValue() {
+        return this.isComplex || this.isTrigger ? this.node.VALUE : this.node.VALUE[0];
+    }
 
     //Handlers from editor
     setValue(value, forceSend) {
-        if (this.valueIsTheSame(value, this.node.value) && !forceSend) return;
-        this.client.setValue(this.node, value);
+        if (!this.isTrigger) {
+            if (!Array.isArray(value) && value != undefined) value = [value];
+            if (!this.checkCoherentValue(value, this.node.VALUE)) return;
+            if (!forceSend && this.checkSameValue(value, this.node.VALUE)) return;
+        }
+
+        this.client.setValueFromParameter(this, this.isTrigger ? [] : value);
     }
 
     setRange(min, max) {
-        this.client.setRange(this.node, min, max);
+        this.client.setRangeFromParameter(this, min, max);
     }
 
     //Checkers
-    valueIsTheSame(value1, value2) {
-        if (value1.length != value2.length) return false;
+    checkCoherentValue(value1, value2) {
+        if (this.isTrigger) return true;
+        if (value1.length != value2.length) {
+            console.warn("Length mismatch", value1.length, value2.length);
+            return false;
+        }
+
+        return true;
+    }
+
+    checkSameValue(value1, value2) {
+        if (this.isTrigger) return false;
         return value1.every((v, i) => v == value2[i]);
     }
 }

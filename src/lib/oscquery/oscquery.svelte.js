@@ -1,4 +1,5 @@
 import { Parameter } from './Parameter.svelte.js';
+import * as osc from 'osc';
 
 export let servers = $state([]);
 
@@ -15,7 +16,18 @@ export const removeServer = function (client) {
     }
 }
 
-import * as osc from 'osc';
+export const OSCQueryOSCTypes = {
+    "f": ['f'],
+    "i": ['i'],
+    "s": ['s'],
+    "r": ['r'],
+    "N": ['N'],
+    "I": ['I'],
+    "T": ['T'],
+    "F": ['F'],
+    "ff": ['f', 'f'],
+    "fff": ['f', 'f', 'f']
+};
 
 export class OSCQueryClient {
 
@@ -23,8 +35,9 @@ export class OSCQueryClient {
     ip = $state('127.0.0.1');
     port = $state(42000);
     name = $state("[OSCQueryClient]");
+    structureReady = $state(false);
 
-    data = $state({});
+    data = {};
 
     addressMap = {};
 
@@ -55,7 +68,6 @@ export class OSCQueryClient {
     }
 
     setup() {
-        // console.log(`[${this.name}] Init OSCQuery Websocket Client`);
 
         if (this.oscPort) {
             this.oscPort.close();
@@ -113,7 +125,7 @@ export class OSCQueryClient {
 
     requestHostInfo() {
         var hostInfoUrl = "http://" + this.ip + ":" + this.port + '/?HOST_INFO';
-        console.log("Requesting Host Info: ", hostInfoUrl);
+        // console.log("Requesting Host Info: ", hostInfoUrl);
         fetch(hostInfoUrl)
             .then(function (response) {
                 return response.json();
@@ -124,6 +136,14 @@ export class OSCQueryClient {
             .catch((err) => {
                 console.warn("Error fetching host info: ", err);
             });
+    }
+
+    sendOSCPacket(address, args) {
+        // console.log("send osc packet", this.oscPort);
+        this.oscPort.send({
+            address: address,
+            args: args
+        });
     }
 
     sendWebsocketMessage(msg) {
@@ -159,6 +179,7 @@ export class OSCQueryClient {
     parseStructure(json) {
         this.data = json;
         this.buildAddressMap();
+        this.structureReady = true;
     }
 
     parseHostInfo(json) {
@@ -193,8 +214,8 @@ export class OSCQueryClient {
             console.warn("Got update from OSCQuery but address not found: " + address);
             return;
         }
-        nMap.node.VALUE = packet.args;
-        nMap.listeners.forEach((listener) => listener({ event: "valueChanged", value:nMap.node.VALUE }));
+
+        this.setValueAndNotify(nMap, packet.args);
     }
 
 
@@ -265,8 +286,37 @@ export class OSCQueryClient {
         return new Parameter(this, node, callback);
     }
 
+    setValueFromParameter(parameter, value) {
+        // console.log("Setting value for node: ", node.FULL_PATH, value);
+
+        let node = parameter.node;
+        this.setValueAndNotify(this.addressMap[node.FULL_PATH], value, parameter);
+
+        const args = [];
+        const oscTypes = OSCQueryOSCTypes[node.TYPE];
+        value.forEach((v, i) => {
+            args.push({ type: oscTypes[i], value: v });
+        });
+        
+        this.sendOSCPacket(node.FULL_PATH, args);
+    }
+
+    setValueAndNotify(nMap, value, exclude) {
+        if (nMap.node.TYPE == "T" || nMap.node.TYPE == "F") {
+            nMap.node.TYPE = value[0] ? "T" : "F";
+        }
+        nMap.node.VALUE = value;
+        nMap.listeners.forEach((listener) => {
+
+            if (listener == exclude) return;
+            listener({ event: "valueChanged", value })
+        });
+    }
+
     //Helpers
     hasData() {
         return Object.entries(this.data).length > 0;
     }
 }
+
+addServer();

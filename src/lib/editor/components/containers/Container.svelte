@@ -50,13 +50,13 @@
         }
 
         if (comp.id != SHADOW_PLACEHOLDER_ITEM_ID)
-            comp.children = $state.snapshot(e.detail.items);
+            comp.children = e.detail.items;
     }
 
     function handleDndFinalize(e) {
         let sameElement = comp.id == dragDropState.dragContainerSource; //last event to fire is this one
         if (isFreeLayout) setXY(e);
-        comp.children = $state.snapshot(e.detail.items);
+        comp.children = e.detail.items;
         isDraggingOver = false;
         editorState.dragExpandedGaps = false;
     }
@@ -106,10 +106,10 @@
     onconsider={handleDndConsider}
     onfinalize={handleDndFinalize}
     use:dndzone={{
-        items: $state.snapshot(comp.children),
+        items: comp.children,
         flipDurationMs,
         dragDisabled: !editorState.editMode,
-        morphDisabled: false,
+        morphDisabled: true,
         centreDraggedOnCursor: layout != layoutTypes.FREE,
         dropTargetClasses: ["dnd-dragging"],
         dropTargetStyle: {},

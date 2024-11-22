@@ -1,13 +1,52 @@
 <script>
     import { boardData } from "$lib/boards.svelte";
+    import { dndzone, TRIGGERS } from "svelte-dnd-action";
     import { componentTypes, editorState } from "../editor.svelte";
+    import { v4 as uuidv4 } from "uuid";
+
+    let tools = [];
+    Object.entries(componentTypes).forEach((type) => {
+        tools.push({
+            type: type[0],
+            icon: type[1].icon,
+            id: type[0] + "-" + uuidv4(),
+            options: { label: type[1].name },
+        });
+    });
+
+    function handleDndConsider(e) {
+        const { trigger, id } = e.detail.info;
+        if (trigger == TRIGGERS.DRAG_STARTED) {
+            const tool = tools.find((tool) => tool.id === id);
+            const index = tools.indexOf(tool);
+            const newId = tool.type + "-" + uuidv4();
+            e.detail.items.splice(index, 1, { ...tools[index], id: newId });
+        tools = e.detail.items;
+    }
+    }
+
+    function handleDndFinalize(e) {
+        tools = e.detail.items;
+    }
 </script>
 
 <div class="component-toolbar" class:open={editorState.editMode}>
-    <div class="content">
-        {#each Object.entries(componentTypes) as type}
-            <span class="tool" use:dndAction={{ type: 'tool', data: type[0] }}>{type[1].icon}</span>
-        {/each}
+    <div
+        class="content"
+        use:dndzone={{
+            items: tools,
+            centreDraggedOnCursor: true,
+            dropTargetClasses: ["dnd-dragging"],
+            dropTargetStyle: {},
+            dropFromOthersDisabled: true,
+            morphDisabled:true
+        }}
+        on:consider={handleDndConsider}
+        on:finalize={handleDndFinalize}
+    >
+            {#each tools as tool (tool.id)}
+                <span class="tool"> {tool.icon}</span>
+            {/each}
     </div>
 </div>
 

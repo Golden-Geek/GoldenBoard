@@ -14,6 +14,7 @@
   import { removeComponent } from "$lib/boards.svelte";
   import ServerExplorer from "$lib/editor/oscquery/ServerExplorer.svelte";
 
+  
   function onKeyDown(e) {
     switch (e.key) {
       case "e":
