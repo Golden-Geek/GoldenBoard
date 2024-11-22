@@ -1,29 +1,40 @@
 <script>
-    import { editMode } from "$lib/editor/store";
+    import { editorState } from "$lib/editor/editor.svelte";
 
-    export let sendValueFunc;
-    export let layoutData;
-    export let linkedNode = layoutData.options.linkedNode;
-    export let slider;
+    let { comp, parameter, classes, css, updateValue } = $props();
 
-    export function valueUpdated(value) {
-        slider.value = value;
-        // console.log("valueUpdated", value);
+    let val = $state(parameter?.getValue());
+
+    let minVal = comp.options?.minValue
+        ? comp.options.minValue
+        : parameter?.node.RANGE[0].MIN
+          ? parameter?.node.RANGE[0].MIN
+          : 0;
+    let maxVal = comp.options?.maxValue
+        ? comp.options.maxValue
+        : parameter?.node.RANGE[0].MAX
+          ? parameter?.node.RANGE[0].MAX
+          : 1;
+
+    export function setValue(value) {
+        console.log("value");
+        val = value;
     }
 </script>
 
-
-<span class="label">{ layoutData.options.label }</span>
+<span class="label">{comp.options?.label || comp.id}</span>
 <input
-    bind:this={slider}
     type="range"
-    class={$$restProps.class || ""}
-    disabled={$editMode}
-    value="{layoutData.value}"
-    min="{layoutData.options.minValue?layoutData.options.minValue:0}"
-    max="{layoutData.options.maxValue?layoutData.options.maxValue:1}"
+    class={classes}
+    style={css}
+    disabled={editorState.editMode}
+    bind:value={val}
+    min={minVal}
+    max={maxVal}
     step="0.0001"
-    on:input={(e) => sendValueFunc(e.target.value)}
+    oninput={(e) => {
+        updateValue(e.target.value);
+    }}
 />
 
 <style>

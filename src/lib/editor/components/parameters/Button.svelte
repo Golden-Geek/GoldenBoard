@@ -1,36 +1,34 @@
 <script>
-// @ts-nocheck
-
-    import { editMode } from "$lib/editor/store";
+    import { editorState } from "$lib/editor/editor.svelte";
     import { onMount } from "svelte";
 
+    let { comp, parameter, classes, css, updateValue } = $props();
+    let active = $state(false);
 
-    export let sendValueFunc;
-    export let layoutData;
-
-    export let button;
-
-    export function valueUpdated(value)
-    {
-        button.classList.add("active");
-        setTimeout(() => {
-            button.classList.remove("active");
-        }, 10);
-
+    export function setValue(value) {
+        active = true;
+        setTimeout(() => (active = false), 10);
     }
-
 </script>
 
-<button bind:this={button} class="{$$restProps.class || ''}" disabled="{$editMode}" on:mousedown={() => sendValueFunc()}>{layoutData?.options?.label}</button>
-
+<button
+    class={classes}
+    class:active
+    style={css}
+    disabled={editorState.editMode}
+    onclick={(e) => {
+        updateValue();
+    }}
+>
+    {comp?.options?.label || comp.id}
+</button>
 
 <style>
-    
     /* cool dark theme button with round corners, shadows and hover behaviour*/
     button {
         background-color: #333;
-        width:100%;
-        height:100%;
+        width: 100%;
+        height: 100%;
         color: #ccc;
         border: none;
         border-radius: 4px;
@@ -38,9 +36,9 @@
         transition: background-color 0.2s ease-out;
         user-select: none;
     }
-     
+
     button:not([disabled]):hover {
-         cursor: pointer;
+        cursor: pointer;
         background-color: #3a3a3a;
     }
 
@@ -50,5 +48,4 @@
         transition: background-color 0s ease-out;
         transform: translateY(2px);
     }
-
 </style>

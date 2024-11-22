@@ -1,120 +1,64 @@
 <script>
-    import { onDestroy, onMount } from "svelte";
-    import {
-        ComponentTypes,
-        Layouts,
-        editMode,
-        finishUpdateComponent,
-        layout,
-        selectComponent,
-        selectedComponents,
-        startUpdateComponent,
-    } from "../store";
-    import Container from "./containers/Container.svelte";
-    import { Parameter, ParametersManager } from "$lib/oscquery/Parameter";
+    import { componentTypes, editorState, layoutTypes } from "../editor.svelte";
+    let { comp, parentComp, isMain = false } = $props();
 
-    export let isMain = false;
-    export let layoutData;
-    export let parentLayout = null;
+    let selected = $derived(editorState.selectedComponents.includes(comp));
+    let isContainer = $derived(comp.type == "container");
+    let CompElement = $derived(componentTypes[comp.type].type);
 
-    let wrapper;
-    let comp;
+    let css = $derived(
+        (comp.options?.style
+            ? Object.entries(comp.options?.style)
+                  ?.map(([key, value]) => `--${key}:${value}`)
+                  .join(";") + ";"
+            : "") + comp.options?.customCSS || "",
+    );
 
-    if (layoutData.id == null)
-        console.warn("UIComponent", "No id provided for component");
+    let wrapperElement;
 
-    function sendValueCallback(value = null) {
-        if (param) param.sendValue(value);
-        comp.valueUpdated();
+
+    let linkedNode = $derived(
+        comp.options?.linkedNodes?.length > 0
+            ? comp.options.linkedNodes[0]
+            : null,
+    );
+
+    let parameter;
+    let linkedValue = $state([]);
+    let compDiv;
+    if (linkedNode) {
+        parameter = linkedNode.server.createParameter(linkedNode.address, (value) => {
+           compDiv.setValue(value)
+        } );
     }
 
-    let css = "";
-    let compType = ComponentTypes[layoutData.type];
-    $: container = compType?.type == Container;
-    $: selected = $selectedComponents.includes(layoutData.id);
-    $: editing = $editMode;
-
-    let resizing = false;
-
-    if (!layoutData.children) layoutData.children = [];
-    if (!layoutData.options) layoutData.options = {};
-    if (!layoutData.options.style)
-        layoutData.options.style = layoutData.options.style = {};
-
-    let param = null;
-    if (layoutData.options?.linkedNode) {
-        param = new Parameter(layoutData.options.linkedNode, (param, val) => {
-            if (comp != null) {
-                comp.valueUpdated(val);
-            }
-        });
+    function updateValue(value) {
+        if (parameter)  parameter.setValue(value);
     }
-
-    css =
-        Object.entries(layoutData.options.style)
-            .map(([key, value]) => `--${key}:${value}`)
-            .join(";") + ";";
-
-    if (layoutData.options?.customCSS) css += layoutData.options.customCSS;
-
-    let observer = new ResizeObserver(function (entries) {
-        if (entries[0].target == wrapper) {
-            layoutData.options.style.width =
-                entries[0].contentRect.width + "px";
-            layoutData.options.style.height =
-                entries[0].contentRect.height + "px";
-        }
-    });
-
-    function handleMouseDown(e) {
-        if (!$editMode) return;
-        if (e.target == wrapper) {
-            resizing = true;
-            observer.observe(wrapper);
-            startUpdateComponent();
-            e.stopPropagation();
-        }
-    }
-
-    function handleMouseUp(e) {
-        if (resizing) {
-            resizing = false;
-            observer.unobserve(wrapper);
-            finishUpdateComponent();
-        }
-    }
-
-    onDestroy(() => {
-        if (param) param.unregister();
-    });
 </script>
 
-<!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-    bind:this={wrapper}
-    class="ui-component-wrapper {isMain ? 'main' : ''} {parentLayout ==
-    Layouts.FREE
+    bind:this={wrapperElement}
+    class="ui-component-wrapper {isMain ? 'main' : ''} {!isMain &&
+    parentComp.layout == layoutTypes.FREE
         ? 'resizable'
         : ''}"
-    class:editing
+    class:editing={editorState.editMode}
     class:selected
-    class:container
-    style={css}
-    on:mousedown={handleMouseDown}
-    on:mouseup={handleMouseUp}
+    class:container={isContainer}
+    style={isContainer ? "" : css}
 >
-    <svelte:component
-        this={compType.type}
-        bind:this={comp}
-        class="ui-component"
-        {layoutData}
-        sendValueFunc={(val) => sendValueCallback(val)}
-    />
+    <CompElement bind:this={compDiv} class="ui-component" {comp} {parentComp} {css} {updateValue} {parameter}/>
 
-    {#if $editMode && !container}
+    {#if editorState.editMode && !isContainer}
         <div
             class="edit-overlay"
-            on:click={(e) => selectComponent(layoutData.id, e.ctrlKey)}
+            role="button"
+            tabindex="0"
+            onclick={(e) => {
+                if (e.ctrlKey) editorState.selectedComponents.push(comp);
+                else editorState.selectedComponents = [comp];
+            }}
         ></div>
     {/if}
 </div>
@@ -183,22 +127,4 @@
     .ui-component-wrapper.editing:hover > .edit-overlay {
         background-color: rgba(255, 255, 255, 0.05);
     }
-
-    /*
-    .ui-component-wrapper.editing:hover > .edit-overlay {
-        outline: solid 1px rgba(255, 0, 183, 0.777);
-        background-color: rgba(209, 36, 177, 0.195);
-    }
-
-    .ui-component-wrapper.editing:hover{
-        outline: solid 1px rgba(255, 0, 183, 0.3);
-    }
-
-    .ui-component-wrapper.editing.selected > .edit-overlay {
-        outline: solid 1px rgb(0, 255, 89);
-    }
-
-    .ui-component-wrapper.editing.selected:hover > .edit-overlay {
-        background-color: rgba(0, 255, 34, 0.1);
-    } */
 </style>

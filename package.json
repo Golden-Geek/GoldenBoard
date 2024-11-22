@@ -1,30 +1,28 @@
 {
 	"name": "goldenboard",
 	"version": "0.0.1",
-	"private": true,
+	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch"
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^3.0.0",
 		"@sveltejs/kit": "^2.0.0",
-		"@sveltejs/vite-plugin-svelte": "^3.0.0",
-		"svelte": "^4.2.15",
-		"svelte-check": "^3.6.0",
-		"svelte-dnd-action": "^0.9.43",
+		"@sveltejs/vite-plugin-svelte": "^4.0.0",
+		"svelte": "^5.0.0",
+		"svelte-check": "^4.0.0",
+		"svelte-dnd-action": "^0.9.52",
 		"typescript": "^5.0.0",
 		"vite": "^5.0.3"
 	},
-	"type": "module",
 	"dependencies": {
-		"@gira-de/svelte-undo": "^1.2.2",
-		"@sveltejs/adapter-static": "^3.0.1",
-		"osc": "^2.4.4",
-		"uuid": "^9.0.1",
+		"@sveltejs/adapter-static": "^3.0.6",
+		"osc": "^2.4.5",
+		"uuid": "^11.0.3",
 		"buffer": "^6.0.3",
 		"events": "^3.3.0",
 		"long": "^5.2.3",

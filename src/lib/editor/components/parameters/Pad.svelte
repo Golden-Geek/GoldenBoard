@@ -1,18 +1,15 @@
 <script>
-    import { editMode } from "$lib/editor/store";
+    import { editorState } from "$lib/editor/editor.svelte";
 
-    export let sendValueFunc;
-    export let layoutData;
-
-    export function valueUpdated(value) {
-        // console.log("valueUpdated", value);
-    }
+    let { comp, parameter, classes, css } = $props();
 </script>
 
-
- <div class="{$$restProps.class || ''}">
+<div class={classes}
+style={css}
+disabled={editorState.editMode}>
     PAD
 </div>
+
 <style>
   
 </style>

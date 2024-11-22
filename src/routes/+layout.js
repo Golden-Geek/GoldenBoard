@@ -3,4 +3,4 @@
  * No pre-renderer is done on the server.
  */
 
-export let ssr = false;
+export const ssr = false;

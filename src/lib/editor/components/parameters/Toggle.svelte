@@ -1,29 +1,28 @@
 <script>
-// @ts-nocheck
-
-    import { editMode } from "$lib/editor/store";
     import { onMount } from "svelte";
 
+    let { comp, parameter, classes, css, updateValue } = $props();
+    let checked = $state(parameter.getValue());
 
-    export let sendValueFunc;
-    export let layoutData;
-
-    export function valueUpdated(value)
-    {
-        // console.log("valueUpdated", value);
+    export function setValue(value) {
+        checked = value;
     }
-
 </script>
-<span class="label"> {layoutData.options.label} </span>
-<input type="checkbox" class="{$$restProps.class || ''}" bind:checked={$$restProps.value} on:change={event => sendValueFunc(event.target.checked)} />
+
+<span class="label"> {comp.options?.label || comp.id} </span>
+<input
+    type="checkbox"
+    class={classes}
+    style={css}
+    bind:checked
+    onchange={() => updateValue(checked)}
+/>
 
 <style>
-  
-  .label
-  {
-    color: #ccc;
-    font-size: 0.8em;
-  }
+    .label {
+        color: #ccc;
+        font-size: 0.8em;
+    }
 
     input[type="checkbox"] {
         appearance: none;
@@ -45,5 +44,4 @@
     input[type="checkbox"]:checked {
         background: #34b661;
     }
-
 </style>

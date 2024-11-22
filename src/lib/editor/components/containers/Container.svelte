@@ -1,86 +1,70 @@
 <script>
-    import { onMount } from "svelte";
-    import UIComponent from "../UIComponent.svelte";
     import {
-        Layouts,
-        dragContainerSource,
-        editMode,
-        layout,
-        startUpdateComponent,
-        finishUpdateComponent,
-        selectComponent,
-    } from "$lib/editor/store";
+        dragDropState,
+        editorState,
+        layoutTypes,
+    } from "$lib/editor/editor.svelte";
     import { flip } from "svelte/animate";
+    import UIComponent from "../UIComponent.svelte";
+
+    import { onMount } from "svelte";
     import {
         dndzone,
         SHADOW_ITEM_MARKER_PROPERTY_NAME,
+        SHADOW_PLACEHOLDER_ITEM_ID,
         TRIGGERS,
     } from "svelte-dnd-action";
-    import { SetAction } from "@gira-de/svelte-undo";
-    import { writable } from "svelte/store";
+    import { v4 as uuidv4 } from "uuid";
 
-    // export let sendValueFunc; //to avoid warning
+    let { comp, parentComp, css } = $props();
+    let layout = $derived(comp.options?.layout || layoutTypes.FREE);
+    let isFreeLayout = $derived(layout == layoutTypes.FREE);
+    let directOver = $state(false);
+    let containerDiv;
 
-    //layout
-    export let layoutData;
-
-    let containerElem;
-    if (!layoutData.options.layout) layoutData.options.layout = Layouts.FREE;
-
-    let children = layoutData.children;
-    let isFreeLayout = layoutData.options.layout == Layouts.FREE;
-    let css = "";
-
-    let directOver = "";
-
-    //Dragging
+    // //Dragging
     const flipDurationMs = 100;
     let mouseX = 0,
         mouseY = 0;
 
-    if (layoutData.options?.style) {
-        css =
-            Object.entries(layoutData.options?.style)
-                .map(([key, value]) => `--${key}:${value}`)
-                .join(";") + ";";
-    } else {
-    }
-
-    if (layoutData.options?.customCSS) css += layoutData.options.customCSS;
+    let isDraggingOver = false;
 
     function handleDndConsider(e) {
+        if (
+            e.detail.info.trigger == TRIGGERS.DRAG_STARTED ||
+            e.detail.info.trigger == TRIGGERS.DRAGGED_ENTERED
+        ) {
+            isDraggingOver = true;
+        } else if (e.detail.info.trigger == TRIGGERS.DRAGGED_LEFT) {
+            isDraggingOver = false;
+            editorState.dragExpandedGaps = true;
+        }
+
         if (e.detail.info.trigger == TRIGGERS.DRAG_STARTED) {
-            dragContainerSource.set(e.srcElement);
-            startUpdateComponent();
+            dragDropState.dragContainerSource = comp.id;
+            editorState.dragExpandedGaps = false;
         }
+
         if ((e.detail.info.trigger = TRIGGERS.DRAGGED_OVER_INDEX)) {
-            if (isFreeLayout) {
-                setXY(e);
-            }
+            if (isFreeLayout) setXY(e);
         }
-        children = e.detail.items;
+
+        if (comp.id != SHADOW_PLACEHOLDER_ITEM_ID)
+            comp.children = e.detail.items;
     }
 
     function handleDndFinalize(e) {
-        let setUndo = e.srcElement == $dragContainerSource; //last event to fire is this one
+        let sameElement = comp.id == dragDropState.dragContainerSource; //last event to fire is this one
         if (isFreeLayout) setXY(e);
-
-        let tool = e.detail.items.find((c) => c.tool);
-
-        children = e.detail.items.map((i) => {
-            i.tool = undefined;
-            return i;
-        });
-        layoutData.children = children;
-
-        if (setUndo) finishUpdateComponent();
-
-        if (tool) selectComponent(tool.id);
+        comp.children = e.detail.items;
+        isDraggingOver = false;
+        editorState.dragExpandedGaps = false;
     }
 
     function setXY(e) {
         let item = e.detail.items.find((c) => c.id == e.detail.info.id);
         if (item != null) {
+            if (item.options == null) item.options = {};
             if (item.options.style == null) item.options.style = {};
 
             let w = item.options.style.width
@@ -95,73 +79,64 @@
     }
 
     function handleMouseDown(e) {
-        if (!$editMode) return;
-        if (e.target == containerElem)
-            selectComponent(layoutData.id, e.ctrlKey);
+        if (!editorState.editMode || !directOver) return;
+        if (e.ctrlKey) editorState.selectedComponents.push(comp);
+        else editorState.selectedComponents = [comp];
     }
 
     function handleMouseMove(e) {
-        if (isFreeLayout) {
-            mouseX = e.clientX - containerElem.getBoundingClientRect().left;
-            mouseY = e.clientY - containerElem.getBoundingClientRect().top;
+        if (isFreeLayout && isDraggingOver) {
+            mouseX = e.clientX - containerDiv.getBoundingClientRect().left;
+            mouseY = e.clientY - containerDiv.getBoundingClientRect().top;
         }
     }
 </script>
 
 <section
-    bind:this={containerElem}
+    bind:this={containerDiv}
+    role="region"
+    aria-label="Container {comp.id}"
+    class="ui-container layout-{layout}"
+    class:editing={editorState.editMode}
+    class:direct-over={directOver}
+    class:dragExpandedGaps={editorState.dragExpandedGaps}
+    onmousemove={(e) => (directOver = e.target == containerDiv)}
+    onmouseleave={(e) => (directOver = false)}
+    onclick={handleMouseDown}
+    onconsider={handleDndConsider}
+    onfinalize={handleDndFinalize}
     use:dndzone={{
-        items: children,
+        items: comp.children,
         flipDurationMs,
-        dragDisabled: !$editMode,
-        centreDraggedOnCursor: true,
+        dragDisabled: !editorState.editMode,
+        morphDisabled: true,
+        centreDraggedOnCursor: layout != layoutTypes.FREE,
         dropTargetClasses: ["dnd-dragging"],
         dropTargetStyle: {},
     }}
-    on:click={handleMouseDown}
-    on:mousemove={(e) =>
-        (directOver = e.target == containerElem ? "direct-over" : "")}
-    on:mouseleave={(e) => (directOver = "")}
-    on:consider={handleDndConsider}
-    on:finalize={handleDndFinalize}
-    class="{$$restProps.class || ''} ui-container layout-{layoutData.options
-        .layout} {$editMode ? 'editing' : ''} {directOver}"
     style={css}
 >
-    {#if layoutData.children}
-        {#each children as item (item.id)}
+    {#if comp.children}
+        {#each comp.children as item (item.id)}
             <div
                 class="dnd-wrapper"
-                style="{isFreeLayout && item.options?.style?.left
-                    ? '--left:' + item.options.style.left + ';'
-                    : ''}
-                    {isFreeLayout && item.options?.style?.top
-                    ? '--top:' + item.options.style.top + ';'
-                    : ''}
-                    {isFreeLayout && item.options?.style?.width
-                    ? '--width:' + item.options.style.width + ';'
-                    : ''}
-                    {isFreeLayout && item.options?.style?.height
-                    ? '--height:' + item.options.style.height + ';'
-                    : ''}
-                    {!isFreeLayout && item.options?.style?.size
-                    ? '--size:' + item.options.style.size + ';'
-                    : ''}
-                    {!isFreeLayout && item.options?.style?.shrink
-                    ? '--shrink:' + item.options.style.shrink + ';'
-                    : ''}"
+                data-is-dnd-shadow-item-hint={item[
+                    SHADOW_ITEM_MARKER_PROPERTY_NAME
+                ]}
+                style={isFreeLayout
+                    ? Object.entries(item.options?.style)
+                          .map(([key, value]) => `--${key}:${value}`)
+                          .join(";") + ";"
+                    : ""}
                 animate:flip={{ duration: flipDurationMs }}
             >
-                <UIComponent
-                    layoutData={item}
-                    parentLayout={layoutData.options?.layout}
-                />
+                <UIComponent comp={item} parentComp={comp} />
             </div>
         {/each}
     {/if}
 </section>
 
-<svelte:window on:mousemove={handleMouseMove} />
+<svelte:window onmousemove={handleMouseMove} />
 
 <style>
     .ui-container {
@@ -183,7 +158,7 @@
             gap 0.2s ease;
     }
 
-    .ui-container.dnd-dragging {
+    .ui-container.dnd-dragging.dragExpandedGaps {
         gap: calc(var(--gap, 5px) + 10px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         padding: 20px;

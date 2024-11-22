@@ -1,43 +1,72 @@
 <script>
-    import { editMode, outlinerOpen, selectedComponents } from "$lib/editor/store";
-    import { layout, getComponentWithId } from "$lib/editor/store";
-    import { onMount } from "svelte";
-    import { onDestroy } from "svelte";
-    import TreeView from "./TreeView.svelte";
+    import OutlinerTreeItem from "./OutlinerTreeItem.svelte";
+    import { editorState } from "../editor.svelte.js";
+    import { boardData } from "$lib/boards.svelte.js";
 
-    let components = [];
-
-    selectedComponents.subscribe((value) => {
-        if (value.length == 0) {
-            components = [];
-            return;
+    $effect(() => {
+        if (editorState.selectedBoard == null) {
+            editorState.selectedBoard = boardData.boards
+                ? boardData.boards[0]
+                : null;
         }
-
-        components = value.map((id) => {return getComponentWithId(id)});
     });
 </script>
 
-<div class="components-outliner">
+<div class="outliner">
+    <div class="header">
         <h1>Outliner</h1>
-        {#key $layout}
-        <TreeView tree={$layout.main} />
+        {#key editorState.selectedBoard}
+            <select
+                class="boardSelector"
+                bind:value={editorState.selectedBoard}
+            >
+                {#each boardData.boards as board}
+                    <option value={board}
+                        >{board.options?.label
+                            ? board.options.label
+                            : board.id}</option
+                    >
+                {/each}
+            </select>
         {/key}
+    </div>
+
+    <div class="content">
+        {#if editorState.selectedBoard}
+            <OutlinerTreeItem data={editorState.selectedBoard} />
+        {/if}
+    </div>
 </div>
+
 <style>
-
-   
-    .components-outliner {
-        flex: 40% 1 0;
-        box-sizing: border-box;
-    }
-
     h1 {
-        font-size: 1.5em;
-        margin: 0 0 10px 0;
         text-align: center;
     }
 
-    pre {
-        white-space: pre-wrap;
+    .boardSelector {
+        position: absolute;
+        right: 5px;
+        top: 5px;
+        float: right;
     }
+
+    .outliner {
+        min-width: 150px;
+    }
+
+    .content {
+        padding: 10px;
+        box-sizing: border-box;
+        min-width: 300px;
+        height: 100%;
+        transition: transform 0.3s ease;
+        user-select: none;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    /* .outlinerPanel.open .outliner-content {
+        transform: translateX(0);
+    } */
 </style>
