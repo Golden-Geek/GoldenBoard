@@ -176,4 +176,4 @@ export const removeComponent = (parent, comp) => {
     parent.children.forEach(child => removeComponent(child, comp));
 };
 
-boardData.boards = [demoBoards[1]];
+boardData.boards = demoBoards;// [demoBoards[1]];
