@@ -1,0 +1,193 @@
+:root {
+	color-scheme: dark;
+	--bg: #0f1116;
+	--panel: #171b23;
+	--panel-alt: #1f2531;
+	--border: #272d3b;
+	--accent: #f7b733;
+	--accent-soft: #f7b73333;
+	--text: #eaedf7;
+	--muted: #9aa4bf;
+	--danger: #ff6b6b;
+	font-family: 'Inter', 'Segoe UI', system-ui;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	background: radial-gradient(circle at top, #141824, #0b0d14 65%);
+	color: var(--text);
+	font-family: inherit;
+	min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+	font: inherit;
+	color: inherit;
+}
+
+.app-shell {
+	display: grid;
+	grid-template-columns: 200px 1fr 320px;
+	grid-template-rows: auto 1fr;
+	grid-template-areas:
+		'toolbar toolbar toolbar'
+		'palette canvas inspector';
+	gap: 0.75rem;
+	padding: 0.75rem;
+}
+
+.toolbar,
+.panel {
+	background: rgba(17, 20, 29, 0.9);
+	border: 1px solid rgba(255, 255, 255, 0.04);
+	border-radius: 14px;
+	box-shadow: 0 15px 30px rgba(0, 0, 0, 0.35);
+	backdrop-filter: blur(18px);
+}
+
+.toolbar {
+	grid-area: toolbar;
+	padding: 0.5rem 1rem;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.widget-palette {
+	padding: 0.75rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.left-column {
+	grid-area: palette;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.canvas-panel {
+	grid-area: canvas;
+	padding: 0.75rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.inspector-panel {
+	grid-area: inspector;
+	padding: 0.75rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.section-title {
+	font-size: 0.85rem;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	color: var(--muted);
+}
+
+.board-canvas {
+	flex: 1;
+	border-radius: 12px;
+	background: linear-gradient(135deg, rgba(23, 27, 35, 0.9), rgba(15, 17, 24, 0.9));
+	border: 1px dashed rgba(255, 255, 255, 0.05);
+	padding: 1rem;
+	overflow: auto;
+}
+
+.widget {
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	padding: 0.75rem;
+	background: rgba(255, 255, 255, 0.02);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+	transition: border 150ms ease, box-shadow 150ms ease;
+}
+
+.widget.selected {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 1px var(--accent-soft);
+}
+
+input,
+select,
+textarea {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 8px;
+	padding: 0.35rem 0.5rem;
+}
+
+button {
+	border: none;
+	border-radius: 8px;
+	padding: 0.4rem 0.75rem;
+	background: rgba(255, 255, 255, 0.06);
+	cursor: pointer;
+}
+
+button.primary {
+	background: var(--accent);
+	color: #120a00;
+	font-weight: 600;
+}
+
+button.ghost {
+	background: transparent;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.toolbar input[type='text'] {
+	width: 240px;
+}
+
+.osc-tree {
+	max-height: 220px;
+	overflow: auto;
+	padding: 0.5rem 0.25rem;
+}
+
+.osc-node {
+	padding: 0.2rem 0.4rem;
+	border-radius: 6px;
+	margin-left: calc(var(--depth) * 12px);
+	font-size: 0.85rem;
+	cursor: grab;
+}
+
+.osc-node:hover {
+	background: rgba(255, 255, 255, 0.05);
+}
+
+.inspector-form {
+	display: flex;
+	flex-direction: column;
+	gap: 0.45rem;
+}
+
+.json-preview {
+	background: #06080f;
+	border-radius: 8px;
+	padding: 0.5rem;
+	font-family: 'JetBrains Mono', 'Fira Code', monospace;
+	font-size: 0.78rem;
+	max-height: 160px;
+	overflow: auto;
+}
+
+.muted {
+	color: var(--muted);
+	font-size: 0.85rem;
+}
