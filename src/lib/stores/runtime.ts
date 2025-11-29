@@ -17,6 +17,11 @@ export const bindingContext = derived([activeBoard, oscValues], ([$board, $osc])
 					entry[key] = binding.value ?? null;
 				}
 			}
+			for (const [key, binding] of Object.entries(widget.meta ?? {})) {
+				if (binding?.kind === 'literal') {
+					entry[`meta.${key}`] = binding.value ?? null;
+				}
+			}
 			widgetValues[widget.id] = entry;
 		});
 	}

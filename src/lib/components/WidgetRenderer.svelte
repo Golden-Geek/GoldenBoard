@@ -1,6 +1,12 @@
 
+
 <script lang="ts">
-	import type { ContainerWidget, SliderWidget, Widget } from '$lib/types/widgets';
+	import SliderWidgetView from '$lib/components/widgets/SliderWidget.svelte';
+	import IntStepperWidgetView from '$lib/components/widgets/IntStepperWidget.svelte';
+	import TextFieldWidgetView from '$lib/components/widgets/TextFieldWidget.svelte';
+	import ColorPickerWidgetView from '$lib/components/widgets/ColorPickerWidget.svelte';
+	import RotaryWidgetView from '$lib/components/widgets/RotaryWidget.svelte';
+	import type { ContainerWidget, SliderWidget, Widget, MetaBindingKey } from '$lib/types/widgets';
 	import { literal, oscBinding, resolveBinding, type Binding, type BindingContext, type BindingValue } from '$lib/types/binding';
 	import { bindingContext } from '$lib/stores/runtime';
 	import {
@@ -32,11 +38,28 @@
 	$: isEditMode = mode === 'edit';
 	const isRemovable = () => widget.id !== rootId;
 
-	const resolveProp = (key: string, fallback = 0): number => {
-		const props = widget.props as Record<string, Binding> | undefined;
-		const binding = props?.[key];
-		const resolved = binding ? resolveBinding(binding, ctx) : undefined;
-		return typeof resolved === 'number' ? resolved : fallback;
+	let metaLabel = widget.label;
+	let metaId = widget.id;
+	let metaType: string = widget.type;
+	$: metaLabel = resolveMetaField('label', widget.label, ctx);
+	$: metaId = resolveMetaField('id', widget.id, ctx);
+	$: metaType = resolveMetaField('type', widget.type, ctx);
+
+	const resolveMetaField = (key: MetaBindingKey, fallback: string, context: BindingContext): string => {
+		const binding = widget.meta?.[key];
+		if (!binding) return fallback;
+		const resolved = resolveBinding(binding, context);
+		if (resolved === null || resolved === undefined) {
+			return fallback;
+		}
+		return String(resolved);
+	};
+
+	const childLabel = (node: Widget, context: BindingContext): string => {
+		const binding = node.meta?.label;
+		if (!binding) return node.label;
+		const resolved = resolveBinding(binding, context);
+		return resolved === null || resolved === undefined ? node.label : String(resolved);
 	};
 
 	const handleValueInput = (next: number | string) => {
@@ -121,7 +144,10 @@
 </script>
 
 <div
-	class={`widget ${isSelected ? 'selected' : ''} ${isEditMode ? 'edit-stage' : 'live-stage'}`}
+	class={`widget ${isSelected ? 'selected' : ''}`}
+	data-mode={isEditMode ? 'edit' : 'live'}
+	data-meta-id={metaId}
+	data-meta-type={metaType}
 	role="button"
 	tabindex="0"
 	on:click={(event) => {
@@ -139,70 +165,31 @@
 	on:dragover={handleDragOver}
 	on:drop={handleDrop}
 >
-	<header>
-		<h4>{widget.label}</h4>
-		{#if isEditMode && isRemovable()}
-			<button class="icon" type="button" aria-label="Remove widget" on:click|stopPropagation={handleRemove}>
-				✕
-			</button>
-		{/if}
-	</header>
+		<header>
+			<h4>{metaLabel}</h4>
+			{#if isEditMode && isRemovable()}
+				<button class="icon" type="button" aria-label="Remove widget" on:click|stopPropagation={handleRemove}>
+					✕
+				</button>
+			{/if}
+		</header>
 
 	{#if widget.type === 'slider'}
-		<div class="control">
-			<input
-				type="range"
-				min={resolveProp('min', 0)}
-				max={resolveProp('max', 1)}
-				step={resolveProp('step', 0.01)}
-				value={Number(value) ?? 0}
-				disabled={isEditMode}
-				on:input={(event) => handleValueInput(parseFloat((event.target as HTMLInputElement).value))}
-			/>
-			<input
-				type="number"
-				value={Number(value) ?? 0}
-				disabled={isEditMode}
-				on:change={(event) => handleValueInput(parseFloat((event.target as HTMLInputElement).value))}
-			/>
-		</div>
+		<SliderWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
 	{:else if widget.type === 'int-stepper'}
-		<div class="control">
-			<input
-				type="number"
-				step={resolveProp('step', 1)}
-				value={Number(value) ?? 0}
-				disabled={isEditMode}
-				on:change={(event) => handleValueInput(parseInt((event.target as HTMLInputElement).value, 10))}
-			/>
-		</div>
+		<IntStepperWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
 	{:else if widget.type === 'text-field'}
-		<div class="control">
-			<input type="text" value={value ?? ''} disabled={isEditMode} on:input={(event) => handleStringInput((event.target as HTMLInputElement).value)} />
-		</div>
+		<TextFieldWidgetView {isEditMode} value={value ?? ''} onInput={handleStringInput} />
 	{:else if widget.type === 'color-picker'}
-		<div class="control">
-			<input type="color" value={(value as string) ?? '#ffffff'} disabled={isEditMode} on:input={(event) => handleStringInput((event.target as HTMLInputElement).value)} />
-		</div>
+		<ColorPickerWidgetView {isEditMode} value={value ?? '#ffffff'} onInput={handleStringInput} />
 	{:else if widget.type === 'rotary'}
-		<div class="rotary">
-			<input
-				type="range"
-				min={resolveProp('min', 0)}
-				max={resolveProp('max', 1)}
-				step={resolveProp('step', 0.01)}
-				value={Number(value) ?? 0}
-				disabled={isEditMode}
-				on:input={(event) => handleValueInput(parseFloat((event.target as HTMLInputElement).value))}
-			/>
-			<span>{Number(value).toFixed(2)}</span>
-		</div>
+		<RotaryWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
 	{:else if containerWidget}
 		<div class={`container-body layout-${containerWidget.layout}`}>
 			{#if containerWidget.layout === 'tabs'}
 				<div class="tabs">
 					{#each containerWidget.children as child}
-						<button class:selected={child.id === selectedTab} on:click={() => (selectedTab = child.id)}>{child.label}</button>
+						<button class:selected={child.id === selectedTab} on:click={() => (selectedTab = child.id)}>{childLabel(child, ctx)}</button>
 					{/each}
 				</div>
 				{#if selectedTab}
@@ -215,7 +202,7 @@
 			{:else if containerWidget.layout === 'accordion'}
 				{#each containerWidget.children as child}
 					<details open>
-						<summary>{child.label}</summary>
+						<summary>{childLabel(child, ctx)}</summary>
 						<svelte:self widget={child} {selectedId} {rootId} />
 					</details>
 				{/each}
@@ -251,22 +238,24 @@
 		padding: 0;
 		border-radius: 999px;
 		font-size: 0.75rem;
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 120ms ease;
 	}
 
-	.widget.edit-stage {
-		outline: 1px dashed rgba(255, 255, 255, 0.05);
+	:global(.widget[data-mode='edit']:hover button.icon) {
+		opacity: 1;
+		pointer-events: auto;
 	}
 
-	.widget.edit-stage input:disabled,
-	.widget.edit-stage .rotary input:disabled {
+	:global(.widget[data-mode='live'] button.icon) {
+		display: none;
+	}
+
+	:global(.widget[data-mode='edit'] input:disabled),
+	:global(.widget[data-mode='edit'] .rotary input:disabled) {
 		opacity: 0.5;
 		cursor: not-allowed;
-	}
-
-	.control {
-		display: flex;
-		gap: 0.4rem;
-		align-items: center;
 	}
 
 	.container-body {
@@ -309,9 +298,5 @@
 		color: #0b0902;
 	}
 
-	.rotary {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-	}
+
 </style>

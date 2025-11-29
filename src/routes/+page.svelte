@@ -4,30 +4,43 @@
 	import BoardCanvas from '$lib/components/BoardCanvas.svelte';
 	import InspectorPanel from '$lib/components/InspectorPanel.svelte';
 	import ModeToggle from '$lib/components/ModeToggle.svelte';
-	import WidgetRenderer from '$lib/components/WidgetRenderer.svelte';
-	import { editorMode } from '$lib/stores/ui';
+	import MainSettingsDialog from '$lib/components/MainSettingsDialog.svelte';
+	import { editorMode, mainSettings } from '$lib/stores/ui';
+	import type { EditorMode } from '$lib/stores/ui';
 	import { activeBoard } from '$lib/stores/boards';
 
+	let mode: EditorMode = 'edit';
+	let settingsOpen = false;
+	let boardCss = '';
+	let globalCss = '';
 	$: mode = $editorMode;
-	const isLive = () => mode === 'live';
+	$: isLive = mode === 'live';
+	$: showLiveBoards = $mainSettings.showLiveBoards;
+	$: globalCss = $mainSettings.globalCss;
+	$: boardCss = $activeBoard?.css ?? '';
 </script>
+
+<svelte:head>
+	{#if globalCss.trim()}
+		<style id="goldenboard-global-css">{globalCss}</style>
+	{/if}
+	{#if boardCss.trim()}
+		<style id="goldenboard-board-css">{boardCss}</style>
+	{/if}
+</svelte:head>
 
 <div class={`app-root mode-${mode}`}>
 	<ModeToggle />
-	{#if !isLive()}
-		<Toolbar />
+	{#if !isLive}
+		<Toolbar on:openSettings={() => (settingsOpen = true)} />
 	{/if}
 
-	{#if isLive()}
-		<div class="live-stage">
-			{#if $activeBoard}
-				<WidgetRenderer widget={$activeBoard.root} selectedId={undefined} rootId={$activeBoard.root.id} />
-			{:else}
-				<p class="muted">No board selected.</p>
-			{/if}
-		</div>
-	{:else}
-		<div class="workspace workspace-edit">
+	<div class={`workspace ${isLive ? 'workspace-live' : 'workspace-edit'}`}>
+		{#if isLive}
+			<main class="canvas-wrapper live-only">
+				<BoardCanvas showHeader={showLiveBoards} showPanel={false} />
+			</main>
+		{:else}
 			<aside class="panel-column">
 				<OscTreePanel />
 			</aside>
@@ -37,6 +50,7 @@
 			<aside class="panel-column">
 				<InspectorPanel />
 			</aside>
-		</div>
-	{/if}
+		{/if}
+	</div>
+	<MainSettingsDialog bind:open={settingsOpen} />
 </div>

@@ -1,10 +1,14 @@
 <script lang="ts">
+	import { createEventDispatcher } from 'svelte';
 	import WidgetToolbar from '$lib/components/WidgetToolbar.svelte';
 	import { exportActiveBoard, importBoard } from '$lib/stores/boards';
 
 	let fileInput: HTMLInputElement;
+	const dispatch = createEventDispatcher();
 
 	const uploadBoard = () => fileInput.click();
+
+	const openSettings = () => dispatch('openSettings');
 
 	const handleImport = async (event: Event) => {
 		const input = event.target as HTMLInputElement;
@@ -29,14 +33,17 @@
 
 <div class="toolbar-shell">
 	<div class="meta-toolbar single-line">
-		<div class="brand" aria-label="Golden Board">
-			<span>Golden Board</span>
+		<div class="brand-row">
+			<div class="brand" aria-label="Golden Board">
+				<span>Golden Board</span>
+			</div>
+			<div class="actions">
+				<button on:click={openSettings} type="button" title="Open main settings">Main Settings</button>
+				<button on:click={uploadBoard} type="button" title="Import board">Import</button>
+				<button on:click={handleExport} type="button" title="Export board">Export</button>
+			</div>
 		</div>
 		<WidgetToolbar iconOnly />
-		<div class="actions">
-			<button on:click={uploadBoard} type="button" title="Import board">Import</button>
-			<button on:click={handleExport} type="button" title="Export board">Export</button>
-		</div>
 	</div>
 	<input bind:this={fileInput} type="file" accept="application/json" hidden on:change={handleImport} />
 </div>
@@ -50,8 +57,15 @@
 	.meta-toolbar.single-line {
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
 		gap: 0.75rem;
-		padding: 0.35rem 1rem;
+		padding: 0.35rem 4rem 0.35rem 1rem;
+	}
+
+	.brand-row {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
 	}
 
 	.brand {
@@ -62,9 +76,8 @@
 	}
 
 	.actions {
-		display: flex;
-		gap: 0.3rem;
-		margin-left: auto;
+		display: inline-flex;
+		gap: 0.35rem;
 	}
 
 	.actions button {

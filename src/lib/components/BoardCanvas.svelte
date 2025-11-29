@@ -5,6 +5,9 @@
 
 	let boards: Board[] = [];
 	let activeBoardId = '';
+	export let showHeader = true;
+	export let showPanel = true;
+	$: containerClass = showPanel ? 'panel canvas-panel' : 'canvas-panel bare';
 
 	$: boards = $boardsStore.boards;
 	$: activeBoardId = $boardsStore.activeBoardId ?? '';
@@ -13,20 +16,22 @@
 	const createBoard = () => addBoard();
 </script>
 
-<div class="panel canvas-panel">
-	<div class="board-switcher" role="tablist" aria-label="Boards">
-		{#each boards as board}
-			<button
-				type="button"
-				class:selected={board.id === activeBoardId}
-				aria-pressed={board.id === activeBoardId}
-				on:click={() => handleSelectBoard(board.id)}
-			>
-				{board.name}
-			</button>
-		{/each}
-		<button type="button" class="ghost add-board" on:click={createBoard} title="Add board">+</button>
-	</div>
+<div class={containerClass}>
+	{#if showHeader}
+		<div class="board-switcher" role="tablist" aria-label="Boards">
+			{#each boards as board}
+				<button
+					type="button"
+					class:selected={board.id === activeBoardId}
+					aria-pressed={board.id === activeBoardId}
+					on:click={() => handleSelectBoard(board.id)}
+				>
+					{board.name}
+				</button>
+			{/each}
+			<button type="button" class="ghost add-board" on:click={createBoard} title="Add board">+</button>
+		</div>
+	{/if}
 	{#if $activeBoard}
 		<div
 			class="board-canvas"
@@ -47,6 +52,13 @@
 </div>
 
 <style>
+	.canvas-panel.bare {
+		background: transparent;
+		border: none;
+		box-shadow: none;
+		padding: 0;
+	}
+
 	.board-switcher {
 		display: flex;
 		align-items: center;

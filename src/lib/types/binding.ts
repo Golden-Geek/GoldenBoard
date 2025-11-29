@@ -12,7 +12,45 @@ export interface BindingContext {
 	functions: Record<string, string>;
 }
 
-const expressionCache = new Map<string, (context: Record<string, unknown>) => BindingValue>();
+type ExpressionFn = (context: Record<string, unknown>) => BindingValue;
+type ExpressionCacheEntry = { fn: ExpressionFn } | { error: Error };
+
+const expressionCache = new Map<string, ExpressionCacheEntry>();
+
+function annotateExpressionError(error: unknown, code: string): Error {
+	const err = error instanceof Error ? error : new Error(String(error));
+	Object.defineProperty(err, 'bindingCode', {
+		value: code,
+		configurable: true,
+		enumerable: false,
+		writable: true
+	});
+	return err;
+}
+
+function compileExpression(code: string): ExpressionFn {
+	const cached = expressionCache.get(code);
+	if (cached) {
+		if ('fn' in cached) {
+			return cached.fn;
+		}
+		throw cached.error;
+	}
+	if (!code.trim()) {
+		const error = annotateExpressionError(new SyntaxError('Empty expression'), code);
+		expressionCache.set(code, { error });
+		throw error;
+	}
+	try {
+		const fn = new Function('context', `with (context) { return (${code}); }`) as ExpressionFn;
+		expressionCache.set(code, { fn });
+		return fn;
+	} catch (error) {
+		const annotated = annotateExpressionError(error, code);
+		expressionCache.set(code, { error: annotated });
+		throw annotated;
+	}
+}
 
 export function resolveBinding(binding: Binding, context: BindingContext): BindingValue {
 	switch (binding.kind) {
@@ -48,17 +86,28 @@ function buildExecutionContext(
 
 function runExpression(code: string, context: Record<string, unknown>): BindingValue {
 	try {
-		let fn = expressionCache.get(code);
-		if (!fn) {
-			fn = new Function('context', `with (context) { return (${code}); }`) as (
-				ctx: Record<string, unknown>
-			) => BindingValue;
-			expressionCache.set(code, fn);
-		}
+		const fn = compileExpression(code);
 		return fn(context);
 	} catch (error) {
-		console.error('Binding expression failed', error);
+		if (error instanceof Error) {
+			const reported = Reflect.get(error, 'bindingReported');
+			if (!reported) {
+				console.error('Binding expression failed', error);
+				Reflect.set(error, 'bindingReported', true);
+			}
+		} else {
+			console.error('Binding expression failed', error);
+		}
 		return null;
+	}
+}
+
+export function isExpressionValid(code: string): boolean {
+	try {
+		compileExpression(code);
+		return true;
+	} catch {
+		return false;
 	}
 }
 

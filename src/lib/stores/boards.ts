@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import { derived, get, writable } from 'svelte/store';
-import { literal, oscBinding, type Binding, type BindingValue } from '$lib/types/binding';
+import { isExpressionValid, literal, oscBinding, type Binding, type BindingValue } from '$lib/types/binding';
 import type { Board, BoardsState } from '$lib/types/board';
 import type { Widget, WidgetKind, WidgetTemplate, ContainerWidget } from '$lib/types/widgets';
 import { createId } from '$lib/utils/ids';
@@ -35,18 +35,18 @@ function loadState(): BoardsState {
 		const raw = localStorage.getItem(STORAGE_KEY);
 		if (raw) {
 			try {
-				return JSON.parse(raw) as BoardsState;
+				return normalizeState(JSON.parse(raw) as BoardsState);
 			} catch (error) {
 				console.warn('Failed to parse board state', error);
 			}
 		}
 	}
 	const board = createDefaultBoard();
-	return {
+	return normalizeState({
 		boards: [board],
 		activeBoardId: board.id,
 		selection: { boardId: board.id, widgetId: board.root.id }
-	};
+	});
 }
 
 export const boardsStore = writable<BoardsState>(loadState());
@@ -144,7 +144,11 @@ export function addWidgetToBoard(kind: WidgetKind, parentId?: string): void {
 export function insertWidgetInstance(widget: Widget, parentId?: string): void {
 	boardsStore.update((state) => {
 		const board = findRoot(state, state.activeBoardId);
-		const updatedBoard = placeWidget(board, widget, parentId ?? state.selection?.widgetId);
+		const updatedBoard = placeWidget(
+			board,
+			ensureMeta(structuredClone(widget)),
+			parentId ?? state.selection?.widgetId
+		);
 		return attachBoard(state, updatedBoard);
 	});
 }
@@ -152,7 +156,7 @@ export function insertWidgetInstance(widget: Widget, parentId?: string): void {
 export function updateWidgetBindings(widgetId: string, mapper: (props: Widget) => Widget): void {
 	boardsStore.update((state) => {
 		const board = findRoot(state, state.activeBoardId);
-		const updated = updateWidget(board, widgetId, mapper);
+		const updated = updateWidget(board, widgetId, (widget) => sanitizeWidget(mapper(widget)));
 		return attachBoard(state, updated);
 	});
 }
@@ -183,7 +187,13 @@ export function renameWidgetId(widgetId: string, nextId: string): void {
 		if (!target || widgetId === trimmed) return state;
 		const collision = findWidget(board, trimmed);
 		if (collision) return state;
-		const updatedBoard = updateWidget(board, widgetId, (current) => ({ ...current, id: trimmed } as Widget));
+		const updatedBoard = updateWidget(board, widgetId, (current) => {
+			const meta = { ...(current.meta ?? {}) };
+			if (meta.id?.kind === 'literal') {
+				meta.id = literal(trimmed);
+			}
+			return { ...current, id: trimmed, meta } as Widget;
+		});
 		const nextSelection = state.selection && state.selection.widgetId === widgetId
 			? { ...state.selection, widgetId: trimmed }
 			: state.selection;
@@ -197,7 +207,8 @@ export function registerCustomWidget(template: WidgetTemplate): void {
 		const normalized: WidgetTemplate = {
 			...template,
 			id: template.id ?? createId('custom-template'),
-			summary: template.summary ?? template.type
+			summary: template.summary ?? template.type,
+			payload: sanitizeWidget(ensureMeta(structuredClone(template.payload)))
 		};
 		const next: Board = { ...board, customWidgets: [...board.customWidgets, normalized] };
 		return attachBoard(state, next);
@@ -231,10 +242,11 @@ export function importBoard(json: string): void {
 		if (!board.id) {
 			board.id = createId('board');
 		}
+		const normalized = normalizeBoard(board);
 		boardsStore.update((state) => ({
-			boards: [...state.boards, board],
-			activeBoardId: board.id,
-			selection: { boardId: board.id, widgetId: board.root.id }
+			boards: [...state.boards, normalized],
+			activeBoardId: normalized.id,
+			selection: { boardId: normalized.id, widgetId: normalized.root.id }
 		}));
 	} catch (error) {
 		console.error('Invalid board json', error);
@@ -363,6 +375,67 @@ function ensureMeta<T extends Widget>(widget: T): T {
 		const container = next as typeof next & { children: Widget[] };
 		container.children = container.children.map((child) => ensureMeta(child));
 		return container;
+	}
+	return next;
+}
+
+function normalizeBoard(board: Board): Board {
+	return {
+		...board,
+		root: sanitizeWidget(ensureMeta(board.root)),
+		customWidgets: (board.customWidgets ?? []).map((template) => ({
+			...template,
+			payload: sanitizeWidget(ensureMeta(template.payload))
+		})),
+		sharedProps: sanitizeBindingRecord(board.sharedProps ?? {}, `${board.id}.sharedProps`, null)
+	};
+}
+
+function normalizeState(state: BoardsState): BoardsState {
+	return {
+		...state,
+		boards: state.boards.map((board) => normalizeBoard(board))
+	};
+}
+
+function sanitizeBinding(
+	binding: Binding | undefined,
+	location: string,
+	fallback: BindingValue | undefined = undefined
+): Binding {
+	if (!binding) {
+		return literal(fallback ?? '');
+	}
+	if (binding.kind === 'expression' && !isExpressionValid(binding.code)) {
+		console.warn(`Invalid expression binding at ${location}. Falling back to literal value.`);
+		const value = fallback ?? binding.code ?? '';
+		return literal(value);
+	}
+	return binding;
+}
+
+function sanitizeBindingRecord(
+	record: Record<string, Binding>,
+	location: string,
+	fallback: BindingValue | undefined = undefined
+): Record<string, Binding> {
+	const entries = Object.entries(record).map(([key, binding]) => [key, sanitizeBinding(binding, `${location}.${key}`, fallback)] as const);
+	return Object.fromEntries(entries);
+}
+
+function sanitizeWidget<T extends Widget>(widget: T, location = widget.id): T {
+	const next = structuredClone(widget) as T;
+	next.value = sanitizeBinding(next.value, `${location}.value`, null);
+	next.props = sanitizeBindingRecord(next.props ?? {}, `${location}.props`, null);
+	if (next.meta) {
+		const metaEntries = Object.entries(next.meta).map(([key, binding]) => {
+			const fallback = key === 'label' ? next.label : key === 'id' ? next.id : key === 'type' ? next.type : undefined;
+			return [key, sanitizeBinding(binding!, `${location}.meta.${key}`, fallback)] as const;
+		});
+		next.meta = Object.fromEntries(metaEntries);
+	}
+	if (next.type === 'container') {
+		next.children = next.children.map((child) => sanitizeWidget(child, `${location}.${child.id}`));
 	}
 	return next;
 }
