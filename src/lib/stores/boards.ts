@@ -10,7 +10,7 @@ import { pushOscValue } from '$lib/stores/oscquery';
 const STORAGE_KEY = 'goldenboard:boards';
 
 function createDefaultBoard(): Board {
-	const root: ContainerWidget = {
+	const root = ensureMeta<ContainerWidget>({
 		id: createId('container'),
 		type: 'container',
 		label: 'Root',
@@ -19,7 +19,7 @@ function createDefaultBoard(): Board {
 		layout: 'vertical',
 		css: '',
 		children: [createWidget('slider'), createWidget('text-field')]
-	};
+	});
 	return {
 		id: createId('board'),
 		name: 'Main Board',
@@ -88,7 +88,7 @@ export function addBoard(name = 'New Board'): void {
 			id: createId('board'),
 			name,
 			css: '',
-			root: {
+			root: ensureMeta<ContainerWidget>({
 				id: createId('container'),
 				type: 'container',
 				label: 'Root',
@@ -97,7 +97,7 @@ export function addBoard(name = 'New Board'): void {
 				layout: 'vertical',
 				children: [],
 				css: ''
-			},
+			}),
 			customWidgets: [],
 			sharedProps: {}
 		};
@@ -105,6 +105,22 @@ export function addBoard(name = 'New Board'): void {
 			boards: [...state.boards, board],
 			activeBoardId: board.id,
 			selection: { boardId: board.id, widgetId: board.root.id }
+		};
+	});
+}
+
+export function removeBoard(boardId: string): void {
+	boardsStore.update((state) => {
+		if (state.boards.length === 1) {
+			return state;
+		}
+		const boards = state.boards.filter((board) => board.id !== boardId);
+		const nextActive = boardId === state.activeBoardId ? boards[0].id : state.activeBoardId;
+		const nextBoard = boards.find((board) => board.id === nextActive) ?? boards[0];
+		return {
+			boards,
+			activeBoardId: nextBoard.id,
+			selection: { boardId: nextBoard.id, widgetId: nextBoard.root.id }
 		};
 	});
 }
@@ -158,6 +174,23 @@ export function updateBoardCss(css: string): void {
 	});
 }
 
+export function renameWidgetId(widgetId: string, nextId: string): void {
+	const trimmed = nextId.trim();
+	if (!trimmed) return;
+	boardsStore.update((state) => {
+		const board = findRoot(state, state.activeBoardId);
+		const target = findWidget(board, widgetId);
+		if (!target || widgetId === trimmed) return state;
+		const collision = findWidget(board, trimmed);
+		if (collision) return state;
+		const updatedBoard = updateWidget(board, widgetId, (current) => ({ ...current, id: trimmed } as Widget));
+		const nextSelection = state.selection && state.selection.widgetId === widgetId
+			? { ...state.selection, widgetId: trimmed }
+			: state.selection;
+		return { ...attachBoard(state, updatedBoard), selection: nextSelection };
+	});
+}
+
 export function registerCustomWidget(template: WidgetTemplate): void {
 	boardsStore.update((state) => {
 		const board = findRoot(state, state.activeBoardId);
@@ -167,6 +200,17 @@ export function registerCustomWidget(template: WidgetTemplate): void {
 			summary: template.summary ?? template.type
 		};
 		const next: Board = { ...board, customWidgets: [...board.customWidgets, normalized] };
+		return attachBoard(state, next);
+	});
+}
+
+export function removeCustomWidgetTemplate(templateId: string): void {
+	boardsStore.update((state) => {
+		const board = findRoot(state, state.activeBoardId);
+		const next: Board = {
+			...board,
+			customWidgets: board.customWidgets.filter((template) => template.id !== templateId)
+		};
 		return attachBoard(state, next);
 	});
 }
@@ -235,7 +279,7 @@ function placeWidget(board: Board, widget: Widget, targetId?: string): Board {
 export function createWidget(kind: WidgetKind): Widget {
 	switch (kind) {
 		case 'container':
-			return {
+			return ensureMeta({
 				id: createId('container'),
 				type: 'container',
 				label: 'Container',
@@ -244,9 +288,9 @@ export function createWidget(kind: WidgetKind): Widget {
 				layout: 'vertical',
 				css: '',
 				children: []
-			};
+			});
 		case 'slider':
-			return {
+			return ensureMeta({
 				id: createId('slider'),
 				type: 'slider',
 				label: 'Slider',
@@ -257,9 +301,9 @@ export function createWidget(kind: WidgetKind): Widget {
 					step: literal(0.01)
 				},
 				css: ''
-			};
+			});
 		case 'int-stepper':
-			return {
+			return ensureMeta({
 				id: createId('stepper'),
 				type: 'int-stepper',
 				label: 'Stepper',
@@ -268,9 +312,9 @@ export function createWidget(kind: WidgetKind): Widget {
 					step: literal(1)
 				},
 				css: ''
-			};
+			});
 		case 'text-field':
-			return {
+			return ensureMeta({
 				id: createId('text'),
 				type: 'text-field',
 				label: 'Text',
@@ -280,9 +324,9 @@ export function createWidget(kind: WidgetKind): Widget {
 					decimals: literal(2)
 				},
 				css: ''
-			};
+			});
 		case 'color-picker':
-			return {
+			return ensureMeta({
 				id: createId('color'),
 				type: 'color-picker',
 				label: 'Color',
@@ -291,9 +335,9 @@ export function createWidget(kind: WidgetKind): Widget {
 					model: literal('hex')
 				},
 				css: ''
-			};
+			});
 		case 'rotary':
-			return {
+			return ensureMeta({
 				id: createId('rotary'),
 				type: 'rotary',
 				label: 'Rotary',
@@ -304,6 +348,21 @@ export function createWidget(kind: WidgetKind): Widget {
 					step: literal(0.01)
 				},
 				css: ''
-			};
+			});
 	}
+}
+
+function ensureMeta<T extends Widget>(widget: T): T {
+	const meta = {
+		id: widget.meta?.id ?? literal(widget.id),
+		label: widget.meta?.label ?? literal(widget.label),
+		type: widget.meta?.type ?? literal(widget.type)
+	};
+	const next = { ...widget, meta } as T;
+	if (next.type === 'container') {
+		const container = next as typeof next & { children: Widget[] };
+		container.children = container.children.map((child) => ensureMeta(child));
+		return container;
+	}
+	return next;
 }

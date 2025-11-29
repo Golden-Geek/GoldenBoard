@@ -17,6 +17,8 @@ export type WidgetKind =
 	| 'color-picker'
 	| 'rotary';
 
+export type MetaBindingKey = 'id' | 'type' | 'label';
+
 export interface WidgetBase {
 	id: string;
 	type: WidgetKind;
@@ -24,6 +26,7 @@ export interface WidgetBase {
 	value: Binding;
 	props: Record<string, Binding>;
 	css?: string;
+	meta?: Partial<Record<MetaBindingKey, Binding>>;
 }
 
 export interface ContainerWidget extends WidgetBase {

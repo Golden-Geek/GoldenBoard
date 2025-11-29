@@ -1,12 +1,8 @@
 <script lang="ts">
-	import { addBoard, boardsStore, exportActiveBoard, importBoard, selectBoard } from '$lib/stores/boards';
-	import { connectOsc, oscEndpoint, oscStatus } from '$lib/stores/oscquery';
+	import WidgetToolbar from '$lib/components/WidgetToolbar.svelte';
+	import { exportActiveBoard, importBoard } from '$lib/stores/boards';
 
 	let fileInput: HTMLInputElement;
-	let endpoint = '';
-	$: endpoint = $oscEndpoint;
-	let selectedBoardId = '';
-	$: selectedBoardId = $boardsStore.activeBoardId;
 
 	const uploadBoard = () => fileInput.click();
 
@@ -29,79 +25,51 @@
 		URL.revokeObjectURL(link.href);
 	};
 
-	const handleConnect = () => {
-		oscEndpoint.set(endpoint);
-		connectOsc(endpoint);
-	};
-
-	const handleBoardChange = (event: Event) => {
-		const value = (event.target as HTMLSelectElement).value;
-		selectedBoardId = value;
-		selectBoard(value);
-	};
-
-	const handleEndpointInput = (event: Event) => {
-		endpoint = (event.target as HTMLInputElement).value;
-		oscEndpoint.set(endpoint);
-	};
 </script>
 
-<div class="toolbar">
-	<div class="board-controls">
-		<label>
-			<span class="section-title">Boards</span>
-			<select value={selectedBoardId} on:change={handleBoardChange}>
-				{#each $boardsStore.boards as board}
-					<option value={board.id}>{board.name}</option>
-				{/each}
-			</select>
-		</label>
-		<button class="primary" on:click={() => addBoard()}>+ Board</button>
-	</div>
-
-	<div class="toolbar-actions">
-		<button on:click={uploadBoard}>Import JSON</button>
-		<button on:click={handleExport}>Export JSON</button>
-		<button class="ghost" on:click={handleConnect}>Connect OSC</button>
-		<input
-			value={endpoint}
-			type="text"
-			placeholder="http://localhost:53000"
-			aria-label="OSC Endpoint"
-			on:input={handleEndpointInput}
-		/>
-		<span class={`status ${$oscStatus}`}>{$oscStatus}</span>
+<div class="toolbar-shell">
+	<div class="meta-toolbar single-line">
+		<div class="brand" aria-label="Golden Board">
+			<span>Golden Board</span>
+		</div>
+		<WidgetToolbar iconOnly />
+		<div class="actions">
+			<button on:click={uploadBoard} type="button" title="Import board">Import</button>
+			<button on:click={handleExport} type="button" title="Export board">Export</button>
+		</div>
 	</div>
 	<input bind:this={fileInput} type="file" accept="application/json" hidden on:change={handleImport} />
 </div>
 
 <style>
-	.board-controls {
+	.toolbar-shell {
+		background: rgba(5, 7, 12, 0.92);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+	}
+
+	.meta-toolbar.single-line {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.75rem;
+		padding: 0.35rem 1rem;
 	}
 
-	.toolbar-actions {
+	.brand {
+		font-size: 0.7rem;
+		letter-spacing: 0.3em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+
+	.actions {
 		display: flex;
-		align-items: center;
-		gap: 0.5rem;
+		gap: 0.3rem;
+		margin-left: auto;
 	}
 
-	.status {
-		padding: 0.2rem 0.6rem;
-		border-radius: 999px;
-		text-transform: capitalize;
-		font-size: 0.8rem;
-	}
-
-	.status.connected {
-		background: rgba(104, 217, 164, 0.2);
-		color: #79f7c1;
-	}
-
-	.status.error {
-		background: rgba(255, 107, 107, 0.15);
-		color: var(--danger);
+	.actions button {
+		padding: 0.25rem 0.65rem;
+		font-size: 0.75rem;
+		letter-spacing: 0.08em;
 	}
 </style>

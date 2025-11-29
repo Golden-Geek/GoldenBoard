@@ -1,3 +1,4 @@
+
 <script lang="ts">
 	import type { ContainerWidget, SliderWidget, Widget } from '$lib/types/widgets';
 	import { literal, oscBinding, resolveBinding, type Binding, type BindingContext, type BindingValue } from '$lib/types/binding';
@@ -7,12 +8,15 @@
 		propagateWidgetValue,
 		selectWidget,
 		setWidgetLiteralValue,
-		updateWidgetBindings
+		removeWidgetFromBoard
 	} from '$lib/stores/boards';
 	import { createId } from '$lib/utils/ids';
+	import { editorMode } from '$lib/stores/ui';
+	import type { EditorMode } from '$lib/stores/ui';
 
 	export let widget: Widget;
 	export let selectedId: string | undefined;
+	export let rootId: string;
 
 	let ctx: BindingContext = { oscValues: {}, widgetValues: {}, functions: {} };
 	$: ctx = $bindingContext;
@@ -23,6 +27,11 @@
 	let isSelected = false;
 	$: isSelected = widget.id === selectedId;
 
+	let mode: EditorMode = 'edit';
+	$: mode = $editorMode;
+	$: isEditMode = mode === 'edit';
+	const isRemovable = () => widget.id !== rootId;
+
 	const resolveProp = (key: string, fallback = 0): number => {
 		const props = widget.props as Record<string, Binding> | undefined;
 		const binding = props?.[key];
@@ -31,6 +40,7 @@
 	};
 
 	const handleValueInput = (next: number | string) => {
+		if (isEditMode) return;
 		if (typeof next === 'number' && Number.isNaN(next)) {
 			return;
 		}
@@ -42,11 +52,18 @@
 	};
 
 	const handleStringInput = (next: string) => {
+		if (isEditMode) return;
 		if (widget.value.kind === 'literal') {
 			setWidgetLiteralValue(widget.id, next);
 		} else {
 			propagateWidgetValue(widget.id, widget.value, next);
 		}
+	};
+
+	const handleRemove = (event: Event) => {
+		event.stopPropagation();
+		if (!isRemovable()) return;
+		removeWidgetFromBoard(widget.id);
 	};
 
 	const handleDrop = (event: DragEvent) => {
@@ -101,24 +118,20 @@
 		css: ''
 	};
 
-	const handleLayoutChange = (layout: ContainerWidget['layout']) => {
-		updateWidgetBindings(widget.id, (current) => {
-			if (current.type !== 'container') return current;
-			return { ...current, layout } as Widget;
-		});
-	};
 </script>
 
 <div
-	class={`widget ${isSelected ? 'selected' : ''}`}
+	class={`widget ${isSelected ? 'selected' : ''} ${isEditMode ? 'edit-stage' : 'live-stage'}`}
 	role="button"
 	tabindex="0"
 	on:click={(event) => {
+		if (!isEditMode) return;
 		event.stopPropagation();
 		selectWidget(widget.id);
 	}}
 	on:keydown={(event) => {
 		if (event.key === 'Enter' || event.key === ' ') {
+			if (!isEditMode) return;
 			event.preventDefault();
 			selectWidget(widget.id);
 		}
@@ -128,16 +141,10 @@
 >
 	<header>
 		<h4>{widget.label}</h4>
-		{#if containerWidget}
-			<select value={containerWidget.layout} on:change={(event) => handleLayoutChange((event.target as HTMLSelectElement).value as ContainerWidget['layout'])}>
-				<option value="horizontal">Horizontal</option>
-				<option value="vertical">Vertical</option>
-				<option value="fixed-grid">Fixed Grid</option>
-				<option value="smart-grid">Smart Grid</option>
-				<option value="free">Free</option>
-				<option value="tabs">Tabs</option>
-				<option value="accordion">Accordion</option>
-			</select>
+		{#if isEditMode && isRemovable()}
+			<button class="icon" type="button" aria-label="Remove widget" on:click|stopPropagation={handleRemove}>
+				✕
+			</button>
 		{/if}
 	</header>
 
@@ -149,11 +156,13 @@
 				max={resolveProp('max', 1)}
 				step={resolveProp('step', 0.01)}
 				value={Number(value) ?? 0}
+				disabled={isEditMode}
 				on:input={(event) => handleValueInput(parseFloat((event.target as HTMLInputElement).value))}
 			/>
 			<input
 				type="number"
 				value={Number(value) ?? 0}
+				disabled={isEditMode}
 				on:change={(event) => handleValueInput(parseFloat((event.target as HTMLInputElement).value))}
 			/>
 		</div>
@@ -163,16 +172,17 @@
 				type="number"
 				step={resolveProp('step', 1)}
 				value={Number(value) ?? 0}
+				disabled={isEditMode}
 				on:change={(event) => handleValueInput(parseInt((event.target as HTMLInputElement).value, 10))}
 			/>
 		</div>
 	{:else if widget.type === 'text-field'}
 		<div class="control">
-			<input type="text" value={value ?? ''} on:input={(event) => handleStringInput((event.target as HTMLInputElement).value)} />
+			<input type="text" value={value ?? ''} disabled={isEditMode} on:input={(event) => handleStringInput((event.target as HTMLInputElement).value)} />
 		</div>
 	{:else if widget.type === 'color-picker'}
 		<div class="control">
-			<input type="color" value={(value as string) ?? '#ffffff'} on:input={(event) => handleStringInput((event.target as HTMLInputElement).value)} />
+			<input type="color" value={(value as string) ?? '#ffffff'} disabled={isEditMode} on:input={(event) => handleStringInput((event.target as HTMLInputElement).value)} />
 		</div>
 	{:else if widget.type === 'rotary'}
 		<div class="rotary">
@@ -182,6 +192,7 @@
 				max={resolveProp('max', 1)}
 				step={resolveProp('step', 0.01)}
 				value={Number(value) ?? 0}
+				disabled={isEditMode}
 				on:input={(event) => handleValueInput(parseFloat((event.target as HTMLInputElement).value))}
 			/>
 			<span>{Number(value).toFixed(2)}</span>
@@ -197,7 +208,7 @@
 				{#if selectedTab}
 					{#each containerWidget.children as child}
 						{#if child.id === selectedTab}
-							<svelte:self widget={child} {selectedId} />
+							<svelte:self widget={child} {selectedId} {rootId} />
 						{/if}
 					{/each}
 				{/if}
@@ -205,12 +216,12 @@
 				{#each containerWidget.children as child}
 					<details open>
 						<summary>{child.label}</summary>
-						<svelte:self widget={child} {selectedId} />
+						<svelte:self widget={child} {selectedId} {rootId} />
 					</details>
 				{/each}
 			{:else}
 				{#each containerWidget.children as child}
-					<svelte:self widget={child} {selectedId} />
+					<svelte:self widget={child} {selectedId} {rootId} />
 				{/each}
 			{/if}
 		</div>
@@ -224,6 +235,32 @@
 		justify-content: space-between;
 		gap: 0.5rem;
 		margin-bottom: 0.5rem;
+	}
+
+	.widget header h4 {
+		margin: 0;
+		font-size: 0.92rem;
+	}
+
+	button.icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		padding: 0;
+		border-radius: 999px;
+		font-size: 0.75rem;
+	}
+
+	.widget.edit-stage {
+		outline: 1px dashed rgba(255, 255, 255, 0.05);
+	}
+
+	.widget.edit-stage input:disabled,
+	.widget.edit-stage .rotary input:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	.control {
