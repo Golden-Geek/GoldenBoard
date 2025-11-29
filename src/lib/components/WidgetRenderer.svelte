@@ -13,8 +13,7 @@
 		insertWidgetInstance,
 		propagateWidgetValue,
 		selectWidget,
-		setWidgetLiteralValue,
-		removeWidgetFromBoard
+		setWidgetLiteralValue
 	} from '$lib/stores/boards';
 	import { createId } from '$lib/utils/ids';
 	import { editorMode } from '$lib/stores/ui';
@@ -36,7 +35,6 @@
 	let mode: EditorMode = 'edit';
 	$: mode = $editorMode;
 	$: isEditMode = mode === 'edit';
-	const isRemovable = () => widget.id !== rootId;
 
 	let metaLabel = widget.label;
 	let metaId = widget.id;
@@ -81,12 +79,6 @@
 		} else {
 			propagateWidgetValue(widget.id, widget.value, next);
 		}
-	};
-
-	const handleRemove = (event: Event) => {
-		event.stopPropagation();
-		if (!isRemovable()) return;
-		removeWidgetFromBoard(widget.id);
 	};
 
 	const handleDrop = (event: DragEvent) => {
@@ -165,26 +157,10 @@
 	on:dragover={handleDragOver}
 	on:drop={handleDrop}
 >
-		<header>
+	{#if containerWidget}
+		<div class="widget-header">
 			<h4>{metaLabel}</h4>
-			{#if isEditMode && isRemovable()}
-				<button class="icon" type="button" aria-label="Remove widget" on:click|stopPropagation={handleRemove}>
-					✕
-				</button>
-			{/if}
-		</header>
-
-	{#if widget.type === 'slider'}
-		<SliderWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
-	{:else if widget.type === 'int-stepper'}
-		<IntStepperWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
-	{:else if widget.type === 'text-field'}
-		<TextFieldWidgetView {isEditMode} value={value ?? ''} onInput={handleStringInput} />
-	{:else if widget.type === 'color-picker'}
-		<ColorPickerWidgetView {isEditMode} value={value ?? '#ffffff'} onInput={handleStringInput} />
-	{:else if widget.type === 'rotary'}
-		<RotaryWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
-	{:else if containerWidget}
+		</div>
 		<div class={`container-body layout-${containerWidget.layout}`}>
 			{#if containerWidget.layout === 'tabs'}
 				<div class="tabs">
@@ -212,44 +188,58 @@
 				{/each}
 			{/if}
 		</div>
+	{:else}
+		<div class="widget-inline">
+			<span class="widget-label">{metaLabel}</span>
+			<div class="widget-control">
+				{#if widget.type === 'slider'}
+					<SliderWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
+				{:else if widget.type === 'int-stepper'}
+					<IntStepperWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
+				{:else if widget.type === 'text-field'}
+					<TextFieldWidgetView {isEditMode} value={value ?? ''} onInput={handleStringInput} />
+				{:else if widget.type === 'color-picker'}
+					<ColorPickerWidgetView {isEditMode} value={value ?? '#ffffff'} onInput={handleStringInput} />
+				{:else if widget.type === 'rotary'}
+					<RotaryWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
+				{/if}
+			</div>
+		</div>
 	{/if}
 </div>
 
 <style>
-	.widget header {
+	.widget-header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.5rem;
-		margin-bottom: 0.5rem;
+		margin-bottom: 0.35rem;
 	}
 
-	.widget header h4 {
+	.widget-header h4 {
 		margin: 0;
-		font-size: 0.92rem;
+		font-size: 0.88rem;
+		font-weight: 600;
 	}
 
-	button.icon {
-		display: inline-flex;
+	.widget-inline {
+		display: flex;
 		align-items: center;
-		justify-content: center;
-		width: 24px;
-		height: 24px;
-		padding: 0;
-		border-radius: 999px;
-		font-size: 0.75rem;
-		opacity: 0;
-		pointer-events: none;
-		transition: opacity 120ms ease;
+		gap: 0.6rem;
 	}
 
-	:global(.widget[data-mode='edit']:hover button.icon) {
-		opacity: 1;
-		pointer-events: auto;
+	.widget-label {
+		font-size: 0.72rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--muted);
+		flex: 0 0 130px;
+		white-space: nowrap;
 	}
 
-	:global(.widget[data-mode='live'] button.icon) {
-		display: none;
+	.widget-control {
+		flex: 1;
+		min-width: 0;
 	}
 
 	:global(.widget[data-mode='edit'] input:disabled),

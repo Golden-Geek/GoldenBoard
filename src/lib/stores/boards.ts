@@ -8,6 +8,19 @@ import { findWidget, insertIntoContainer, removeWidget, updateWidget } from '$li
 import { pushOscValue } from '$lib/stores/oscquery';
 
 const STORAGE_KEY = 'goldenboard:boards';
+const HISTORY_LIMIT = 50;
+const undoStack: BoardsState[] = [];
+const redoStack: BoardsState[] = [];
+let suppressHistory = false;
+
+const snapshotState = (state: BoardsState): BoardsState => structuredClone(state);
+
+const pushBounded = (stack: BoardsState[], state: BoardsState) => {
+	stack.push(state);
+	if (stack.length > HISTORY_LIMIT) {
+		stack.shift();
+	}
+};
 
 function createDefaultBoard(): Board {
 	const root = ensureMeta<ContainerWidget>({
@@ -51,6 +64,43 @@ function loadState(): BoardsState {
 
 export const boardsStore = writable<BoardsState>(loadState());
 
+function updateBoardsState(updater: (state: BoardsState) => BoardsState): void {
+	boardsStore.update((state) => {
+		const next = updater(state);
+		if (next === state) {
+			return state;
+		}
+		if (!suppressHistory) {
+			pushBounded(undoStack, snapshotState(state));
+			redoStack.length = 0;
+		}
+		return next;
+	});
+}
+
+export function undoBoardChange(): void {
+	if (!undoStack.length) return;
+	const previous = undoStack.pop();
+	if (!previous) return;
+	suppressHistory = true;
+	pushBounded(redoStack, snapshotState(get(boardsStore)));
+	boardsStore.set(previous);
+	suppressHistory = false;
+}
+
+export function redoBoardChange(): void {
+	if (!redoStack.length) return;
+	const next = redoStack.pop();
+	if (!next) return;
+	suppressHistory = true;
+	pushBounded(undoStack, snapshotState(get(boardsStore)));
+	boardsStore.set(next);
+	suppressHistory = false;
+}
+
+export const canUndoBoardChange = (): boolean => undoStack.length > 0;
+export const canRedoBoardChange = (): boolean => redoStack.length > 0;
+
 if (browser) {
 	boardsStore.subscribe((state) => {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -83,7 +133,7 @@ export function selectWidget(widgetId: string): void {
 }
 
 export function addBoard(name = 'New Board'): void {
-	boardsStore.update((state) => {
+	updateBoardsState((state) => {
 		const board: Board = {
 			id: createId('board'),
 			name,
@@ -110,7 +160,7 @@ export function addBoard(name = 'New Board'): void {
 }
 
 export function removeBoard(boardId: string): void {
-	boardsStore.update((state) => {
+	updateBoardsState((state) => {
 		if (state.boards.length === 1) {
 			return state;
 		}
@@ -126,7 +176,7 @@ export function removeBoard(boardId: string): void {
 }
 
 export function removeWidgetFromBoard(widgetId: string): void {
-	boardsStore.update((state) => {
+	updateBoardsState((state) => {
 		const board = findRoot(state, state.activeBoardId);
 		const updated = removeWidget(board, widgetId);
 		return attachBoard(state, updated);
@@ -134,7 +184,7 @@ export function removeWidgetFromBoard(widgetId: string): void {
 }
 
 export function addWidgetToBoard(kind: WidgetKind, parentId?: string): void {
-	boardsStore.update((state) => {
+	updateBoardsState((state) => {
 		const board = findRoot(state, state.activeBoardId);
 		const updatedBoard = placeWidget(board, createWidget(kind), parentId ?? state.selection?.widgetId);
 		return attachBoard(state, updatedBoard);
@@ -142,7 +192,7 @@ export function addWidgetToBoard(kind: WidgetKind, parentId?: string): void {
 }
 
 export function insertWidgetInstance(widget: Widget, parentId?: string): void {
-	boardsStore.update((state) => {
+	updateBoardsState((state) => {
 		const board = findRoot(state, state.activeBoardId);
 		const updatedBoard = placeWidget(
 			board,
@@ -154,7 +204,7 @@ export function insertWidgetInstance(widget: Widget, parentId?: string): void {
 }
 
 export function updateWidgetBindings(widgetId: string, mapper: (props: Widget) => Widget): void {
-	boardsStore.update((state) => {
+	updateBoardsState((state) => {
 		const board = findRoot(state, state.activeBoardId);
 		const updated = updateWidget(board, widgetId, (widget) => sanitizeWidget(mapper(widget)));
 		return attachBoard(state, updated);
@@ -171,7 +221,7 @@ export function setWidgetLiteralValue(widgetId: string, value: BindingValue): vo
 }
 
 export function updateBoardCss(css: string): void {
-	boardsStore.update((state) => {
+	updateBoardsState((state) => {
 		const board = findRoot(state, state.activeBoardId);
 		const updated = { ...board, css };
 		return attachBoard(state, updated);
@@ -181,7 +231,7 @@ export function updateBoardCss(css: string): void {
 export function renameWidgetId(widgetId: string, nextId: string): void {
 	const trimmed = nextId.trim();
 	if (!trimmed) return;
-	boardsStore.update((state) => {
+	updateBoardsState((state) => {
 		const board = findRoot(state, state.activeBoardId);
 		const target = findWidget(board, widgetId);
 		if (!target || widgetId === trimmed) return state;
@@ -202,7 +252,7 @@ export function renameWidgetId(widgetId: string, nextId: string): void {
 }
 
 export function registerCustomWidget(template: WidgetTemplate): void {
-	boardsStore.update((state) => {
+	updateBoardsState((state) => {
 		const board = findRoot(state, state.activeBoardId);
 		const normalized: WidgetTemplate = {
 			...template,
@@ -216,7 +266,7 @@ export function registerCustomWidget(template: WidgetTemplate): void {
 }
 
 export function removeCustomWidgetTemplate(templateId: string): void {
-	boardsStore.update((state) => {
+	updateBoardsState((state) => {
 		const board = findRoot(state, state.activeBoardId);
 		const next: Board = {
 			...board,
@@ -243,7 +293,7 @@ export function importBoard(json: string): void {
 			board.id = createId('board');
 		}
 		const normalized = normalizeBoard(board);
-		boardsStore.update((state) => ({
+			updateBoardsState((state) => ({
 			boards: [...state.boards, normalized],
 			activeBoardId: normalized.id,
 			selection: { boardId: normalized.id, widgetId: normalized.root.id }

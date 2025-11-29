@@ -22,5 +22,8 @@
 
 	.text-field input {
 		width: 100%;
+		max-width: 260px;
+		font-size: 0.85rem;
+		padding: 0.22rem 0.4rem;
 	}
 </style>

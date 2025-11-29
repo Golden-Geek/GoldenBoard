@@ -42,6 +42,9 @@
 	}
 
 	.int-stepper input {
-		width: 100%;
+		width: 120px;
+		max-width: 100%;
+		font-size: 0.85rem;
+		padding: 0.25rem 0.4rem;
 	}
 </style>

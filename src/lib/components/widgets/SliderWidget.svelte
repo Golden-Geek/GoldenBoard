@@ -47,15 +47,18 @@
 <style>
 	.slider-control {
 		display: flex;
-		gap: 0.4rem;
+		gap: 0.35rem;
 		align-items: center;
 	}
 
 	.slider-control input[type='range'] {
 		flex: 1;
+		min-width: 0;
 	}
 
 	.slider-control input[type='number'] {
-		width: 80px;
+		width: 70px;
+		font-size: 0.8rem;
+		padding: 0.2rem 0.4rem;
 	}
 </style>

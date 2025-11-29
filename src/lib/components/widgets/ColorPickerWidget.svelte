@@ -21,8 +21,8 @@
 	}
 
 	.color-picker input {
-		width: 48px;
-		height: 32px;
+		width: 42px;
+		height: 28px;
 		padding: 0;
 	}
 </style>

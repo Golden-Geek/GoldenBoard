@@ -43,16 +43,19 @@
 	.rotary-control {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: 0.35rem;
 	}
 
 	.rotary-control input[type='range'] {
 		flex: 1;
+		min-width: 0;
 	}
 
 	.rotary-control span {
 		font-variant-numeric: tabular-nums;
-		font-size: 0.85rem;
+		font-size: 0.8rem;
 		color: var(--muted);
+		min-width: 48px;
+		text-align: right;
 	}
 </style>

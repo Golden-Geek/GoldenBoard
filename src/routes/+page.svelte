@@ -7,17 +7,67 @@
 	import MainSettingsDialog from '$lib/components/MainSettingsDialog.svelte';
 	import { editorMode, mainSettings } from '$lib/stores/ui';
 	import type { EditorMode } from '$lib/stores/ui';
-	import { activeBoard } from '$lib/stores/boards';
+	import {
+		activeBoard,
+		selectedWidget,
+		removeWidgetFromBoard,
+		undoBoardChange,
+		redoBoardChange
+	} from '$lib/stores/boards';
+	import type { ContainerWidget, Widget } from '$lib/types/widgets';
 
 	let mode: EditorMode = 'edit';
 	let settingsOpen = false;
 	let boardCss = '';
 	let globalCss = '';
+	let selection: { widget: Widget; parent?: ContainerWidget } | null = null;
 	$: mode = $editorMode;
 	$: isLive = mode === 'live';
 	$: showLiveBoards = $mainSettings.showLiveBoards;
+	$: canvasShowsHeader = !isLive || showLiveBoards;
+	$: canvasShowsPanel = !isLive;
 	$: globalCss = $mainSettings.globalCss;
 	$: boardCss = $activeBoard?.css ?? '';
+	$: selection = $selectedWidget;
+
+	const isEditableTarget = (target: EventTarget | null): target is HTMLElement => {
+		if (!(target instanceof HTMLElement)) return false;
+		const tag = target.tagName;
+		if (target.isContentEditable) return true;
+		return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+	};
+
+	const handleGlobalKeydown = (event: KeyboardEvent) => {
+		if (isLive) return;
+		const targetIsEditable = isEditableTarget(event.target);
+		const metaPressed = event.metaKey || event.ctrlKey;
+		const key = event.key;
+		const normalizedKey = key.toLowerCase();
+
+		if (metaPressed && !targetIsEditable) {
+			if (normalizedKey === 'z') {
+				event.preventDefault();
+				if (event.shiftKey) {
+					redoBoardChange();
+				} else {
+					undoBoardChange();
+				}
+				return;
+			}
+			if (normalizedKey === 'y') {
+				event.preventDefault();
+				redoBoardChange();
+				return;
+			}
+		}
+
+		if (targetIsEditable) return;
+		if (!selection || !$activeBoard) return;
+		if (selection.widget.id === $activeBoard.root.id) return;
+		if (!['Delete', 'Backspace'].includes(key)) return;
+		event.preventDefault();
+		removeWidgetFromBoard(selection.widget.id);
+	};
 </script>
 
 <svelte:head>
@@ -29,28 +79,24 @@
 	{/if}
 </svelte:head>
 
+<svelte:window on:keydown={handleGlobalKeydown} />
+
 <div class={`app-root mode-${mode}`}>
 	<ModeToggle />
-	{#if !isLive}
+	<div class={`toolbar-wrapper ${isLive ? 'toolbar-collapsed' : ''}`} aria-hidden={isLive}>
 		<Toolbar on:openSettings={() => (settingsOpen = true)} />
-	{/if}
+	</div>
 
 	<div class={`workspace ${isLive ? 'workspace-live' : 'workspace-edit'}`}>
-		{#if isLive}
-			<main class="canvas-wrapper live-only">
-				<BoardCanvas showHeader={showLiveBoards} showPanel={false} />
-			</main>
-		{:else}
-			<aside class="panel-column">
-				<OscTreePanel />
-			</aside>
-			<main class="canvas-wrapper">
-				<BoardCanvas />
-			</main>
-			<aside class="panel-column">
-				<InspectorPanel />
-			</aside>
-		{/if}
+		<aside class={`panel-column panel-left ${isLive ? 'panel-collapsed' : ''}`} aria-hidden={isLive}>
+			<OscTreePanel />
+		</aside>
+		<main class={`canvas-wrapper ${isLive ? 'live-only' : ''}`}>
+			<BoardCanvas showHeader={canvasShowsHeader} showPanel={canvasShowsPanel} />
+		</main>
+		<aside class={`panel-column panel-right ${isLive ? 'panel-collapsed' : ''}`} aria-hidden={isLive}>
+			<InspectorPanel />
+		</aside>
 	</div>
 	<MainSettingsDialog bind:open={settingsOpen} />
 </div>
