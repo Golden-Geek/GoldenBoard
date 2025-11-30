@@ -705,18 +705,18 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 					</details>
 				{/each}
 			{:else}
-				{#if visibleGapTargets}
+				<!-- {#if visibleGapTargets} -->
 					<div class={`drop-placeholder drop-placeholder-${containerDropAxis}`} data-active={activeGapIndex === 0 ? 'true' : undefined}></div>
-				{/if}
+				<!-- {/if} -->
 				{#each containerWidget.children as child, index (child.id)}
 					<svelte:self widget={child} {selectedId} {rootId} depth={depth + 1} />
-					{#if visibleGapTargets}
+					<!-- {#if visibleGapTargets} -->
 						<div
 							class={`drop-placeholder drop-placeholder-${containerDropAxis}`}
 							data-active={activeGapIndex === index + 1 ? 'true' : undefined}
 							role="presentation"
 						></div>
-					{/if}
+					<!-- {/if} -->
 				{/each}
 			{/if}
 		</div>
@@ -822,8 +822,9 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 	}
 
 	.container-body {
+		width: 100%;
+		height: 100%;
 		display: flex;
-		gap: 0.5rem;
 	}
 
 	.container-body.has-drop-gaps {
@@ -884,10 +885,12 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 		min-width: 0.4rem;
 		transition: min-height 120ms ease, min-width 120ms ease, opacity 120ms ease;
 		opacity: 0;
+		flex-grow: 0;
 	}
 
 	.drop-placeholder-vertical {
 		width: 100%;
+		height: 0;
 	}
 
 	.drop-placeholder-horizontal {
