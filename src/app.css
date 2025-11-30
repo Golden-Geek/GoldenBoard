@@ -233,9 +233,11 @@ textarea {
 	border: 1px solid transparent;
 	border-radius: 6px;
 	padding: 0.1rem;
+	min-width: 1rem;
+	min-height:1rem;
 	background: rgba(255, 255, 255, 0.012);
 	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-	transition: border 120ms ease, box-shadow 150ms ease, transform 120ms ease;
+	transition: opacity 1200ms ease, min-height 120ms ease, height 120ms ease, border 120ms ease, box-shadow 150ms ease, transform 120ms ease;
 	overflow: hidden;
 }
 

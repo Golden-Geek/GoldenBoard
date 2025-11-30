@@ -6,6 +6,7 @@ export type InspectorView = 'widget' | 'board' | 'settings';
 
 export interface MainSettings {
 	showLiveBoards: boolean;
+	showEditLiveButtons: boolean;
 	globalCss: string;
 }
 
@@ -13,6 +14,7 @@ const DEFAULT_MODE: EditorMode = 'edit';
 const SETTINGS_KEY = 'goldenboard:main-settings';
 const DEFAULT_SETTINGS: MainSettings = {
 	showLiveBoards: true,
+	showEditLiveButtons: true,
 	globalCss: ''
 };
 

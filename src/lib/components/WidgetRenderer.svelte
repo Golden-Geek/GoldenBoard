@@ -8,6 +8,7 @@
 	import CheckboxWidgetView from '$lib/components/widgets/CheckboxWidget.svelte';
 	import ButtonWidgetView from '$lib/components/widgets/ButtonWidget.svelte';
 	import MomentaryButtonWidgetView from '$lib/components/widgets/MomentaryButtonWidget.svelte';
+
 	import type {
 		ContainerWidget,
 		SliderWidget,
@@ -19,7 +20,14 @@
 		ColorPickerWidget
 	} from '$lib/types/widgets';
 	import type { OscValueType } from '$lib/services/oscquery';
-	import { literal, oscBinding, resolveBinding, type Binding, type BindingContext, type BindingValue } from '$lib/types/binding';
+	import {
+		literal,
+		oscBinding,
+		resolveBinding,
+		type Binding,
+		type BindingContext,
+		type BindingValue
+	} from '$lib/types/binding';
 	import { get } from 'svelte/store';
 	import { bindingContext } from '$lib/stores/runtime';
 	import {
@@ -85,7 +93,6 @@
 		activeGapIndex = null;
 		isContainerDropActive = false;
 	}
-	let mode: EditorMode = 'edit';
 	$: mode = $editorMode;
 	let isEditMode = mode === 'edit';
 	$: isEditMode = mode === 'edit';
@@ -100,13 +107,20 @@
 		? resolveContainerLabelVisibility(containerWidget, ctx, isRootWidget)
 		: false;
 	let widgetClassName = 'widget';
-	$: widgetClassName = ['widget', isSelected ? 'selected' : '', isRootWidget ? 'widget-root-container' : '']
+	$: widgetClassName = [
+		'widget',
+		isSelected ? 'selected' : '',
+		isRootWidget ? 'widget-root-container' : ''
+	]
 		.filter(Boolean)
 		.join(' ');
 	const horizontalLikeLayouts: LayoutType[] = ['horizontal', 'fixed-grid', 'smart-grid'];
 	const gapLayouts: LayoutType[] = ['vertical', 'horizontal'];
 	$: containerGapEnabled = !!containerWidget && gapLayouts.includes(containerWidget.layout);
-	$: containerDropAxis = containerWidget && horizontalLikeLayouts.includes(containerWidget.layout) ? 'horizontal' : 'vertical';
+	$: containerDropAxis =
+		containerWidget && horizontalLikeLayouts.includes(containerWidget.layout)
+			? 'horizontal'
+			: 'vertical';
 	let widgetDraggableConfig: PragmaticDraggableConfig | undefined;
 	let containerDropTargetConfig: PragmaticDropTargetConfig | undefined;
 	$: widgetDraggableConfig = buildWidgetDraggableConfig();
@@ -150,7 +164,9 @@
 
 	const ensureEnumValues = (value: unknown): (string | number)[] | undefined => {
 		if (!Array.isArray(value)) return undefined;
-		const filtered = value.filter((item): item is string | number => typeof item === 'string' || typeof item === 'number');
+		const filtered = value.filter(
+			(item): item is string | number => typeof item === 'string' || typeof item === 'number'
+		);
 		return filtered.length ? filtered : undefined;
 	};
 
@@ -170,7 +186,11 @@
 		};
 	};
 
-	const resolveMetaField = (key: MetaBindingKey, fallback: string, context: BindingContext): string => {
+	const resolveMetaField = (
+		key: MetaBindingKey,
+		fallback: string,
+		context: BindingContext
+	): string => {
 		const binding = widget.meta?.[key];
 		if (!binding) return fallback;
 		const resolved = resolveBinding(binding, context);
@@ -229,24 +249,24 @@
 		};
 	};
 
-		const resolveContainerLabelVisibility = (
-			container: ContainerWidget,
-			context: BindingContext,
-			isRoot: boolean
-		): boolean => {
-			const binding = container.props?.showLabel;
-			if (binding) {
-				const resolved = resolveBinding(binding, context);
-				if (typeof resolved === 'boolean') return resolved;
-				if (typeof resolved === 'number') return resolved !== 0;
-				if (typeof resolved === 'string') {
-					const normalized = resolved.trim().toLowerCase();
-					if (!normalized) return !isRoot;
-					return normalized !== 'false' && normalized !== '0';
-				}
+	const resolveContainerLabelVisibility = (
+		container: ContainerWidget,
+		context: BindingContext,
+		isRoot: boolean
+	): boolean => {
+		const binding = container.props?.showLabel;
+		if (binding) {
+			const resolved = resolveBinding(binding, context);
+			if (typeof resolved === 'boolean') return resolved;
+			if (typeof resolved === 'number') return resolved !== 0;
+			if (typeof resolved === 'string') {
+				const normalized = resolved.trim().toLowerCase();
+				if (!normalized) return !isRoot;
+				return normalized !== 'false' && normalized !== '0';
 			}
-			return isRoot ? false : true;
-		};
+		}
+		return isRoot ? false : true;
+	};
 
 	const handleValueInput = (next: number | string | boolean) => {
 		if (isEditMode) return;
@@ -295,10 +315,16 @@
 	const isContainerDragIntent = (
 		intent: DragIntent
 	): intent is WidgetMoveDrag | WidgetTemplateDrag | OscNodeDrag => {
-		return intent.kind === 'widget-move' || intent.kind === 'widget-template' || intent.kind === 'osc-node';
+		return (
+			intent.kind === 'widget-move' ||
+			intent.kind === 'widget-template' ||
+			intent.kind === 'osc-node'
+		);
 	};
 
-	const handleContainerDragPreview = (payload: { source: { data?: Record<string, unknown> } } & DropLocationPayload) => {
+	const handleContainerDragPreview = (
+		payload: { source: { data?: Record<string, unknown> } } & DropLocationPayload
+	) => {
 		if (!containerWidget) return;
 		cancelDropPreviewReset();
 		const intent = extractDragIntent(payload.source.data);
@@ -307,7 +333,9 @@
 		updatePlacementPreview(pointer);
 	};
 
-	const handleContainerDrop = (payload: { source: { data?: Record<string, unknown> } } & DropLocationPayload) => {
+	const handleContainerDrop = (
+		payload: { source: { data?: Record<string, unknown> } } & DropLocationPayload
+	) => {
 		if (!containerWidget) return;
 		cancelDropPreviewReset();
 		const intent = extractDragIntent(payload.source.data);
@@ -349,7 +377,10 @@
 		moveWidget(intent.widgetId, placement.targetId, placement.type);
 	};
 
-	const applyWidgetTemplateIntent = (intent: WidgetTemplateDrag, placement: ContainerPlacement | null) => {
+	const applyWidgetTemplateIntent = (
+		intent: WidgetTemplateDrag,
+		placement: ContainerPlacement | null
+	) => {
 		if (!containerWidget) return;
 		const instantiated = instantiateWidgetFromTemplateIntent(intent);
 		if (!instantiated) return;
@@ -396,18 +427,19 @@
 			return;
 		}
 		isContainerDropActive = true;
-		const placement: ContainerPlacement = point ? resolveContainerPlacementFromPoint(point) : createInsidePlacement();
+		const placement: ContainerPlacement = point
+			? resolveContainerPlacementFromPoint(point)
+			: createInsidePlacement();
 		pendingPlacement = placement;
 		activeGapIndex = placementToGapIndex(placement);
 	};
-
 
 	const resetDropPreview = (releaseOwnership = true) => {
 		cancelDropPreviewReset();
 		isContainerDropActive = false;
 		activeGapIndex = null;
 		pendingPlacement = createInsidePlacement();
-	 	if (releaseOwnership) {
+		if (releaseOwnership) {
 			releaseDropPreviewOwnership();
 		}
 	};
@@ -465,37 +497,43 @@
 		});
 	}
 
-const resolveContainerPlacementFromPoint = (point: PointerPosition | null): ContainerPlacement => {
-	if (!containerWidget || !containerBodyRef || !point) {
-		return { type: 'inside' };
-	}
-	const host = containerBodyRef as HTMLElement;
-	const widgetElements = (Array.from(host.querySelectorAll(':scope > .widget')) as HTMLElement[]).filter((element) => {
-		const elementId = element.dataset.widgetId;
-		if (!elementId) return false;
-		if (draggingId && elementId === draggingId) {
-			return false;
+	const resolveContainerPlacementFromPoint = (
+		point: PointerPosition | null
+	): ContainerPlacement => {
+		if (!containerWidget || !containerBodyRef || !point) {
+			return { type: 'inside' };
 		}
-		return true;
-	});
-	if (!widgetElements.length) {
-		return { type: 'inside' };
-	}
-	const pointerValue = containerDropAxis === 'horizontal' ? point.clientX : point.clientY;
-	for (const element of widgetElements) {
-		const targetId = element.dataset.widgetId;
-		if (!targetId) continue;
-		const rect = element.getBoundingClientRect();
-		const threshold =
-			containerDropAxis === 'horizontal' ? rect.left + rect.width / 2 : rect.top + rect.height / 2;
-		if (pointerValue < threshold) {
-			return { type: 'before', targetId };
+		const host = containerBodyRef as HTMLElement;
+		const widgetElements = (
+			Array.from(host.querySelectorAll(':scope > .widget')) as HTMLElement[]
+		).filter((element) => {
+			const elementId = element.dataset.widgetId;
+			if (!elementId) return false;
+			if (draggingId && elementId === draggingId) {
+				return false;
+			}
+			return true;
+		});
+		if (!widgetElements.length) {
+			return { type: 'inside' };
 		}
-	}
-	const last = widgetElements[widgetElements.length - 1];
-	const lastId = last?.dataset.widgetId;
-	return lastId ? { type: 'after', targetId: lastId } : { type: 'inside' };
-};
+		const pointerValue = containerDropAxis === 'horizontal' ? point.clientX : point.clientY;
+		for (const element of widgetElements) {
+			const targetId = element.dataset.widgetId;
+			if (!targetId) continue;
+			const rect = element.getBoundingClientRect();
+			const threshold =
+				containerDropAxis === 'horizontal'
+					? rect.left + rect.width / 2
+					: rect.top + rect.height / 2;
+			if (pointerValue < threshold) {
+				return { type: 'before', targetId };
+			}
+		}
+		const last = widgetElements[widgetElements.length - 1];
+		const lastId = last?.dataset.widgetId;
+		return lastId ? { type: 'after', targetId: lastId } : { type: 'inside' };
+	};
 
 	const placementToGapIndex = (placement: ContainerPlacement | null): number | null => {
 		if (!containerWidget) return null;
@@ -548,7 +586,6 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 		event.preventDefault();
 		event.stopPropagation();
 	};
-
 
 	let selectedTab = '';
 	function scheduleDropPreviewReset() {
@@ -650,7 +687,6 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 		slider.props.step = literal(osc.step ?? 0.01);
 		return slider;
 	};
-
 </script>
 
 <div
@@ -695,7 +731,10 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 			{#if containerWidget.layout === 'tabs'}
 				<div class="tabs">
 					{#each containerWidget.children as child (child.id)}
-						<button class:selected={child.id === selectedTab} on:click={() => (selectedTab = child.id)}>{childLabel(child, ctx)}</button>
+						<button
+							class:selected={child.id === selectedTab}
+							on:click={() => (selectedTab = child.id)}>{childLabel(child, ctx)}</button
+						>
 					{/each}
 				</div>
 				{#if selectedTab}
@@ -714,62 +753,103 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 				{/each}
 			{:else}
 				{#if visibleGapTargets}
-					<div class={`drop-placeholder drop-placeholder-${containerDropAxis}`} data-active={activeGapIndex === 0 ? 'true' : undefined}></div>
+					<div
+						class={`drop-placeholder drop-placeholder-${containerDropAxis}`}
+						data-active={activeGapIndex === 0 ? 'true' : undefined}
+					></div>
 				{/if}
 				{#each containerWidget.children as child, index (child.id)}
-					<svelte:self widget={child} {selectedId} {rootId} depth={depth + 1} />
+					<svelte:self widget={child} {selectedId} {rootId} depth={depth + 1}  />
 					{#if visibleGapTargets}
-						<div
-							class={`drop-placeholder drop-placeholder-${containerDropAxis}`}
-							data-active={activeGapIndex === index + 1 ? 'true' : undefined}
-							role="presentation"
-						></div>
+					<div
+						class={`drop-placeholder drop-placeholder-${containerDropAxis}`}
+						data-active={activeGapIndex === index + 1 ? 'true' : undefined}
+						role="presentation"
+					></div>
 					{/if}
 				{/each}
 			{/if}
 		</div>
+	{:else if widget.type === 'slider'}
+		<div class="widget-slider">
+			<SliderWidgetView
+				{widget}
+				{ctx}
+				{isEditMode}
+				label={metaLabel}
+				value={value as number | string | null}
+				onChange={handleValueInput}
+			/>
+		</div>
+	{:else if widget.type === 'button'}
+		<div class="widget-button-block">
+			<span class="widget-label widget-label-stack">{metaLabel}</span>
+			<ButtonWidgetView
+				{widget}
+				{isEditMode}
+				{value}
+				label={metaLabel}
+				onChange={handleValueInput}
+			/>
+		</div>
+	{:else if widget.type === 'momentary-button'}
+		<div class="widget-button-block">
+			<span class="widget-label widget-label-stack">{metaLabel}</span>
+			<MomentaryButtonWidgetView
+				{widget}
+				{isEditMode}
+				{value}
+				label={metaLabel}
+				onChange={handleValueInput}
+			/>
+		</div>
 	{:else}
-		{#if widget.type === 'slider'}
-			<div class="widget-slider">
-				<SliderWidgetView
+		<div class="widget-inline">
+			<span class="widget-label">{metaLabel}</span>
+			{#if widget.type === 'int-stepper'}
+				<IntStepperWidgetView
 					{widget}
 					{ctx}
 					{isEditMode}
-					label={metaLabel}
 					value={value as number | string | null}
 					onChange={handleValueInput}
 				/>
-			</div>
-		{:else if widget.type === 'button'}
-			<div class="widget-button-block">
-				<span class="widget-label widget-label-stack">{metaLabel}</span>
-				<ButtonWidgetView {widget} {isEditMode} value={value} label={metaLabel} onChange={handleValueInput} />
-			</div>
-		{:else if widget.type === 'momentary-button'}
-			<div class="widget-button-block">
-				<span class="widget-label widget-label-stack">{metaLabel}</span>
-				<MomentaryButtonWidgetView {widget} {isEditMode} value={value} label={metaLabel} onChange={handleValueInput} />
-			</div>
-		{:else}
-			<div class="widget-inline">
-				<span class="widget-label">{metaLabel}</span>
-				{#if widget.type === 'int-stepper'}
-					<IntStepperWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
-				{:else if widget.type === 'text-field'}
-					<TextFieldWidgetView {isEditMode} value={value ?? ''} onInput={handleStringInput} />
-				{:else if widget.type === 'color-picker'}
-					<ColorPickerWidgetView {isEditMode} value={value ?? '#ffffff'} onInput={handleStringInput} />
-				{:else if widget.type === 'rotary'}
-					<RotaryWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
-				{:else if widget.type === 'toggle'}
-					<ToggleWidgetView {widget} {isEditMode} value={value} label={metaLabel} onChange={handleValueInput} />
-				{:else if widget.type === 'checkbox'}
-					<CheckboxWidgetView {widget} {isEditMode} value={value} label={metaLabel} onChange={handleValueInput} />
-				{/if}
-			</div>
-		{/if}
+			{:else if widget.type === 'text-field'}
+				<TextFieldWidgetView {isEditMode} value={value ?? ''} onInput={handleStringInput} />
+			{:else if widget.type === 'color-picker'}
+				<ColorPickerWidgetView
+					{isEditMode}
+					value={value ?? '#ffffff'}
+					onInput={handleStringInput}
+				/>
+			{:else if widget.type === 'rotary'}
+				<RotaryWidgetView
+					{widget}
+					{ctx}
+					{isEditMode}
+					value={value as number | string | null}
+					onChange={handleValueInput}
+				/>
+			{:else if widget.type === 'toggle'}
+				<ToggleWidgetView
+					{widget}
+					{isEditMode}
+					{value}
+					label={metaLabel}
+					onChange={handleValueInput}
+				/>
+			{:else if widget.type === 'checkbox'}
+				<CheckboxWidgetView
+					{widget}
+					{isEditMode}
+					{value}
+					label={metaLabel}
+					onChange={handleValueInput}
+				/>
+			{/if}
+		</div>
 	{/if}
-	</div>
+</div>
 
 <style>
 	.widget-header {
@@ -839,7 +919,7 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 		gap: 0;
 	}
 
-	.container-body[data-drop-active='true'] {
+	.container-body[data-drop-active='true']:not(:global(.widget-root-container) > .container-body) {
 		outline: 1px dashed rgba(245, 182, 76, 0.5);
 		outline-offset: 4px;
 		background: rgba(245, 182, 76, 0.05);
@@ -876,33 +956,27 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 		flex-wrap: wrap;
 	}
 
-	:global(.widget[data-drag-role='source']) {
-		opacity: 0;
-		pointer-events: none;
-		height: 0 !important;
-		margin: 0 !important;
-		padding: 0 !important;
-		border: none !important;
-		overflow: hidden;
-	}
-
 	.drop-placeholder {
 		position: relative;
 		flex: 1 1 auto;
-		min-height: 0.4rem;
+		min-height: 0 rem;
 		min-width: 0.4rem;
-		transition: min-height 120ms ease, min-width 120ms ease, opacity 120ms ease;
+		transition:
+			min-height 120ms ease,
+			min-width 120ms ease,
+			opacity 120ms ease;
 		opacity: 0;
 		flex-grow: 0;
 	}
 
 	.drop-placeholder-vertical {
 		width: 100%;
-		height: 0;
+		min-height: 0;
 	}
 
 	.drop-placeholder-horizontal {
 		width: 0.5rem;
+		height: auto;
 		min-height: auto;
 		align-self: stretch;
 	}
@@ -915,6 +989,29 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 		border: 1px dashed rgba(245, 182, 76, 0.6);
 		border-radius: 8px;
 		background: rgba(245, 182, 76, 0.15);
+	}
+
+	:global(.widget[data-drag-role='source']) {
+		opacity: 0;
+		pointer-events: none;
+		margin: 0 !important;
+		padding: 0 !important;
+		border: none !important;
+		overflow: hidden;
+		display: none;
+	}
+
+	:global(.layout-horizontal) > .widget[data-drag-role='source'] {
+		width: 0 !important;
+	}
+
+	:global(.layout-vertical) > .widget[data-drag-role='source'] {
+		height: 0 !important;
+	}
+
+	:global(.widget[data-meta-type='container']) {
+		display: flex;
+		flex-direction: column;
 	}
 
 	:global(.widget[data-mode='edit']:not([data-meta-type='container'])) {

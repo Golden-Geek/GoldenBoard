@@ -184,6 +184,10 @@
 		updateMainSettings({ showLiveBoards: checked });
 	};
 
+	const handleEditLiveButtonsToggle = (checked: boolean) => {
+		updateMainSettings({ showEditLiveButtons: checked });
+	};
+
 	const handleGlobalCssChange = (next: string) => {
 		globalCssInput = next;
 		updateMainSettings({ globalCss: next });
@@ -333,6 +337,7 @@
 			showLiveBoards={$mainSettings.showLiveBoards}
 			globalCss={globalCssInput}
 			onToggleBoards={handleLiveBoardsToggle}
+			onToggleEditLiveButtons={handleEditLiveButtonsToggle}
 			onGlobalCssChange={handleGlobalCssChange}
 		/>
 	{/if}

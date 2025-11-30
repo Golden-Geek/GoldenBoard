@@ -4,7 +4,7 @@
 	import BoardCanvas from '$lib/components/BoardCanvas.svelte';
 	import InspectorPanel from '$lib/components/InspectorPanel.svelte';
 	import ModeToggle from '$lib/components/ModeToggle.svelte';
-	import { editorMode, mainSettings } from '$lib/stores/ui';
+	import { editorMode, mainSettings, toggleEditorMode } from '$lib/stores/ui';
 	import type { EditorMode } from '$lib/stores/ui';
 	import {
 		activeBoard,
@@ -23,6 +23,7 @@
 	$: mode = $editorMode;
 	$: isLive = mode === 'live';
 	$: showLiveBoards = $mainSettings.showLiveBoards;
+	$: showEditLiveButtons = $mainSettings.showEditLiveButtons;
 	$: canvasShowsHeader = !isLive || showLiveBoards;
 	$: canvasShowsPanel = !isLive;
 	$: globalCss = $mainSettings.globalCss;
@@ -37,6 +38,15 @@
 	};
 
 	const handleGlobalKeydown = (event: KeyboardEvent) => {
+
+		if (event.key === 'e' && event.ctrlKey) {
+			console.log('here');
+			event.preventDefault();
+			toggleEditorMode();
+			return;
+		}
+
+
 		if (isLive) return;
 		const targetIsEditable = isEditableTarget(event.target);
 		const metaPressed = event.metaKey || event.ctrlKey;
@@ -58,6 +68,7 @@
 				redoBoardChange();
 				return;
 			}
+			
 		}
 
 		if (targetIsEditable) return;
@@ -66,6 +77,8 @@
 		if (!['Delete', 'Backspace'].includes(key)) return;
 		event.preventDefault();
 		removeWidgetFromBoard(selection.widget.id);
+
+		
 	};
 </script>
 
@@ -81,7 +94,9 @@
 <svelte:window on:keydown={handleGlobalKeydown} />
 
 <div class={`app-root mode-${mode}`}>
+	{#if !showEditLiveButtons}
 	<ModeToggle />
+	{/if}
 	<div class={`toolbar-wrapper ${isLive ? 'toolbar-collapsed' : ''}`} aria-hidden={isLive}>
 		<Toolbar  />
 	</div>
