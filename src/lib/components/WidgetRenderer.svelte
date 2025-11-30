@@ -77,6 +77,14 @@
 	$: isDropPreviewOwner = (activeDropTarget?.id ?? null) === widget.id;
 	$: visibleGapTargets = showGapTargets && isDropPreviewOwner;
 	$: dropActiveFlag = isDropPreviewOwner && isContainerDropActive;
+
+	// If this instance is no longer the preview owner, ensure any visual
+	// placeholder state is cleared so stale placeholders don't remain visible
+	// when another nested container owns the preview or after a drop.
+	$: if (!isDropPreviewOwner) {
+		activeGapIndex = null;
+		isContainerDropActive = false;
+	}
 	let mode: EditorMode = 'edit';
 	$: mode = $editorMode;
 	let isEditMode = mode === 'edit';
@@ -705,18 +713,18 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 					</details>
 				{/each}
 			{:else}
-				<!-- {#if visibleGapTargets} -->
+				{#if visibleGapTargets}
 					<div class={`drop-placeholder drop-placeholder-${containerDropAxis}`} data-active={activeGapIndex === 0 ? 'true' : undefined}></div>
-				<!-- {/if} -->
+				{/if}
 				{#each containerWidget.children as child, index (child.id)}
 					<svelte:self widget={child} {selectedId} {rootId} depth={depth + 1} />
-					<!-- {#if visibleGapTargets} -->
+					{#if visibleGapTargets}
 						<div
 							class={`drop-placeholder drop-placeholder-${containerDropAxis}`}
 							data-active={activeGapIndex === index + 1 ? 'true' : undefined}
 							role="presentation"
 						></div>
-					<!-- {/if} -->
+					{/if}
 				{/each}
 			{/if}
 		</div>
