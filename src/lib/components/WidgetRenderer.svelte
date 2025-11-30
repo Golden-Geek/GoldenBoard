@@ -11,6 +11,7 @@
 	import { bindingContext } from '$lib/stores/runtime';
 	import {
 		insertWidgetInstance,
+		moveWidget,
 		propagateWidgetValue,
 		selectWidget,
 		setWidgetLiteralValue
@@ -39,9 +40,12 @@
 	let metaLabel = widget.label;
 	let metaId = widget.id;
 	let metaType: string = widget.type;
+	let dropIndicator: 'before' | 'after' | 'inside' | null = null;
+	let isDraggable = false;
 	$: metaLabel = resolveMetaField('label', widget.label, ctx);
 	$: metaId = resolveMetaField('id', widget.id, ctx);
 	$: metaType = resolveMetaField('type', widget.type, ctx);
+	$: isDraggable = isEditMode && widget.id !== rootId;
 
 	const resolveMetaField = (key: MetaBindingKey, fallback: string, context: BindingContext): string => {
 		const binding = widget.meta?.[key];
@@ -82,6 +86,31 @@
 	};
 
 	const handleDrop = (event: DragEvent) => {
+		if (!isEditMode) return;
+		const movePayload = event.dataTransfer?.getData('application/goldenboard-move');
+		if (movePayload) {
+			event.preventDefault();
+			const hostRect = (event.currentTarget as HTMLElement | null)?.getBoundingClientRect();
+			if (containerWidget) {
+				dropIndicator = 'inside';
+			} else if (hostRect) {
+				dropIndicator = event.clientY < hostRect.top + hostRect.height / 2 ? 'before' : 'after';
+			}
+			const { widgetId } = JSON.parse(movePayload) as { widgetId?: string };
+			if (!widgetId || widgetId === widget.id) {
+				dropIndicator = null;
+				return;
+			}
+			if (containerWidget) {
+				moveWidget(widgetId, widget.id, 'inside');
+			} else {
+				const before = hostRect ? event.clientY < hostRect.top + hostRect.height / 2 : false;
+				moveWidget(widgetId, widget.id, before ? 'before' : 'after');
+			}
+			dropIndicator = null;
+			event.stopPropagation();
+			return;
+		}
 		if (!containerWidget) return;
 		event.preventDefault();
 		const widgetPayload = event.dataTransfer?.getData('application/goldenboard-widget');
@@ -89,6 +118,8 @@
 			const parsed = JSON.parse(widgetPayload) as Widget;
 			parsed.id = createId(parsed.type);
 			insertWidgetInstance(parsed, widget.id);
+			dropIndicator = null;
+			event.stopPropagation();
 			return;
 		}
 		const oscPayload = event.dataTransfer?.getData('application/osc-node');
@@ -102,12 +133,56 @@
 			slider.props.max = literal(osc.max ?? 1);
 			slider.props.step = literal(osc.step ?? 0.01);
 			insertWidgetInstance(slider, widget.id);
+			dropIndicator = null;
+			event.stopPropagation();
 		}
 	};
 
 	const handleDragOver = (event: DragEvent) => {
+		if (!isEditMode) return;
+		const types = Array.from(event.dataTransfer?.types ?? []);
+		if (types.includes('application/goldenboard-move')) {
+			event.preventDefault();
+			event.dataTransfer && (event.dataTransfer.dropEffect = 'move');
+			if (containerWidget) {
+				dropIndicator = 'inside';
+			} else {
+				const rect = (event.currentTarget as HTMLElement | null)?.getBoundingClientRect();
+				if (rect) {
+					dropIndicator = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+				}
+			}
+			return;
+		}
 		if (!containerWidget) return;
-		event.preventDefault();
+		if (types.includes('application/goldenboard-widget') || types.includes('application/osc-node')) {
+			event.preventDefault();
+			dropIndicator = 'inside';
+		}
+	};
+
+	const handleMoveDragStart = (event: DragEvent) => {
+		if (!isEditMode || widget.id === rootId) return;
+		event.stopPropagation();
+		event.dataTransfer?.setData('application/goldenboard-move', JSON.stringify({ widgetId: widget.id }));
+		event.dataTransfer?.setData('text/plain', widget.label);
+		if (event.dataTransfer) {
+			event.dataTransfer.effectAllowed = 'move';
+		}
+	};
+
+	const handleDragLeave = (event: DragEvent) => {
+		if (!isEditMode) return;
+		const current = event.currentTarget as HTMLElement | null;
+		const related = event.relatedTarget as Node | null;
+		if (current && related && current.contains(related)) {
+			return;
+		}
+		dropIndicator = null;
+	};
+
+	const handleDragEnd = () => {
+		dropIndicator = null;
 	};
 
 	let selectedTab = '';
@@ -140,6 +215,8 @@
 	data-mode={isEditMode ? 'edit' : 'live'}
 	data-meta-id={metaId}
 	data-meta-type={metaType}
+	data-drop-position={dropIndicator ?? undefined}
+	draggable={isDraggable}
 	role="button"
 	tabindex="0"
 	on:click={(event) => {
@@ -154,9 +231,26 @@
 			selectWidget(widget.id);
 		}
 	}}
+	on:dragstart={handleMoveDragStart}
+	on:dragend={handleDragEnd}
 	on:dragover={handleDragOver}
+	on:dragleave={handleDragLeave}
 	on:drop={handleDrop}
 >
+	{#if isEditMode && widget.id !== rootId}
+		<button
+			type="button"
+			class="widget-drag-handle"
+			title="Drag to move"
+			tabindex="-1"
+			aria-hidden="true"
+			on:click|stopPropagation
+			on:mousedown|stopPropagation
+			on:dragstart={handleMoveDragStart}
+		>
+			⋮⋮
+		</button>
+	{/if}
 	{#if containerWidget}
 		<div class="widget-header">
 			<h4>{metaLabel}</h4>
@@ -310,6 +404,32 @@
 	.tabs button.selected {
 		background: var(--accent);
 		color: #0b0902;
+	}
+
+	.widget-drag-handle {
+		position: absolute;
+		top: 6px;
+		right: 6px;
+		width: 24px;
+		height: 24px;
+		border: none;
+		border-radius: 4px;
+		background: rgba(255, 255, 255, 0.08);
+		color: var(--muted);
+		font-size: 0.75rem;
+		cursor: grab;
+		opacity: 0;
+		transition: opacity 120ms ease, background 120ms ease;
+	}
+
+	.widget[data-mode='edit']:hover .widget-drag-handle,
+	.widget[data-mode='edit'].selected .widget-drag-handle {
+		opacity: 1;
+	}
+
+	.widget-drag-handle:active {
+		cursor: grabbing;
+		background: rgba(255, 255, 255, 0.15);
 	}
 
 

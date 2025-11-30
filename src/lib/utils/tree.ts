@@ -86,3 +86,13 @@ export function getWidgetRecord(board: Board): Record<string, Widget> {
 	});
 	return map;
 }
+
+export function containsWidget(root: Widget, id: string): boolean {
+	if (root.id === id) {
+		return true;
+	}
+	if (root.type !== 'container') {
+		return false;
+	}
+	return root.children.some((child) => containsWidget(child, id));
+}

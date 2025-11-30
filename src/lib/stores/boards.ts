@@ -5,7 +5,7 @@ import { isExpressionValid, literal, oscBinding, type Binding, type BindingValue
 import type { Board, BoardsState } from '$lib/types/board';
 import type { Widget, WidgetKind, WidgetTemplate, ContainerWidget } from '$lib/types/widgets';
 import { createId } from '$lib/utils/ids';
-import { findWidget, insertIntoContainer, removeWidget, updateWidget } from '$lib/utils/tree';
+import { containsWidget, findWidget, insertIntoContainer, removeWidget, updateWidget } from '$lib/utils/tree';
 import { pushOscValue } from '$lib/stores/oscquery';
 
 const STORAGE_KEY = 'goldenboard:boards';
@@ -209,6 +209,22 @@ export function insertWidgetInstance(widget: Widget, parentId?: string): void {
 			parentId ?? state.selection?.widgetId
 		);
 		return attachBoard(state, updatedBoard);
+	});
+}
+
+export type WidgetMovePosition = 'before' | 'after' | 'inside';
+
+export function moveWidget(widgetId: string, targetId: string, position: WidgetMovePosition): void {
+	if (!widgetId || !targetId || widgetId === targetId) {
+		return;
+	}
+	updateBoardsState((state) => {
+		const board = findRoot(state, state.activeBoardId);
+		const updated = repositionWidget(board, widgetId, targetId, position);
+		if (updated === board) {
+			return state;
+		}
+		return attachBoard(state, updated);
 	});
 }
 
@@ -497,4 +513,51 @@ function sanitizeWidget<T extends Widget>(widget: T, location = widget.id): T {
 		next.children = next.children.map((child) => sanitizeWidget(child, `${location}.${child.id}`));
 	}
 	return next;
+}
+
+function repositionWidget(board: Board, widgetId: string, targetId: string, position: WidgetMovePosition): Board {
+	if (widgetId === board.root.id) {
+		return board;
+	}
+	const cloned = structuredClone(board);
+	const source = findWidget(cloned, widgetId);
+	if (!source || !source.parent) {
+		return board;
+	}
+	const target = findWidget(cloned, targetId);
+	if (!target) {
+		return board;
+	}
+	if (containsWidget(source.widget, targetId)) {
+		return board;
+	}
+	const detach = () => {
+		source.parent!.children = source.parent!.children.filter((child) => child.id !== widgetId);
+	};
+	const moving = source.widget;
+	if (position === 'inside') {
+		if (target.widget.type !== 'container') {
+			return board;
+		}
+		detach();
+		target.widget.children = [...target.widget.children, moving];
+		return cloned;
+	}
+	const container = target.parent;
+	if (!container) {
+		return board;
+	}
+	detach();
+	const siblings = container.children;
+	const targetIndex = siblings.findIndex((child) => child.id === targetId);
+	if (targetIndex === -1) {
+		return board;
+	}
+	const insertIndex = position === 'before' ? targetIndex : targetIndex + 1;
+	container.children = [
+		...siblings.slice(0, insertIndex),
+		moving,
+		...siblings.slice(insertIndex)
+	];
+	return cloned;
 }
