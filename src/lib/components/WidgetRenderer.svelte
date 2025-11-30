@@ -213,7 +213,6 @@
 	});
 
 	const buildWidgetDraggableConfig = (): PragmaticDraggableConfig | undefined => {
-			console.log("HERE", isEditMode, widget.id, rootId);
 		if (!isEditMode || widget.id === rootId) {
 			return undefined;
 		}

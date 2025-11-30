@@ -349,16 +349,16 @@ button.ghost {
 
 .osc-tree {
 	max-height: 260px;
-	border-radius: var(--radius);
-	border: 1px solid rgba(255, 255, 255, 0.04);
-	padding: 0.2rem;
+	/* border-radius: var(--radius); */
+	/* border: 1px solid rgba(255, 255, 255, 0.04); */
+	/* padding: 0.2rem; */
 	margin-top: 0.5rem;
 }
 
 .osc-node {
 	padding: 0.15rem 0.25rem;
 	border-radius: 4px;
-	margin-left: calc(var(--depth) * 8px);
+	margin-left: calc((var(--depth) - 1) * 1rem);
 	font-size: 0.8rem;
 	display: flex;
 	align-items: center;

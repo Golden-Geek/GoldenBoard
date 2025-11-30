@@ -1,6 +1,10 @@
 <script lang="ts">
 	import type { OscNode, OscValueType } from '$lib/services/oscquery';
-	import { createDragData, pragmaticDraggable, type PragmaticDraggableConfig } from '$lib/drag/pragmatic';
+	import {
+		createDragData,
+		pragmaticDraggable,
+		type PragmaticDraggableConfig
+	} from '$lib/drag/pragmatic';
 	import { activeDragOperation, type OscNodeDrag } from '$lib/stores/drag';
 
 	export let node: OscNode;
@@ -11,13 +15,13 @@
 	let isLeaf = node.type !== 'container';
 	$: isLeaf = node.type !== 'container';
 	const typeIcons: Record<OscValueType, string> = {
-		container: '📂',
-		float: '🌊',
+		container: '🗄️',
+		float: '🔣',
 		int: '🔢',
-		string: '📝',
+		string: '🔗',
 		color: '🎨',
-		boolean: '⚙️',
-		trigger: '🚀',
+		boolean: '☑️',
+		trigger: '❗',
 		unknown: '❔'
 	};
 	$: icon = typeIcons[node.type] ?? '·';
@@ -62,8 +66,9 @@
 	};
 </script>
 
+{#if depth > 0}
 <div
-	class="osc-node"
+	class="osc-node {hasChildren ? 'parent-node' : 'leaf-node'}"
 	style={`--depth:${depth}`}
 	role="treeitem"
 	tabindex="0"
@@ -72,8 +77,14 @@
 	use:pragmaticDraggable={oscDraggable}
 >
 	{#if hasChildren}
-		<button type="button" class="node-toggle" title="Toggle children" on:click={toggle} aria-label={expanded ? 'Collapse node' : 'Expand node'}>
-			{expanded ? '-' : '+'}
+		<button
+			type="button"
+			class="node-toggle"
+			title="Toggle children"
+			on:click={toggle}
+			aria-label={expanded ? 'Collapse node' : 'Expand node'}
+		>
+			{expanded ? '▼' : '▶'}
 		</button>
 	{/if}
 	<span class="node-label">
@@ -81,6 +92,7 @@
 		<span class="node-name">{node.description ?? node.name}</span>
 	</span>
 </div>
+{/if}
 
 {#if hasChildren && expanded}
 	{#each node.children as child}
@@ -110,11 +122,11 @@
 		border: none;
 		background: transparent;
 		color: var(--muted);
-		font-size: 0.85rem;
-		width: 1.25rem;
-		height: 1.25rem;
+		font-size: 0.6rem;
+		/* width: .5rem; */
+		/* height: .5rem; */
 		padding: 0;
-		margin-right: 0.25rem;
+		/* margin-right: 0.25rem; */
 		cursor: pointer;
 		align-self: center;
 	}

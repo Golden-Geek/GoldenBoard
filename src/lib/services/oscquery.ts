@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import type { BindingValue } from '$lib/types/binding';
 import { decodeOscPacket, encodeOscMessage } from '$lib/utils/osc';
 import type { OscDecodedMessage } from '$lib/utils/osc';
@@ -760,7 +760,7 @@ export function createOscClient() {
 			case 'trigger': {
 				const active = interpretBoolean(value);
 				if (!active) return null;
-				return { types: 'N', args: [] };
+				return { types: '', args: [] }; //don't put the N tags, organic ui and other dont support it
 			}
 			case 'int': {
 				const num = Number(value);
@@ -880,15 +880,16 @@ export function createOscClient() {
 		}
 		userSubscriptions = next;
 		rebuildDesiredSubscriptions();
-		for (const path of userSubscriptions) {
-			ensureValueSnapshot(path);
-		}
 		syncSubscriptions();
 	}
 
 	function ensureValueSnapshot(path: string) {
 		if (!currentEndpoint) return;
 		if (pendingValueFetches.has(path)) return;
+		// If we already have a value entry for this path (from the structure defaults
+		// or previous updates) there's no need to fetch ?VALUE for it.
+		const currentValues = get(values);
+		if (Object.prototype.hasOwnProperty.call(currentValues, path)) return;
 		const task = fetchNodeValue(path).finally(() => pendingValueFetches.delete(path));
 		pendingValueFetches.set(path, task);
 	}
@@ -897,6 +898,10 @@ export function createOscClient() {
 		if (!currentEndpoint) return;
 		try {
 			const response = await requestJson<ValueResponse>(`${currentEndpoint}${path}?VALUE`);
+			if (!response || typeof response !== 'object') {
+				console.warn('OSCQuery value fetch returned invalid response', path, response);
+				return;
+			}
 			const value = Array.isArray(response.VALUE) ? response.VALUE[0] : undefined;
 			if (value === undefined) return;
 			values.update((prev) => {

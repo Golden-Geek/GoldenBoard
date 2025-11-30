@@ -6,7 +6,8 @@
 		selectedWidget,
 		boardsStore,
 		selectBoard,
-		addBoard
+		addBoard,
+		removeBoard
 	} from '$lib/stores/boards';
 	import { editorMode } from '$lib/stores/ui';
 	import type { Board } from '$lib/types/board';
@@ -28,14 +29,26 @@
 	{#if showHeader}
 		<div class="board-switcher" role="tablist" aria-label="Boards">
 			{#each boards as board}
-				<button
-					type="button"
-					class:selected={board.id === activeBoardId}
-					aria-pressed={board.id === activeBoardId}
-					on:click={() => handleSelectBoard(board.id)}
-				>
-					{board.name}
-				</button>
+				<div class="board-item">
+					<button
+						type="button"
+						class:selected={board.id === activeBoardId}
+						aria-pressed={board.id === activeBoardId}
+						on:click={() => handleSelectBoard(board.id)}
+						on:keydown={(event) => {
+							if (event.key === 'Enter' || event.key === ' ') {
+								event.preventDefault();
+								handleSelectBoard(board.id);
+							} else if (event.key === 'Delete' || event.key === 'Backspace') {
+								event.preventDefault();
+								if ($editorMode === 'edit') removeBoard(board.id);
+							}
+						}}
+					>
+						{board.name}
+					</button>
+					
+				</div>
 			{/each}
 			
 				{#if $editorMode === 'edit'}
@@ -100,5 +113,20 @@
 		height: 28px;
 		padding: 0;
 		font-size: 1rem;
+	}
+
+	.board-item {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	.board-item button.delete-board {
+		width: 22px;
+		height: 22px;
+		padding: 0;
+		font-size: 0.85rem;
+		border-radius: 6px;
+		line-height: 1;
 	}
 </style>
