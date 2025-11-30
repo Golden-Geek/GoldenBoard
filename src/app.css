@@ -228,22 +228,58 @@ textarea {
 }
 
 .widget {
+	position: relative;
 	border: 1px solid transparent;
 	border-radius: 6px;
 	padding: 0.45rem 0.65rem;
 	background: rgba(255, 255, 255, 0.012);
 	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 	transition: border 120ms ease, box-shadow 150ms ease, transform 120ms ease;
+	overflow: hidden;
+}
+
+.widget::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	background: transparent;
+	opacity: 1;
+	pointer-events: none;
+	transition: background 150ms ease, opacity 150ms ease;
+}
+
+.widget[data-mode='edit'] {
+	user-select: none;
+}
+
+.widget[data-mode='edit'] * {
+	user-select: none;
+}
+
+
+.widget[data-mode='edit']::after {
+	background: transparent;
 }
 
 .widget[data-mode='edit']:hover {
-	border-color: rgba(255, 255, 255, 0.18);
+	border-color: rgba(255, 255, 255, 0.05);
 	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-.widget.selected {
+.widget[data-mode='edit']:hover::after {
+	background: rgba(255, 255, 255, 0.02);
+}
+
+.widget[data-mode='edit'].selected,
+.widget[data-mode='edit'].selected:hover {
 	border-color: var(--accent);
 	box-shadow: 0 0 0 1px var(--accent-soft);
+}
+
+.widget[data-mode='edit'].selected::after,
+.widget[data-mode='edit'].selected:hover::after {
+	background: rgba(245, 182, 76, 0.18);
 }
 
 input,

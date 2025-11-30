@@ -1,5 +1,6 @@
 import { browser } from '$app/environment';
 import { derived, get, writable } from 'svelte/store';
+import { setInspectorView } from '$lib/stores/ui';
 import { isExpressionValid, literal, oscBinding, type Binding, type BindingValue } from '$lib/types/binding';
 import type { Board, BoardsState } from '$lib/types/board';
 import type { Widget, WidgetKind, WidgetTemplate, ContainerWidget } from '$lib/types/widgets';
@@ -118,18 +119,24 @@ export const selectedWidget = derived([boardsStore, activeBoard], ([$state, $boa
 });
 
 export function selectBoard(boardId: string): void {
-	boardsStore.update((state) => ({
-		...state,
-		activeBoardId: boardId,
-		selection: { boardId, widgetId: findRoot(state, boardId).root.id }
-	}));
+	boardsStore.update((state) => {
+		findRoot(state, boardId);
+		return {
+			...state,
+			activeBoardId: boardId,
+			selection: undefined
+		};
+	});
+	setInspectorView('board');
 }
 
 export function selectWidget(widgetId: string): void {
 	boardsStore.update((state) => {
-		if (!state.selection) return state;
-		return { ...state, selection: { ...state.selection, widgetId } };
+		const boardId = state.selection?.boardId ?? state.activeBoardId;
+		if (!boardId) return state;
+		return { ...state, selection: { boardId, widgetId } };
 	});
+	setInspectorView('widget');
 }
 
 export function addBoard(name = 'New Board'): void {
@@ -154,9 +161,10 @@ export function addBoard(name = 'New Board'): void {
 		return {
 			boards: [...state.boards, board],
 			activeBoardId: board.id,
-			selection: { boardId: board.id, widgetId: board.root.id }
+			selection: undefined
 		};
 	});
+	setInspectorView('board');
 }
 
 export function removeBoard(boardId: string): void {
@@ -170,9 +178,10 @@ export function removeBoard(boardId: string): void {
 		return {
 			boards,
 			activeBoardId: nextBoard.id,
-			selection: { boardId: nextBoard.id, widgetId: nextBoard.root.id }
+			selection: undefined
 		};
 	});
+	setInspectorView('board');
 }
 
 export function removeWidgetFromBoard(widgetId: string): void {

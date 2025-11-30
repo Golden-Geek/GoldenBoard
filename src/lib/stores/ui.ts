@@ -2,6 +2,7 @@ import { browser } from '$app/environment';
 import { writable } from 'svelte/store';
 
 export type EditorMode = 'live' | 'edit';
+export type InspectorView = 'widget' | 'board' | 'settings';
 
 export interface MainSettings {
 	showLiveBoards: boolean;
@@ -17,6 +18,7 @@ const DEFAULT_SETTINGS: MainSettings = {
 
 export const editorMode = writable<EditorMode>(DEFAULT_MODE);
 export const mainSettings = writable<MainSettings>(loadSettings());
+export const inspectorView = writable<InspectorView>('widget');
 
 export function setEditorMode(mode: EditorMode): void {
 	editorMode.set(mode);
@@ -28,6 +30,10 @@ export function toggleEditorMode(): void {
 
 export function updateMainSettings(patch: Partial<MainSettings>): void {
 	mainSettings.update((current) => ({ ...current, ...patch }));
+}
+
+export function setInspectorView(view: InspectorView): void {
+	inspectorView.set(view);
 }
 
 function loadSettings(): MainSettings {

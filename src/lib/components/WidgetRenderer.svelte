@@ -30,7 +30,7 @@
 	let containerWidget: ContainerWidget | null = null;
 	$: containerWidget = widget.type === 'container' ? (widget as ContainerWidget) : null;
 	let isSelected = false;
-	$: isSelected = widget.id === selectedId;
+	$: isSelected = isEditMode && widget.id === selectedId;
 
 	let mode: EditorMode = 'edit';
 	$: mode = $editorMode;
@@ -189,22 +189,33 @@
 			{/if}
 		</div>
 	{:else}
-		<div class="widget-inline">
-			<span class="widget-label">{metaLabel}</span>
-			<div class="widget-control">
-				{#if widget.type === 'slider'}
-					<SliderWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
-				{:else if widget.type === 'int-stepper'}
-					<IntStepperWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
-				{:else if widget.type === 'text-field'}
-					<TextFieldWidgetView {isEditMode} value={value ?? ''} onInput={handleStringInput} />
-				{:else if widget.type === 'color-picker'}
-					<ColorPickerWidgetView {isEditMode} value={value ?? '#ffffff'} onInput={handleStringInput} />
-				{:else if widget.type === 'rotary'}
-					<RotaryWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
-				{/if}
+		{#if widget.type === 'slider'}
+			<div class="widget-slider">
+				<SliderWidgetView
+					{widget}
+					{ctx}
+					{isEditMode}
+					label={metaLabel}
+					value={value as number | string | null}
+					onChange={handleValueInput}
+				/>
 			</div>
-		</div>
+		{:else}
+			<div class="widget-inline">
+				<span class="widget-label">{metaLabel}</span>
+				<div class="widget-control">
+					{#if widget.type === 'int-stepper'}
+						<IntStepperWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
+					{:else if widget.type === 'text-field'}
+						<TextFieldWidgetView {isEditMode} value={value ?? ''} onInput={handleStringInput} />
+					{:else if widget.type === 'color-picker'}
+						<ColorPickerWidgetView {isEditMode} value={value ?? '#ffffff'} onInput={handleStringInput} />
+					{:else if widget.type === 'rotary'}
+						<RotaryWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
+					{/if}
+				</div>
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -242,6 +253,12 @@
 		min-width: 0;
 	}
 
+	.widget-slider {
+		width: 100%;
+		display: block;
+		padding: 0.1rem 0;
+	}
+
 	:global(.widget[data-mode='edit'] input:disabled),
 	:global(.widget[data-mode='edit'] .rotary input:disabled) {
 		opacity: 0.5;
@@ -255,7 +272,14 @@
 
 	.container-body.layout-horizontal {
 		flex-direction: row;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;
+		align-items: stretch;
+		justify-content: space-between;
+	}
+
+	:global(.container-body.layout-horizontal > .widget) {
+		flex: 1 1 0;
+		min-width: 0;
 	}
 
 	.container-body.layout-vertical {

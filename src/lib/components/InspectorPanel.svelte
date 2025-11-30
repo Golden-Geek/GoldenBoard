@@ -8,7 +8,7 @@
 		updateWidgetBindings,
 		renameWidgetId
 	} from '$lib/stores/boards';
-	import { mainSettings, updateMainSettings } from '$lib/stores/ui';
+	import { inspectorView, mainSettings, setInspectorView, updateMainSettings } from '$lib/stores/ui';
 	import type { ContainerWidget, Widget } from '$lib/types/widgets';
 	import {
 			expressionBinding,
@@ -28,7 +28,6 @@
 	let labelBindingValue = '';
 	let valueBindingError = '';
 	let labelBindingError = '';
-	let inspectorView: 'widget' | 'board' | 'settings' = 'widget';
 	let globalCssInput = '';
 
 	const layouts: ContainerWidget['layout'][] = ['horizontal', 'vertical', 'fixed-grid', 'smart-grid', 'free', 'tabs', 'accordion'];
@@ -195,43 +194,43 @@
 		<div>
 			<p class="section-label">Inspector</p>
 			<div class="inspector-tabs" role="tablist" aria-label="Inspector views">
-				<button type="button" class:selected={inspectorView === 'widget'} on:click={() => (inspectorView = 'widget')}>
+				<button type="button" class:selected={$inspectorView === 'widget'} on:click={() => setInspectorView('widget')}>
 					Widget
 				</button>
-				<button type="button" class:selected={inspectorView === 'board'} on:click={() => (inspectorView = 'board')}>
+				<button type="button" class:selected={$inspectorView === 'board'} on:click={() => setInspectorView('board')}>
 					Board
 				</button>
-				<button type="button" class:selected={inspectorView === 'settings'} on:click={() => (inspectorView = 'settings')}>
+				<button type="button" class:selected={$inspectorView === 'settings'} on:click={() => setInspectorView('settings')}>
 					Main Settings
 				</button>
 			</div>
-			{#if inspectorView === 'widget' && $selectedWidget}
+			{#if $inspectorView === 'widget' && $selectedWidget}
 				<div class="inspector-title">
 					<strong>{$selectedWidget.widget.label}</strong>
 					<span>#{ $selectedWidget.widget.id }</span>
 				</div>
-			{:else if inspectorView === 'board' && $activeBoard}
+			{:else if $inspectorView === 'board' && $activeBoard}
 				<div class="inspector-title">
 					<strong>{$activeBoard.name}</strong>
 					<span>Board</span>
 				</div>
-			{:else if inspectorView === 'settings'}
+			{:else if $inspectorView === 'settings'}
 				<div class="inspector-title">
 					<strong>Main Settings</strong>
 					<span>Workspace</span>
 				</div>
 			{/if}
 		</div>
-		{#if inspectorView === 'widget' && $selectedWidget}
+		{#if $inspectorView === 'widget' && $selectedWidget}
 			<span class="type-pill">{$selectedWidget.widget.type}</span>
-		{:else if inspectorView === 'board'}
+		{:else if $inspectorView === 'board'}
 			<span class="type-pill">Board</span>
-		{:else if inspectorView === 'settings'}
+		{:else if $inspectorView === 'settings'}
 			<span class="type-pill">Global</span>
 		{/if}
 	</div>
 
-	{#if inspectorView === 'widget'}
+	{#if $inspectorView === 'widget'}
 		{#if $selectedWidget}
 		<form class="property-list" on:submit|preventDefault>
 			<div class="property-row">
@@ -325,7 +324,7 @@
 		{:else}
 			<p class="muted empty-state">Select a widget to edit its properties.</p>
 		{/if}
-	{:else if inspectorView === 'board'}
+	{:else if $inspectorView === 'board'}
 		{#if $activeBoard}
 			<div class="property-list" aria-live="polite">
 				<div class="property-row">
