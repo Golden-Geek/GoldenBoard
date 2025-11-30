@@ -9,6 +9,8 @@
 		renameWidgetId
 	} from '$lib/stores/boards';
 	import { inspectorView, mainSettings, setInspectorView, updateMainSettings } from '$lib/stores/ui';
+	import BoardInspector from '$lib/components/inspector/BoardInspector.svelte';
+	import MainSettingsInspector from '$lib/components/inspector/MainSettingsInspector.svelte';
 	import type { ContainerWidget, Widget } from '$lib/types/widgets';
 	import {
 			expressionBinding,
@@ -158,8 +160,8 @@
 		updateWidgetBindings($selectedWidget.widget.id, (widget) => ({ ...widget, css: next }));
 	};
 
-	const updateBoardTheme = (event: Event) => {
-		boardCss = (event.target as HTMLTextAreaElement).value;
+	const handleBoardCssChange = (next: string) => {
+		boardCss = next;
 		updateBoardCss(boardCss);
 	};
 
@@ -178,13 +180,13 @@
 		updateWidgetBindings($selectedWidget.widget.id, (widget) => ({ ...widget, layout }));
 	};
 
-	const toggleLiveBoardsSetting = (event: Event) => {
-		const checked = (event.target as HTMLInputElement).checked;
+	const handleLiveBoardsToggle = (checked: boolean) => {
 		updateMainSettings({ showLiveBoards: checked });
 	};
 
-	const updateGlobalCssSetting = () => {
-		updateMainSettings({ globalCss: globalCssInput });
+	const handleGlobalCssChange = (next: string) => {
+		globalCssInput = next;
+		updateMainSettings({ globalCss: next });
 	};
 </script>
 
@@ -325,37 +327,14 @@
 			<p class="muted empty-state">Select a widget to edit its properties.</p>
 		{/if}
 	{:else if $inspectorView === 'board'}
-		{#if $activeBoard}
-			<div class="property-list" aria-live="polite">
-				<div class="property-row">
-					<span class="property-label">Board Name</span>
-					<input type="text" value={$activeBoard.name} disabled />
-				</div>
-				<div class="property-row">
-					<span class="property-label">Board ID</span>
-					<input type="text" value={$activeBoard.id} disabled />
-				</div>
-				<div class="property-row stacked">
-					<span class="property-label">Board CSS</span>
-					<textarea rows={6} bind:value={boardCss} on:change={updateBoardTheme} placeholder={'body { }'}></textarea>
-				</div>
-			</div>
-		{:else}
-			<p class="muted empty-state">No board selected.</p>
-		{/if}
+		<BoardInspector board={$activeBoard} css={boardCss} onCssChange={handleBoardCssChange} />
 	{:else}
-		<div class="property-list" aria-live="polite">
-			<div class="property-row">
-				<span class="property-label">Show Boards List</span>
-				<label class="toggle" aria-label="Show boards list in live mode">
-					<input type="checkbox" checked={$mainSettings.showLiveBoards} on:change={toggleLiveBoardsSetting} />
-				</label>
-			</div>
-			<div class="property-row stacked">
-				<span class="property-label">Global CSS</span>
-				<textarea rows={6} bind:value={globalCssInput} on:input={updateGlobalCssSetting} placeholder={':root { }'}></textarea>
-			</div>
-		</div>
+		<MainSettingsInspector
+			showLiveBoards={$mainSettings.showLiveBoards}
+			globalCss={globalCssInput}
+			onToggleBoards={handleLiveBoardsToggle}
+			onGlobalCssChange={handleGlobalCssChange}
+		/>
 	{/if}
 </div>
 
@@ -440,155 +419,154 @@
 		border: 1px solid rgba(255, 255, 255, 0.12);
 	}
 
-	.property-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.05rem;
-		font-size: 0.85rem;
-	}
+:global(.inspector-panel .property-list) {
+	display: flex;
+	flex-direction: column;
+	gap: 0.05rem;
+	font-size: 0.85rem;
+}
 
-	.property-row {
-		display: grid;
-		grid-template-columns: 110px minmax(0, 1fr);
-		gap: 0.4rem;
-		align-items: center;
-		padding: 0.25rem 0;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-	}
+:global(.inspector-panel .property-row) {
+	display: grid;
+	grid-template-columns: 110px minmax(0, 1fr);
+	gap: 0.4rem;
+	align-items: center;
+	padding: 0.25rem 0;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
 
-	.property-row:last-child {
-		border-bottom: none;
-	}
+:global(.inspector-panel .property-row:last-child) {
+	border-bottom: none;
+}
 
-	.property-row.stacked,
-	.property-row.binding-row {
-		align-items: flex-start;
-	}
+:global(.inspector-panel .property-row.stacked),
+:global(.inspector-panel .property-row.binding-row) {
+	align-items: flex-start;
+}
 
-	.property-label {
-		font-size: 0.64rem;
-		text-transform: uppercase;
-		letter-spacing: 0.14em;
-		color: var(--muted);
-	}
+:global(.inspector-panel .property-label) {
+	font-size: 0.64rem;
+	text-transform: uppercase;
+	letter-spacing: 0.14em;
+	color: var(--muted);
+}
 
-	.binding-inline {
-		display: flex;
-		gap: 0.35rem;
-		align-items: center;
-	}
+:global(.inspector-panel .binding-inline) {
+	display: flex;
+	gap: 0.35rem;
+	align-items: center;
+}
 
-	.binding-error {
-		grid-column: 2;
-		font-size: 0.7rem;
-		color: var(--danger);
-		margin-top: 0.2rem;
-	}
+:global(.inspector-panel .binding-error) {
+	grid-column: 2;
+	font-size: 0.7rem;
+	color: var(--danger);
+	margin-top: 0.2rem;
+}
 
-	.binding-inline input {
-		flex: 1;
-		min-width: 0;
-	}
+:global(.inspector-panel .binding-inline input) {
+	flex: 1;
+	min-width: 0;
+}
 
-	.binding-toggle {
-		border-radius: 6px;
-		width: 30px;
-		height: 30px;
-		padding: 0;
-		font-size: 0.72rem;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		background: rgba(255, 255, 255, 0.06);
-		cursor: pointer;
-		transition: background 120ms ease, border 120ms ease, transform 120ms ease;
-	}
+:global(.inspector-panel .binding-toggle) {
+	border-radius: 6px;
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	font-size: 0.72rem;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	background: rgba(255, 255, 255, 0.06);
+	cursor: pointer;
+	transition: background 120ms ease, border 120ms ease, transform 120ms ease;
+}
 
-	.binding-toggle.literal {
-		background: var(--accent);
-		color: #0b0600;
-		border-color: transparent;
-	}
+:global(.inspector-panel .binding-toggle.literal) {
+	background: var(--accent);
+	color: #0b0600;
+	border-color: transparent;
+}
 
-	.binding-toggle.osc {
-		background: rgba(87, 167, 255, 0.2);
-		color: #7ec8ff;
-		border-color: rgba(87, 167, 255, 0.4);
-	}
+:global(.inspector-panel .binding-toggle.osc) {
+	background: rgba(87, 167, 255, 0.2);
+	color: #7ec8ff;
+	border-color: rgba(87, 167, 255, 0.4);
+}
 
-	.binding-toggle.widget {
-		background: rgba(95, 255, 196, 0.18);
-		color: #6ef7c6;
-		border-color: rgba(95, 255, 196, 0.5);
-	}
+:global(.inspector-panel .binding-toggle.widget) {
+	background: rgba(95, 255, 196, 0.18);
+	color: #6ef7c6;
+	border-color: rgba(95, 255, 196, 0.5);
+}
 
-	.binding-toggle.expression {
-		background: rgba(205, 146, 255, 0.18);
-		color: #d6a8ff;
-		border-color: rgba(205, 146, 255, 0.45);
-	}
+:global(.inspector-panel .binding-toggle.expression) {
+	background: rgba(205, 146, 255, 0.18);
+	color: #d6a8ff;
+	border-color: rgba(205, 146, 255, 0.45);
+}
 
-	.property-row input,
-	.property-row select,
-	.property-row textarea {
-		width: 100%;
-		font-size: 0.85rem;
-	}
+:global(.inspector-panel .property-row input),
+:global(.inspector-panel .property-row select),
+:global(.inspector-panel .property-row textarea) {
+	width: 100%;
+	font-size: 0.85rem;
+}
 
-	.property-heading {
-		margin: 0.4rem 0 0.1rem;
-		font-size: 0.72rem;
-		text-transform: uppercase;
-		letter-spacing: 0.18em;
-		color: var(--muted);
-	}
+:global(.inspector-panel .property-heading) {
+	margin: 0.4rem 0 0.1rem;
+	font-size: 0.72rem;
+	text-transform: uppercase;
+	letter-spacing: 0.18em;
+	color: var(--muted);
+}
 
-	.property-row textarea {
-		grid-column: 2 / 3;
-		width: 100%;
-		min-height: 110px;
-		resize: vertical;
-	}
+:global(.inspector-panel .property-row textarea) {
+	grid-column: 2 / 3;
+	width: 100%;
+	min-height: 110px;
+	resize: vertical;
+}
 
-	.property-note {
-		margin-left: 110px;
-		font-size: 0.68rem;
-	}
+:global(.inspector-panel .property-note) {
+	margin-left: 110px;
+	font-size: 0.68rem;
+}
 
-	.inspector-section {
-		background: rgba(255, 255, 255, 0.02);
-		border: 1px solid rgba(255, 255, 255, 0.04);
-		border-radius: 6px;
-		padding: 0.35rem 0.6rem 0.6rem;
-	}
+:global(.inspector-panel .inspector-section) {
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.04);
+	border-radius: 6px;
+	padding: 0.35rem 0.6rem 0.6rem;
+}
 
-	.inspector-section summary {
-		cursor: pointer;
-		font-size: 0.75rem;
-		text-transform: uppercase;
-		letter-spacing: 0.18em;
-		color: var(--muted);
-		margin-bottom: 0.4rem;
-	}
+:global(.inspector-panel .inspector-section summary) {
+	cursor: pointer;
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.18em;
+	color: var(--muted);
+	margin-bottom: 0.4rem;
+}
 
+:global(.inspector-panel .toggle) {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+}
 
-	.toggle {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.35rem;
-	}
+:global(.inspector-panel .toggle input[type='checkbox']) {
+	width: 20px;
+	height: 20px;
+	accent-color: var(--accent);
+}
 
-	.toggle input[type='checkbox'] {
-		width: 38px;
-		height: 20px;
-		accent-color: var(--accent);
-	}
+:global(.inspector-panel .json-preview) {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
 
-	.json-preview {
-		white-space: pre-wrap;
-		word-break: break-word;
-	}
-
-	.empty-state {
-		padding: 1rem 0;
-		text-align: center;
-	}
+:global(.inspector-panel .empty-state) {
+	padding: 1rem 0;
+	text-align: center;
+}
 </style>

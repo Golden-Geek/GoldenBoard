@@ -4,7 +4,6 @@
 	import BoardCanvas from '$lib/components/BoardCanvas.svelte';
 	import InspectorPanel from '$lib/components/InspectorPanel.svelte';
 	import ModeToggle from '$lib/components/ModeToggle.svelte';
-	import MainSettingsDialog from '$lib/components/MainSettingsDialog.svelte';
 	import { editorMode, mainSettings } from '$lib/stores/ui';
 	import type { EditorMode } from '$lib/stores/ui';
 	import {
@@ -84,7 +83,7 @@
 <div class={`app-root mode-${mode}`}>
 	<ModeToggle />
 	<div class={`toolbar-wrapper ${isLive ? 'toolbar-collapsed' : ''}`} aria-hidden={isLive}>
-		<Toolbar on:openSettings={() => (settingsOpen = true)} />
+		<Toolbar  />
 	</div>
 
 	<div class={`workspace ${isLive ? 'workspace-live' : 'workspace-edit'}`}>
@@ -98,5 +97,4 @@
 			<InspectorPanel />
 		</aside>
 	</div>
-	<MainSettingsDialog bind:open={settingsOpen} />
 </div>

@@ -79,7 +79,8 @@ textarea {
 
 .workspace-live {
 	display: flex;
-	padding: 0.75rem 1rem 1.25rem;
+	padding: 0;
+	gap: 0;
 	background: radial-gradient(circle at 20% 0%, rgba(26, 31, 48, 0.85), rgba(5, 6, 10, 0.95));
 }
 
@@ -114,7 +115,7 @@ textarea {
 
 .workspace-live .canvas-wrapper.live-only {
 	background: transparent;
-	padding: 1.25rem 1.5rem;
+	padding: 0;
 }
 
 .panel-column > .panel,
@@ -160,7 +161,7 @@ textarea {
 	border-radius: var(--radius);
 	border: 1px dashed rgba(255, 255, 255, 0.07);
 	background: radial-gradient(circle at 10% 10%, rgba(26, 30, 45, 0.9), rgba(10, 12, 18, 0.9));
-	padding: 0.85rem;
+	/* padding: 0.85rem; */
 	min-height: 360px;
 	position: relative;
 }
@@ -236,6 +237,12 @@ textarea {
 	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 	transition: border 120ms ease, box-shadow 150ms ease, transform 120ms ease;
 	overflow: hidden;
+}
+
+.widget-root-container
+{
+	width: 100%;
+	height: 100%;
 }
 
 .widget::after {
@@ -338,7 +345,8 @@ textarea {
 	background: rgba(255, 255, 255, 0.05);
 	border: 1px solid rgba(255, 255, 255, 0.14);
 	border-radius: 5px;
-	padding: 0.25rem 0.45rem;
+	/* padding: 0.25rem 0.45rem; */
+	margin:0;
 }
 
 select {

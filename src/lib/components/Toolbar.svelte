@@ -38,7 +38,6 @@
 				<span>Golden Board</span>
 			</div>
 			<div class="actions">
-				<button on:click={openSettings} type="button" title="Open main settings">Main Settings</button>
 				<button on:click={uploadBoard} type="button" title="Import board">Import</button>
 				<button on:click={handleExport} type="button" title="Export board">Export</button>
 			</div>

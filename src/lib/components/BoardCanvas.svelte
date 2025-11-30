@@ -1,6 +1,14 @@
 <script lang="ts">
 	import WidgetRenderer from '$lib/components/WidgetRenderer.svelte';
-	import { activeBoard, selectWidget, selectedWidget, boardsStore, selectBoard, addBoard } from '$lib/stores/boards';
+	import {
+		activeBoard,
+		selectWidget,
+		selectedWidget,
+		boardsStore,
+		selectBoard,
+		addBoard
+	} from '$lib/stores/boards';
+	import { editorMode } from '$lib/stores/ui';
 	import type { Board } from '$lib/types/board';
 
 	let boards: Board[] = [];
@@ -29,7 +37,12 @@
 					{board.name}
 				</button>
 			{/each}
-			<button type="button" class="ghost add-board" on:click={createBoard} title="Add board">+</button>
+			
+				{#if $editorMode === 'edit'}
+					<button type="button" class="ghost add-board" on:click={createBoard} title="Add board"
+						>➕</button
+					>
+				{/if}
 		</div>
 	{/if}
 	{#if $activeBoard}
@@ -40,7 +53,7 @@
 			tabindex="0"
 			on:click={() => selectWidget($activeBoard.root.id)}
 			on:keydown={(event) =>
-				(event.key === 'Enter' || event.key === ' ')
+				event.key === 'Enter' || event.key === ' '
 					? (event.preventDefault(), selectWidget($activeBoard.root.id))
 					: null}
 		>
@@ -73,7 +86,6 @@
 	}
 
 	.board-switcher button {
-		padding: 0.15rem 0.75rem;
 		border-radius: 999px;
 		background: rgba(255, 255, 255, 0.04);
 		font-size: 0.78rem;

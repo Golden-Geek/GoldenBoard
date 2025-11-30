@@ -37,6 +37,9 @@ export interface ContainerWidget extends WidgetBase {
 	type: 'container';
 	layout: LayoutType;
 	children: Widget[];
+	props: WidgetBase['props'] & {
+		showLabel?: Binding;
+	};
 }
 
 export interface SliderWidget extends WidgetBase {

@@ -29,7 +29,7 @@ function createDefaultBoard(): Board {
 		type: 'container',
 		label: 'Root',
 		value: literal(null),
-		props: {},
+		props: { showLabel: literal(false) },
 		layout: 'vertical',
 		css: '',
 		children: [createWidget('slider'), createWidget('text-field')]
@@ -173,7 +173,7 @@ export function addBoard(name = 'New Board'): void {
 				type: 'container',
 				label: 'Root',
 				value: literal(null),
-				props: {},
+				props: { showLabel: literal(false) },
 				layout: 'vertical',
 				children: [],
 				css: ''
@@ -394,7 +394,7 @@ export function createWidget(kind: WidgetKind): Widget {
 				type: 'container',
 				label: 'Container',
 				value: literal(null),
-				props: {},
+				props: { showLabel: literal(true) },
 				layout: 'vertical',
 				css: '',
 				children: []
@@ -513,13 +513,26 @@ function ensureMeta<T extends Widget>(widget: T): T {
 	return next;
 }
 
+function applyContainerDefaults<T extends Widget>(widget: T, isRoot = false): T {
+	if (widget.type !== 'container') {
+		return widget;
+	}
+	const container = widget as ContainerWidget;
+	const props = { ...(container.props ?? {}) };
+	if (!('showLabel' in props)) {
+		props.showLabel = literal(isRoot ? false : true);
+	}
+	const children = container.children.map((child) => applyContainerDefaults(child, false));
+	return { ...container, props, children } as T;
+}
+
 function normalizeBoard(board: Board): Board {
 	return {
 		...board,
-		root: sanitizeWidget(ensureMeta(board.root)),
+		root: applyContainerDefaults(sanitizeWidget(ensureMeta(board.root)), true),
 		customWidgets: (board.customWidgets ?? []).map((template) => ({
 			...template,
-			payload: sanitizeWidget(ensureMeta(template.payload))
+			payload: applyContainerDefaults(sanitizeWidget(ensureMeta(template.payload)))
 		})),
 		sharedProps: sanitizeBindingRecord(board.sharedProps ?? {}, `${board.id}.sharedProps`, null)
 	};

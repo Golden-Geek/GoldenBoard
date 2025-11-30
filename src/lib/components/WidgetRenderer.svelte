@@ -45,6 +45,16 @@
 	$: containerWidget = widget.type === 'container' ? (widget as ContainerWidget) : null;
 	let isSelected = false;
 	$: isSelected = isEditMode && widget.id === selectedId;
+	let isRootWidget = false;
+	$: isRootWidget = widget.id === rootId;
+	let showContainerLabel = false;
+	$: showContainerLabel = containerWidget
+		? resolveContainerLabelVisibility(containerWidget, ctx, isRootWidget)
+		: false;
+	let widgetClassName = 'widget';
+	$: widgetClassName = ['widget', isSelected ? 'selected' : '', isRootWidget ? 'widget-root-container' : '']
+		.filter(Boolean)
+		.join(' ');
 
 	let mode: EditorMode = 'edit';
 	$: mode = $editorMode;
@@ -100,6 +110,25 @@
 		const resolved = resolveBinding(binding, context);
 		return resolved === null || resolved === undefined ? node.label : String(resolved);
 	};
+
+		const resolveContainerLabelVisibility = (
+			container: ContainerWidget,
+			context: BindingContext,
+			isRoot: boolean
+		): boolean => {
+			const binding = container.props?.showLabel;
+			if (binding) {
+				const resolved = resolveBinding(binding, context);
+				if (typeof resolved === 'boolean') return resolved;
+				if (typeof resolved === 'number') return resolved !== 0;
+				if (typeof resolved === 'string') {
+					const normalized = resolved.trim().toLowerCase();
+					if (!normalized) return !isRoot;
+					return normalized !== 'false' && normalized !== '0';
+				}
+			}
+			return isRoot ? false : true;
+		};
 
 	const handleValueInput = (next: number | string | boolean) => {
 		if (isEditMode) return;
@@ -436,7 +465,7 @@
 </script>
 
 <div
-	class={`widget ${isSelected ? 'selected' : ''}`}
+	class={widgetClassName}
 	data-mode={isEditMode ? 'edit' : 'live'}
 	data-meta-id={metaId}
 	data-meta-type={metaType}
@@ -464,9 +493,11 @@
 	on:drop={handleDrop}
 >
 	{#if containerWidget}
-		<div class="widget-header">
-			<h4>{metaLabel}</h4>
-		</div>
+		{#if showContainerLabel}
+			<div class="widget-header">
+				<h4>{metaLabel}</h4>
+			</div>
+		{/if}
 		<div class={`container-body layout-${containerWidget.layout} ${showGapTargets ? 'has-drop-gaps' : ''}`}>
 			{#if containerWidget.layout === 'tabs'}
 				<div class="tabs">
@@ -684,6 +715,14 @@
 	.drop-gap[data-active='true']::after {
 		opacity: 0.9;
 		transform: scale(1);
+	}
+
+	:global(.widget[data-mode='edit']:not([data-meta-type='container'])) {
+		cursor: pointer;
+	}
+
+	:global(.widget[data-mode='edit']:not([data-meta-type='container']) *) {
+		pointer-events: none;
 	}
 
 	.tabs {
