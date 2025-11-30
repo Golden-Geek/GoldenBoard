@@ -1,5 +1,7 @@
 import { writable } from 'svelte/store';
 import type { BindingValue } from '$lib/types/binding';
+import { decodeOscPacket, encodeOscMessage } from '$lib/utils/osc';
+import type { OscDecodedMessage } from '$lib/utils/osc';
 
 export type OscValueType =
 	| 'container'
@@ -17,7 +19,10 @@ export type OscHostInfo = {
 	oscPort?: number;
 	transport?: string;
 	websocketPort?: number;
-	extensions?: string[];
+	wsIp?: string;
+	wsPort?: number;
+	wsPath?: string;
+	extensions?: Record<string, boolean>;
 	metadata?: Record<string, unknown>;
 };
 
@@ -36,9 +41,9 @@ export type OscNode = {
 };
 
 type OscQueryRange = {
-	MIN?: number;
-	MAX?: number;
-	STEP?: number;
+	MIN?: number | string;
+	MAX?: number | string;
+	STEP?: number | string;
 	VALS?: (string | number)[];
 };
 
@@ -72,7 +77,9 @@ const mockHostInfo: OscHostInfo = {
 	name: 'Mock OSC Server',
 	oscIp: '127.0.0.1',
 	oscPort: 12000,
-	transport: 'udp'
+	transport: 'udp',
+	wsPort: 12000,
+	extensions: { LISTEN: true, PATH_CHANGED: true }
 };
 
 const mockTree: OscNode = {
@@ -220,15 +227,31 @@ function determineNodeType(type?: string, extended?: string[]): OscValueType {
 	return 'unknown';
 }
 
+function toFiniteNumber(value: unknown): number | undefined {
+	if (typeof value === 'number' && Number.isFinite(value)) {
+		return value;
+	}
+	if (typeof value === 'string') {
+		const parsed = Number(value.trim());
+		if (Number.isFinite(parsed)) {
+			return parsed;
+		}
+	}
+	return undefined;
+}
+
 function extractRangeMeta(rangeList?: OscQueryRange[]) {
 	const meta: { min?: number; max?: number; step?: number; enumValues?: (string | number)[] } = {};
 	if (!rangeList?.length) {
 		return meta;
 	}
 	const [range] = rangeList;
-	if (typeof range.MIN === 'number') meta.min = range.MIN;
-	if (typeof range.MAX === 'number') meta.max = range.MAX;
-	if (typeof range.STEP === 'number') meta.step = range.STEP;
+	const min = toFiniteNumber(range.MIN);
+	const max = toFiniteNumber(range.MAX);
+	const step = toFiniteNumber(range.STEP);
+	if (min !== undefined) meta.min = min;
+	if (max !== undefined) meta.max = max;
+	if (step !== undefined) meta.step = step;
 	if (Array.isArray(range.VALS)) meta.enumValues = range.VALS;
 	return meta;
 }
@@ -243,16 +266,28 @@ function normalizeHostInfo(data: HostInfoResponse): OscHostInfo {
 		typeof value === 'string' && value.trim().length ? value : undefined;
 	const toNumberValue = (value: unknown): number | undefined =>
 		typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-	const toStringArray = (value: unknown): string[] | undefined =>
-		Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : undefined;
+	const toBooleanRecord = (value: unknown): Record<string, boolean> | undefined => {
+		if (!value || typeof value !== 'object') return undefined;
+		const record: Record<string, boolean> = {};
+		for (const [key, entry] of Object.entries(value)) {
+			if (typeof entry === 'boolean') {
+				record[key] = entry;
+			}
+		}
+		return Object.keys(record).length ? record : undefined;
+	};
+	const source = payload as Record<string, unknown>;
 	const info: OscHostInfo = {
-		name: toStringValue((payload as Record<string, unknown>).NAME) ?? 'OSC Server',
-		oscIp: toStringValue((payload as Record<string, unknown>).OSC_IP),
-		oscPort: toNumberValue((payload as Record<string, unknown>).OSC_PORT),
-		transport: toStringValue((payload as Record<string, unknown>).OSC_TRANSPORT),
-		websocketPort: toNumberValue((payload as Record<string, unknown>).OSC_WEBSOCKET_PORT),
-		extensions: toStringArray((payload as Record<string, unknown>).EXTENSIONS),
-		metadata: { ...(payload as Record<string, unknown>) }
+		name: toStringValue(source['NAME']) ?? 'OSC Server',
+		oscIp: toStringValue(source['OSC_IP']),
+		oscPort: toNumberValue(source['OSC_PORT']),
+		transport: toStringValue(source['OSC_TRANSPORT']),
+		websocketPort: toNumberValue(source['OSC_WEBSOCKET_PORT']),
+		wsIp: toStringValue(source['WS_IP']),
+		wsPort: toNumberValue(source['WS_PORT']),
+		wsPath: toStringValue(source['WS_PATH']),
+		extensions: toBooleanRecord(source['EXTENSIONS']),
+		metadata: { ...source }
 	};
 	return info;
 }
@@ -329,6 +364,38 @@ function flatten(node: OscNode, acc: Record<string, BindingValue> = {}): Record<
 	return acc;
 }
 
+function buildNodeIndex(node: OscNode, map: Map<string, OscNode> = new Map()): Map<string, OscNode> {
+	map.set(node.path, node);
+	node.children?.forEach((child) => buildNodeIndex(child, map));
+	return map;
+}
+
+function isReadable(node?: OscNode): boolean {
+	if (!node) return false;
+	if (node.type === 'container') return false;
+	if (typeof node.access !== 'number') return true;
+	return (node.access & 0b01) !== 0;
+}
+
+function collectLeafPaths(node: OscNode, acc: string[] = []): string[] {
+	if (isReadable(node)) {
+		acc.push(node.path);
+	}
+	node.children?.forEach((child) => collectLeafPaths(child, acc));
+	return acc;
+}
+
+function mergeValues(
+	previous: Record<string, BindingValue>,
+	defaults: Record<string, BindingValue>
+): Record<string, BindingValue> {
+	const next: Record<string, BindingValue> = {};
+	for (const [path, defaultValue] of Object.entries(defaults)) {
+		next[path] = path in previous ? previous[path] : defaultValue ?? null;
+	}
+	return next;
+}
+
 export function createOscClient() {
 	const status = writable<OscStatus>('disconnected');
 	const structure = writable<OscNode>(mockTree);
@@ -336,31 +403,28 @@ export function createOscClient() {
 	const hostInfo = writable<OscHostInfo>(mockHostInfo);
 
 	let mockInterval: ReturnType<typeof setInterval> | undefined;
+	let reconnectHandle: ReturnType<typeof setTimeout> | undefined;
+	let websocket: WebSocket | null = null;
+	let disconnecting = false;
+	let pendingFrames: (string | ArrayBuffer)[] = [];
+	let streamingEnabled = false;
 	let currentEndpoint = '';
+	let currentNodeIndex = buildNodeIndex(mockTree);
+	let desiredSubscriptions = new Set<string>(collectLeafPaths(mockTree));
+	let activeSubscriptions = new Set<string>();
+	let lastHostInfo: OscHostInfo = mockHostInfo;
+	let connectionAttempt = 0;
+	const triggerResetTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-	async function connect(endpoint: string) {
-		status.set('connecting');
-		currentEndpoint = normalizeEndpoint(endpoint || '');
-		try {
-			const info = await fetchHostInfo(currentEndpoint);
-			hostInfo.set(info);
-			const tree = await fetchStructure(currentEndpoint);
-			structure.set(tree);
-			values.set(flatten(tree));
-			status.set('connected');
-			startMockUpdates(tree);
-		} catch (error) {
-			console.warn('OSCQuery connection failed, falling back to mock data', error);
-			hostInfo.set(mockHostInfo);
-			structure.set(mockTree);
-			values.set(flatten(mockTree));
-			status.set('error');
-			startMockUpdates(mockTree);
+	function stopMockUpdates() {
+		if (mockInterval) {
+			clearInterval(mockInterval);
+			mockInterval = undefined;
 		}
 	}
 
 	function startMockUpdates(tree: OscNode) {
-		if (mockInterval) clearInterval(mockInterval);
+		stopMockUpdates();
 		const leafPaths = Object.keys(flatten(tree));
 		mockInterval = setInterval(() => {
 			values.update((prev) => {
@@ -376,23 +440,414 @@ export function createOscClient() {
 		}, 2000);
 	}
 
-	function disconnect() {
-		if (mockInterval) {
-			clearInterval(mockInterval);
-			mockInterval = undefined;
+	function clearReconnectTimer() {
+		if (reconnectHandle) {
+			clearTimeout(reconnectHandle);
+			reconnectHandle = undefined;
 		}
-		status.set('disconnected');
+	}
+
+	function clearTriggerTimers() {
+		for (const timer of triggerResetTimers.values()) {
+			clearTimeout(timer);
+		}
+		triggerResetTimers.clear();
+	}
+
+	function useMockData() {
+		streamingEnabled = false;
+		currentEndpoint = '';
+		activeSubscriptions.clear();
+		desiredSubscriptions = new Set<string>(collectLeafPaths(mockTree));
+		currentNodeIndex = buildNodeIndex(mockTree);
+		pendingFrames = [];
+		clearReconnectTimer();
+		clearTriggerTimers();
+		teardownWebsocket();
+		hostInfo.set(mockHostInfo);
+		structure.set(mockTree);
+		values.set(flatten(mockTree));
+		startMockUpdates(mockTree);
+		status.set('error');
+	}
+
+	function teardownWebsocket() {
+		if (!websocket) return;
+		websocket.removeEventListener('open', handleSocketOpen);
+		websocket.removeEventListener('message', handleSocketMessage);
+		websocket.removeEventListener('close', handleSocketClose);
+		websocket.removeEventListener('error', handleSocketError);
+		try {
+			websocket.close();
+		} catch {
+			/* noop */
+		}
+		websocket = null;
+	}
+
+	function supportsStreaming(info: OscHostInfo): boolean {
+		if (info.extensions && 'LISTEN' in info.extensions) {
+			return Boolean(info.extensions.LISTEN);
+		}
+		return Boolean(info.wsPort ?? info.websocketPort ?? info.wsIp ?? info.wsPath);
+	}
+
+	function resolveWebsocketUrl(info: OscHostInfo): string | null {
+		if (!currentEndpoint) return null;
+		try {
+			const endpointUrl = new URL(currentEndpoint);
+			const protocol = endpointUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+			const hostname = info.wsIp ?? endpointUrl.hostname;
+			const defaultPort = endpointUrl.port ? Number(endpointUrl.port) : undefined;
+			const port = info.wsPort ?? info.websocketPort ?? defaultPort;
+			const candidatePath = info.wsPath ?? endpointUrl.pathname ?? '/';
+			const path = candidatePath.startsWith('/') ? candidatePath : `/${candidatePath}`;
+			const authority = port ? `${hostname}:${port}` : hostname;
+			return `${protocol}//${authority}${path}`;
+		} catch (error) {
+			console.warn('Failed to resolve websocket url', error);
+			return null;
+		}
+	}
+
+	function flushPendingFrames() {
+		if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
+		while (pendingFrames.length) {
+			const frame = pendingFrames.shift();
+			if (frame === undefined) break;
+			websocket.send(frame);
+		}
+	}
+
+	function enqueueFrame(frame: string | ArrayBuffer) {
+		if (!streamingEnabled) return;
+		if (websocket && websocket.readyState === WebSocket.OPEN) {
+			websocket.send(frame);
+			return;
+		}
+		if (pendingFrames.length >= 128) {
+			pendingFrames.shift();
+		}
+		pendingFrames.push(frame);
+	}
+
+	function sendCommand(command: string, data: unknown) {
+		try {
+			enqueueFrame(JSON.stringify({ COMMAND: command, DATA: data }));
+		} catch (error) {
+			console.warn('OSCQuery command serialization failed', error);
+		}
+	}
+
+	function syncSubscriptions() {
+		if (!streamingEnabled) return;
+		for (const path of desiredSubscriptions) {
+			if (activeSubscriptions.has(path)) continue;
+			activeSubscriptions.add(path);
+			sendCommand('LISTEN', path);
+		}
+		for (const path of [...activeSubscriptions]) {
+			if (desiredSubscriptions.has(path)) continue;
+			sendCommand('IGNORE', path);
+			activeSubscriptions.delete(path);
+		}
+	}
+
+	function handleSocketOpen() {
+		clearReconnectTimer();
+		flushPendingFrames();
+		syncSubscriptions();
+	}
+
+	function handleSocketMessage(event: MessageEvent) {
+		const payload = event.data;
+		if (typeof payload === 'string') {
+			handleCommandMessage(payload);
+			return;
+		}
+		if (payload instanceof ArrayBuffer) {
+			handleBinaryPayload(payload);
+			return;
+		}
+		if (typeof Blob !== 'undefined' && payload instanceof Blob) {
+			payload
+				.arrayBuffer()
+				.then(handleBinaryPayload)
+				.catch((error) => console.warn('OSCQuery blob decode failed', error));
+		}
+	}
+
+	function handleCommandMessage(raw: string) {
+		try {
+			const message = JSON.parse(raw);
+			const command =
+				typeof message?.COMMAND === 'string'
+					? message.COMMAND
+					: typeof message?.command === 'string'
+						? message.command
+						: '';
+			switch (command) {
+				case 'PATH_CHANGED':
+				case 'PATH_ADDED':
+				case 'PATH_REMOVED':
+				case 'PATH_RENAMED':
+					void refreshStructure();
+					break;
+				default:
+					break;
+			}
+		} catch (error) {
+			console.warn('OSCQuery websocket message parse failed', error);
+		}
+	}
+
+	function handleBinaryPayload(buffer: ArrayBuffer) {
+		const decoded = decodeOscPacket(buffer);
+		if (!decoded) return;
+		applyIncomingValue(decoded);
+	}
+
+	function applyIncomingValue(message: OscDecodedMessage) {
+		const nextValue = coerceIncomingValue(message);
+		if (nextValue === undefined) return;
+		values.update((prev) => {
+			if (!(message.address in prev)) return prev;
+			if (prev[message.address] === nextValue) return prev;
+			return { ...prev, [message.address]: nextValue };
+		});
+		if (message.types.startsWith('N')) {
+			scheduleTriggerReset(message.address);
+		}
+	}
+
+	function scheduleTriggerReset(path: string) {
+		const existing = triggerResetTimers.get(path);
+		if (existing) clearTimeout(existing);
+		const timer = setTimeout(() => {
+			triggerResetTimers.delete(path);
+			values.update((prev) => {
+				if (!(path in prev) || prev[path] === false) return prev;
+				return { ...prev, [path]: false };
+			});
+		}, 120);
+		triggerResetTimers.set(path, timer);
+	}
+
+	function coerceIncomingValue(message: OscDecodedMessage): BindingValue | undefined {
+		const [firstTag] = message.types;
+		const [firstArg] = message.args;
+		switch (firstTag) {
+			case 'T':
+				return true;
+			case 'F':
+				return false;
+			case 'N':
+				return true;
+			case 'I':
+				return null;
+			case 'r':
+				return normalizeColorValue(firstArg);
+			default:
+				return (firstArg ?? null) as BindingValue;
+		}
+	}
+
+	async function refreshStructure() {
+		if (!currentEndpoint) return;
+		const snapshot = connectionAttempt;
+		try {
+			const tree = await fetchStructure(currentEndpoint);
+			if (snapshot !== connectionAttempt) return;
+			structure.set(tree);
+			currentNodeIndex = buildNodeIndex(tree);
+			const defaults = flatten(tree);
+			values.update((prev) => mergeValues(prev, defaults));
+			desiredSubscriptions = new Set<string>(collectLeafPaths(tree));
+			syncSubscriptions();
+		} catch (error) {
+			console.warn('OSCQuery structure refresh failed', error);
+		}
+	}
+
+	function handleSocketClose() {
+		activeSubscriptions.clear();
+		if (disconnecting || !streamingEnabled) return;
+		if (reconnectHandle) return;
+		reconnectHandle = setTimeout(() => {
+			reconnectHandle = undefined;
+			if (disconnecting || !streamingEnabled) return;
+			openWebsocket(lastHostInfo);
+		}, 1500);
+	}
+
+	function handleSocketError(event: Event) {
+		console.warn('OSCQuery websocket error', event);
+	}
+
+	function openWebsocket(info: OscHostInfo) {
+		if (typeof WebSocket === 'undefined') {
+			console.warn('WebSocket API is not available in this environment');
+			return;
+		}
+		const url = resolveWebsocketUrl(info);
+		if (!url) {
+			console.warn('Unable to determine OSCQuery websocket URL');
+			return;
+		}
+		clearReconnectTimer();
+		teardownWebsocket();
+		try {
+			websocket = new WebSocket(url);
+			websocket.binaryType = 'arraybuffer';
+			websocket.addEventListener('open', handleSocketOpen);
+			websocket.addEventListener('message', handleSocketMessage);
+			websocket.addEventListener('close', handleSocketClose);
+			websocket.addEventListener('error', handleSocketError);
+		} catch (error) {
+			console.warn('Failed to open OSCQuery websocket', error);
+		}
+	}
+
+	function normalizeColorValue(value: BindingValue): string | null {
+		if (typeof value !== 'string') return null;
+		let hex = value.trim();
+		if (!hex) return null;
+		if (hex.startsWith('#')) {
+			hex = hex.slice(1);
+		}
+		if (hex.length === 6) {
+			return `#${hex.toLowerCase()}`;
+		}
+		if (hex.length === 8) {
+			return `#${hex.slice(0, 6).toLowerCase()}`;
+		}
+		return null;
+	}
+
+	function interpretBoolean(value: BindingValue): boolean {
+		if (value === true) return true;
+		if (value === false || value === null) return false;
+		if (typeof value === 'number') return value !== 0;
+		return String(value).toLowerCase() === 'true';
+	}
+
+	function buildOscPayload(path: string, value: BindingValue): { types: string; args: BindingValue[] } | null {
+		const node = currentNodeIndex.get(path);
+		switch (node?.type) {
+			case 'boolean': {
+				const flag = interpretBoolean(value);
+				return { types: flag ? 'T' : 'F', args: [] };
+			}
+			case 'trigger': {
+				const active = interpretBoolean(value);
+				if (!active) return null;
+				return { types: 'N', args: [] };
+			}
+			case 'int': {
+				const num = Number(value);
+				if (!Number.isFinite(num)) return null;
+				return { types: 'i', args: [Math.round(num)] };
+			}
+			case 'float': {
+				const num = Number(value);
+				if (!Number.isFinite(num)) return null;
+				return { types: 'f', args: [num] };
+			}
+			case 'string': {
+				return { types: 's', args: [String(value ?? '')] };
+			}
+			case 'color': {
+				const color = normalizeColorValue(value);
+				if (!color) return null;
+				return { types: 'r', args: [color] };
+			}
+		}
+		if (typeof value === 'boolean') {
+			return { types: value ? 'T' : 'F', args: [] };
+		}
+		if (typeof value === 'number') {
+			return { types: Number.isInteger(value) ? 'i' : 'f', args: [value] };
+		}
+		if (typeof value === 'string') {
+			return { types: 's', args: [value] };
+		}
+		return null;
+	}
+
+	function sendFallbackOsc(path: string, value: BindingValue) {
+		if (!currentEndpoint) return;
+		fetch(`${currentEndpoint}/osc`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ path, value })
+		}).catch((error) => console.warn('OSC fallback send failed', error));
+	}
+
+	function disconnect(keepStatus = false) {
+		disconnecting = true;
+		stopMockUpdates();
+		clearReconnectTimer();
+		clearTriggerTimers();
+		streamingEnabled = false;
+		pendingFrames = [];
+		activeSubscriptions.clear();
+		desiredSubscriptions.clear();
+		teardownWebsocket();
+		if (!keepStatus) {
+			currentEndpoint = '';
+			status.set('disconnected');
+		}
+	}
+
+	async function connect(endpoint: string) {
+		const normalized = normalizeEndpoint(endpoint || '');
+		disconnect(true);
+		connectionAttempt += 1;
+		const attemptId = connectionAttempt;
+		disconnecting = false;
+		status.set('connecting');
+		currentEndpoint = normalized;
+		try {
+			stopMockUpdates();
+			const info = await fetchHostInfo(normalized);
+			if (attemptId !== connectionAttempt) return;
+			lastHostInfo = info;
+			hostInfo.set(info);
+			const tree = await fetchStructure(normalized);
+			if (attemptId !== connectionAttempt) return;
+			structure.set(tree);
+			currentNodeIndex = buildNodeIndex(tree);
+			const defaults = flatten(tree);
+			values.update((prev) => mergeValues(prev, defaults));
+			desiredSubscriptions = new Set<string>(collectLeafPaths(tree));
+			streamingEnabled = supportsStreaming(info);
+			status.set('connected');
+			if (streamingEnabled) {
+				openWebsocket(info);
+				syncSubscriptions();
+			} else {
+				console.warn('OSCQuery server does not advertise LISTEN support; updates will not stream');
+			}
+		} catch (error) {
+			console.warn('OSCQuery connection failed, falling back to mock data', error);
+			if (attemptId !== connectionAttempt) return;
+			useMockData();
+		}
 	}
 
 	function setValue(path: string, value: BindingValue) {
 		values.update((prev) => ({ ...prev, [path]: value }));
-		if (currentEndpoint) {
-			fetch(`${currentEndpoint}/osc`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ path, value })
-			}).catch((error) => console.warn('OSC send failed', error));
+		const payload = buildOscPayload(path, value);
+		if (payload && streamingEnabled) {
+			try {
+				const frame = encodeOscMessage(path, payload.types, payload.args);
+				enqueueFrame(frame);
+				return;
+			} catch (error) {
+				console.warn('Failed to encode OSC value', error);
+			}
 		}
+		sendFallbackOsc(path, value);
 	}
 
 	return {
@@ -401,7 +856,7 @@ export function createOscClient() {
 		hostInfo: { subscribe: hostInfo.subscribe },
 		values: { subscribe: values.subscribe },
 		connect,
-		disconnect,
+		disconnect: () => disconnect(),
 		setValue
 	};
 }
