@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { OscNode, OscValueType } from '$lib/services/oscquery';
+	import { createDragData, pragmaticDraggable, type PragmaticDraggableConfig } from '$lib/drag/pragmatic';
+	import { activeDragOperation, type OscNodeDrag } from '$lib/stores/drag';
 
 	export let node: OscNode;
 	export let depth = 0;
@@ -25,22 +27,33 @@
 		currentPath = node.path;
 		expanded = depth === 0;
 	}
+	let oscDraggable: PragmaticDraggableConfig | undefined;
+	$: oscDraggable = buildOscNodeDraggableConfig();
 
-	const handleDragStart = (event: DragEvent) => {
-		event.dataTransfer?.setData(
-			'application/osc-node',
-			JSON.stringify({
-				path: node.path,
-				name: node.description ?? node.name,
+	const buildOscNodeDraggableConfig = (): PragmaticDraggableConfig | undefined => {
+		if (!isLeaf) return undefined;
+		const intent: OscNodeDrag = {
+			kind: 'osc-node',
+			path: node.path,
+			osctype: node.type,
+			meta: {
+				name: node.name,
 				description: node.description,
 				min: node.min,
 				max: node.max,
 				step: node.step,
 				enumValues: node.enumValues,
-				default: node.default,
-				type: node.type
-			})
-		);
+				default: node.default
+			}
+		};
+		return {
+			enabled: true,
+			getInitialData: () => createDragData(intent),
+			events: {
+				onDragStart: () => activeDragOperation.set({ intent, origin: 'osc' }),
+				onDrop: () => activeDragOperation.set(null)
+			}
+		};
 	};
 
 	const toggle = (event: MouseEvent) => {
@@ -52,12 +65,11 @@
 <div
 	class="osc-node"
 	style={`--depth:${depth}`}
-	draggable={isLeaf}
 	role="treeitem"
 	tabindex="0"
 	aria-selected="false"
 	aria-expanded={hasChildren ? expanded : undefined}
-	on:dragstart={handleDragStart}
+	use:pragmaticDraggable={oscDraggable}
 >
 	{#if hasChildren}
 		<button type="button" class="node-toggle" title="Toggle children" on:click={toggle} aria-label={expanded ? 'Collapse node' : 'Expand node'}>

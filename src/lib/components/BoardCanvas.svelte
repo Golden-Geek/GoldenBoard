@@ -61,7 +61,6 @@
 				widget={$activeBoard.root}
 				selectedId={$selectedWidget?.widget.id}
 				rootId={$activeBoard.root.id}
-				parentLayout={undefined}
 			/>
 		</div>
 	{:else}

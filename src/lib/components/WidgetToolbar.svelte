@@ -7,6 +7,8 @@
 		removeCustomWidgetTemplate
 	} from '$lib/stores/boards';
 	import type { WidgetKind, WidgetTemplate } from '$lib/types/widgets';
+	import { activeDragOperation, type WidgetTemplateDrag } from '$lib/stores/drag';
+	import { createDragData, pragmaticDraggable, type PragmaticDraggableConfig } from '$lib/drag/pragmatic';
 
 	export let iconOnly = false;
 
@@ -26,6 +28,34 @@
 	let customInput: HTMLInputElement;
 
 	const handleCustomUpload = () => customInput.click();
+
+	const buildToolbarDraggable = (intent: WidgetTemplateDrag): PragmaticDraggableConfig => ({
+		enabled: true,
+		getInitialData: () => createDragData(intent),
+		events: {
+			onDragStart: () => {
+				activeDragOperation.set({ intent, origin: 'toolbar' });
+			},
+			onDrop: () => {
+				activeDragOperation.set(null);
+			}
+		}
+	});
+
+	const createBuiltinTemplateIntent = (option: { type: WidgetKind; label: string }): WidgetTemplateDrag => ({
+		kind: 'widget-template',
+		source: 'builtin',
+		widgetKind: option.type,
+		label: option.label
+	});
+
+	const createCustomTemplateIntent = (template: WidgetTemplate): WidgetTemplateDrag => ({
+		kind: 'widget-template',
+		source: 'custom',
+		templateId: template.id,
+		label: template.name,
+		template: template.payload
+	});
 
 	const parseTemplate = async (event: Event) => {
 		const file = (event.target as HTMLInputElement).files?.[0];
@@ -58,6 +88,7 @@
 				title={option.label}
 				aria-label={option.label}
 				on:click={() => addWidgetToBoard(option.type)}
+				use:pragmaticDraggable={buildToolbarDraggable(createBuiltinTemplateIntent(option))}
 			>
 				<span class="icon">{option.icon}</span>
 				{#if !iconOnly}
@@ -85,7 +116,12 @@
 			<div class="custom-list" aria-label="Custom widgets">
 				{#each $activeBoard.customWidgets as widget}
 					<div class="chip">
-						<button type="button" title={`Insert ${widget.name}`} on:click={() => instantiateCustomWidget(widget.id)}>
+						<button
+							type="button"
+							title={`Insert ${widget.name}`}
+							on:click={() => instantiateCustomWidget(widget.id)}
+							use:pragmaticDraggable={buildToolbarDraggable(createCustomTemplateIntent(widget))}
+						>
 							{widget.name}
 						</button>
 						<button
