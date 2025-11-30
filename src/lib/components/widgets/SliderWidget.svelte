@@ -38,6 +38,7 @@
 	let showCallout = false;
 	let calloutInputValue = '';
 	let calloutLeft = 0;
+	let calloutTop = 0;
 	let percentage = 0;
 	let suppressNextDrag = false;
 
@@ -110,10 +111,19 @@
 		suppressNextDrag = true;
 		const rect = trackRef?.getBoundingClientRect();
 		const relativeX = rect ? event.clientX - rect.left : 0;
-		calloutLeft = rect ? Math.min(rect.width - 12, Math.max(12, relativeX)) : relativeX;
+		// compute initial left/top in viewport coords; we'll refine after rendering
+		calloutLeft = rect ? rect.left + Math.min(rect.width - 12, Math.max(12, relativeX)) : 0;
+		calloutTop = rect ? rect.top - 8 : 0;
 		calloutInputValue = String(currentValue);
 		showCallout = true;
 		await tick();
+		// adjust to account for callout size and keep within viewport
+		if (calloutRef) {
+			const cw = calloutRef.offsetWidth;
+			const ch = calloutRef.offsetHeight;
+			calloutLeft = Math.min(window.innerWidth - cw - 8, Math.max(8, calloutLeft));
+			calloutTop = Math.max(8, rect ? rect.top - ch - 8 : calloutTop);
+		}
 		calloutInput?.focus();
 		calloutInput?.select();
 	};
@@ -224,7 +234,7 @@
 			<span class="slider-value">{currentValue.toFixed(2)}</span>
 		</div>
 		{#if showCallout}
-			<div class="slider-callout" bind:this={calloutRef} style={`left: ${calloutLeft}px`}>
+			<div class="slider-callout" bind:this={calloutRef} style={`left: ${calloutLeft}px; top: ${calloutTop}px`}>
 				<input
 					type="number"
 					bind:this={calloutInput}
@@ -261,8 +271,8 @@
 	.slider-track {
 		position: relative;
 		width: 100%;
-		height: 40px;
-		border-radius: 999px;
+		height: 1.5em;
+		border-radius: 2em;
 		background: linear-gradient(180deg, rgba(18, 46, 32, 0.95), rgba(8, 20, 14, 0.95));
 		border: 1px solid rgba(102, 255, 187, 0.35);
 		box-shadow:
@@ -291,6 +301,7 @@
 		background: linear-gradient(90deg, #00d778, #5bffb2 55%, #b8ffd7);
 		box-shadow: inset 0 0 12px rgba(2, 78, 47, 0.6), 0 0 20px rgba(0, 230, 140, 0.55);
 		z-index: 1;
+		border-radius: 2em;
 	}
 
 	.slider-overlay {
@@ -319,9 +330,8 @@
 	}
 
 	.slider-callout {
-		position: absolute;
-		bottom: 100%;
-		transform: translate(-50%, -0.4rem);
+		position: fixed;
+		/* initial placement overridden via style attribute */
 		background: var(--panel);
 		border: 1px solid rgba(255, 255, 255, 0.12);
 		border-radius: 6px;
@@ -329,8 +339,9 @@
 		display: flex;
 		gap: 0.35rem;
 		align-items: center;
-		box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
-		z-index: 5;
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+		z-index: 99999;
+		pointer-events: auto;
 	}
 
 	.slider-callout input {

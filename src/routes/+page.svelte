@@ -15,8 +15,6 @@
 	} from '$lib/stores/boards';
 	import type { ContainerWidget, Widget } from '$lib/types/widgets';
 
-	let mode: EditorMode = 'edit';
-	let settingsOpen = false;
 	let boardCss = '';
 	let globalCss = '';
 	let selection: { widget: Widget; parent?: ContainerWidget } | null = null;
@@ -40,7 +38,6 @@
 	const handleGlobalKeydown = (event: KeyboardEvent) => {
 
 		if (event.key === 'e' && event.ctrlKey) {
-			console.log('here');
 			event.preventDefault();
 			toggleEditorMode();
 			return;
@@ -93,6 +90,7 @@
 
 <svelte:window on:keydown={handleGlobalKeydown} />
 
+{#if mode !== 'loading'}
 <div class={`app-root mode-${mode}`}>
 	{#if !showEditLiveButtons}
 	<ModeToggle />
@@ -113,3 +111,4 @@
 		</aside>
 	</div>
 </div>
+{/if}

@@ -1,7 +1,7 @@
 import { browser } from '$app/environment';
 import { writable } from 'svelte/store';
 
-export type EditorMode = 'live' | 'edit';
+export type EditorMode = 'live' | 'edit' | 'loading';
 export type InspectorView = 'widget' | 'board' | 'settings';
 
 export interface MainSettings {
@@ -10,15 +10,27 @@ export interface MainSettings {
 	globalCss: string;
 }
 
-const DEFAULT_MODE: EditorMode = 'edit';
+const DEFAULT_MODE: EditorMode = 'loading';
 const SETTINGS_KEY = 'goldenboard:main-settings';
+const EDITOR_MODE_KEY = 'goldenboard:editor-mode';
 const DEFAULT_SETTINGS: MainSettings = {
 	showLiveBoards: true,
 	showEditLiveButtons: true,
 	globalCss: ''
 };
 
-export const editorMode = writable<EditorMode>(DEFAULT_MODE);
+function loadEditorMode(): EditorMode {
+	if (!browser) return DEFAULT_MODE;
+	try {
+		const raw = localStorage.getItem(EDITOR_MODE_KEY);
+		if (raw === 'live') return 'live';
+		return 'edit';
+	} catch (error) {
+		return DEFAULT_MODE;
+	}
+}
+
+export const editorMode = writable<EditorMode>(loadEditorMode());
 export const mainSettings = writable<MainSettings>(loadSettings());
 export const inspectorView = writable<InspectorView>('widget');
 
@@ -54,5 +66,13 @@ function loadSettings(): MainSettings {
 if (browser) {
 	mainSettings.subscribe((value) => {
 		localStorage.setItem(SETTINGS_KEY, JSON.stringify(value));
+	});
+
+	editorMode.subscribe((value) => {
+		try {
+			localStorage.setItem(EDITOR_MODE_KEY, value);
+		} catch (error) {
+			// ignore storage errors
+		}
 	});
 }

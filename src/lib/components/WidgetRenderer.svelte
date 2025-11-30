@@ -123,8 +123,8 @@
 			: 'vertical';
 	let widgetDraggableConfig: PragmaticDraggableConfig | undefined;
 	let containerDropTargetConfig: PragmaticDropTargetConfig | undefined;
-	$: widgetDraggableConfig = buildWidgetDraggableConfig();
-	$: containerDropTargetConfig = buildContainerDropTargetConfig();
+	$: widgetDraggableConfig = (isEditMode, buildWidgetDraggableConfig());
+	$: containerDropTargetConfig = (isEditMode, containerWidget, buildContainerDropTargetConfig());
 	let activeGapIndex: number | null = null;
 	let showGapTargets = false;
 	let isContainerDropActive = false;
@@ -213,6 +213,7 @@
 	});
 
 	const buildWidgetDraggableConfig = (): PragmaticDraggableConfig | undefined => {
+			console.log("HERE", isEditMode, widget.id, rootId);
 		if (!isEditMode || widget.id === rootId) {
 			return undefined;
 		}
