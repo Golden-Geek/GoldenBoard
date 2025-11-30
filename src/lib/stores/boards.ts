@@ -333,7 +333,7 @@ export function exportActiveBoard(): string {
 	return JSON.stringify(board, null, 2);
 }
 
-export function propagateWidgetValue(widgetId: string, binding: Binding, rawValue: number | string): void {
+export function propagateWidgetValue(widgetId: string, binding: Binding, rawValue: number | string | boolean): void {
 	if (binding.kind === 'osc' && binding.path) {
 		pushOscValue(binding.path, rawValue);
 	}
@@ -434,6 +434,42 @@ export function createWidget(kind: WidgetKind): Widget {
 					max: literal(1),
 					step: literal(0.01)
 				},
+				css: ''
+			});
+		case 'toggle':
+			return ensureMeta({
+				id: createId('toggle'),
+				type: 'toggle',
+				label: 'Toggle',
+				value: literal(false),
+				props: {},
+				css: ''
+			});
+		case 'checkbox':
+			return ensureMeta({
+				id: createId('checkbox'),
+				type: 'checkbox',
+				label: 'Checkbox',
+				value: literal(false),
+				props: {},
+				css: ''
+			});
+		case 'button':
+			return ensureMeta({
+				id: createId('button'),
+				type: 'button',
+				label: 'Button',
+				value: literal(false),
+				props: {},
+				css: ''
+			});
+		case 'momentary-button':
+			return ensureMeta({
+				id: createId('momentary'),
+				type: 'momentary-button',
+				label: 'Trigger',
+				value: literal(false),
+				props: {},
 				css: ''
 			});
 	}

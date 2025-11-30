@@ -1,6 +1,6 @@
 <script lang="ts">
 	import OscTreeNode from '$lib/components/OscTreeNode.svelte';
-	import { connectOsc, disconnectOsc, oscEndpoint, oscStatus, oscStructure } from '$lib/stores/oscquery';
+	import { connectOsc, disconnectOsc, oscEndpoint, oscStatus, oscStructure, oscHostInfo } from '$lib/stores/oscquery';
 
 	let endpoint = '';
 	$: endpoint = $oscEndpoint;
@@ -21,6 +21,17 @@
 			<div class="section-title">OSC Query</div>
 			<span class={`status-dot ${$oscStatus}`}>{$oscStatus}</span>
 		</div>
+		{#if $oscHostInfo}
+			<div class="host-meta">
+				<strong>{$oscHostInfo.name}</strong>
+				<small>
+					{$oscHostInfo.oscIp ?? '—'}{#if $oscHostInfo.oscPort}:{$oscHostInfo.oscPort}{/if}
+					{#if $oscHostInfo.transport}
+						&nbsp;&middot;&nbsp;{$oscHostInfo.transport.toUpperCase()}
+					{/if}
+				</small>
+			</div>
+		{/if}
 		<div class="connection">
 			<input
 				value={endpoint}
@@ -44,7 +55,7 @@
 
 <style>
 	.osc-panel {
-		padding: 1rem;
+		padding: 0.5rem;
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
@@ -54,6 +65,21 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
+	}
+
+	.host-meta {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+	}
+
+	.host-meta strong {
+		font-size: 0.9rem;
+	}
+
+	.host-meta small {
+		font-size: 0.75rem;
+		color: var(--muted);
 	}
 
 	.status-dot {

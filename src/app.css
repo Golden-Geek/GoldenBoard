@@ -390,15 +390,22 @@ button.ghost {
 	max-height: 260px;
 	border-radius: var(--radius);
 	border: 1px solid rgba(255, 255, 255, 0.04);
-	padding: 0.4rem;
+	padding: 0.2rem;
 	margin-top: 0.5rem;
 }
 
 .osc-node {
-	padding: 0.25rem 0.4rem;
+	padding: 0.15rem 0.25rem;
 	border-radius: 4px;
-	margin-left: calc(var(--depth) * 12px);
-	font-size: 0.82rem;
+	margin-left: calc(var(--depth) * 8px);
+	font-size: 0.8rem;
+	display: flex;
+	align-items: center;
+	gap: 0.3rem;
+	cursor: default;
+}
+
+.osc-node[draggable='true'] {
 	cursor: grab;
 }
 

@@ -5,6 +5,7 @@
 - **Board data model**: `src/lib/types/board.ts` defines discriminated unions for `Widget`, `ContainerWidget`, and `Board`. Each instance stores metadata, bindings, layout info, css overrides, and arbitrary property bags. Boards are persisted in localStorage and can be exported/imported as JSON.
 - **Global state stores**: `src/lib/stores/boards.ts` manages all boards, current selection, clipboard, and undo history. `src/lib/stores/oscquery.ts` mirrors the remote tree.
 - **Widget property binding**: every widget property is represented as `{ kind: 'literal' | 'osc' | 'widget' | 'expression', value: string }`. Helpers resolve bindings at runtime and handle bi-directional sync with OSC nodes.
+- **Boolean + trigger widgets**: Toggle, checkbox, latched button, and momentary trigger widgets provide dedicated affordances for boolean parameters and impulse-style OSC nodes.
 
 ## UI Regions
 1. **Top toolbar**: board switcher, add/remove board actions, undo/redo, import/export JSON, OSC endpoint connect button.

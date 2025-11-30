@@ -16,7 +16,11 @@
 		{ type: 'int-stepper', label: 'Stepper', icon: '±' },
 		{ type: 'text-field', label: 'Text', icon: '𝚊' },
 		{ type: 'color-picker', label: 'Color', icon: '◎' },
-		{ type: 'rotary', label: 'Rotary', icon: '⟳' }
+		{ type: 'rotary', label: 'Rotary', icon: '⟳' },
+		{ type: 'toggle', label: 'Toggle', icon: '⭘' },
+		{ type: 'checkbox', label: 'Checkbox', icon: '☑' },
+		{ type: 'button', label: 'Button', icon: '⬚' },
+		{ type: 'momentary-button', label: 'Trigger', icon: '●' }
 	];
 
 	let customInput: HTMLInputElement;

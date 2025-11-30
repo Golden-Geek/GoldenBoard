@@ -1,12 +1,23 @@
-
-
 <script lang="ts">
 	import SliderWidgetView from '$lib/components/widgets/SliderWidget.svelte';
 	import IntStepperWidgetView from '$lib/components/widgets/IntStepperWidget.svelte';
 	import TextFieldWidgetView from '$lib/components/widgets/TextFieldWidget.svelte';
 	import ColorPickerWidgetView from '$lib/components/widgets/ColorPickerWidget.svelte';
 	import RotaryWidgetView from '$lib/components/widgets/RotaryWidget.svelte';
-	import type { ContainerWidget, SliderWidget, Widget, MetaBindingKey, LayoutType } from '$lib/types/widgets';
+	import ToggleWidgetView from '$lib/components/widgets/ToggleWidget.svelte';
+	import CheckboxWidgetView from '$lib/components/widgets/CheckboxWidget.svelte';
+	import ButtonWidgetView from '$lib/components/widgets/ButtonWidget.svelte';
+	import MomentaryButtonWidgetView from '$lib/components/widgets/MomentaryButtonWidget.svelte';
+	import type {
+		ContainerWidget,
+		SliderWidget,
+		Widget,
+		MetaBindingKey,
+		LayoutType,
+		ToggleWidget,
+		MomentaryButtonWidget
+	} from '$lib/types/widgets';
+	import type { OscValueType } from '$lib/services/oscquery';
 	import { literal, oscBinding, resolveBinding, type Binding, type BindingContext, type BindingValue } from '$lib/types/binding';
 	import { bindingContext } from '$lib/stores/runtime';
 	import {
@@ -60,6 +71,18 @@
 	$: metaType = resolveMetaField('type', widget.type, ctx);
 	$: isDraggable = isEditMode && widget.id !== rootId;
 
+	type OscDropPayload = {
+		path: string;
+		min?: number;
+		max?: number;
+		step?: number;
+		name?: string;
+		description?: string;
+		enumValues?: (string | number)[];
+		default?: BindingValue;
+		type?: OscValueType;
+	};
+
 	const resolveMetaField = (key: MetaBindingKey, fallback: string, context: BindingContext): string => {
 		const binding = widget.meta?.[key];
 		if (!binding) return fallback;
@@ -77,7 +100,7 @@
 		return resolved === null || resolved === undefined ? node.label : String(resolved);
 	};
 
-	const handleValueInput = (next: number | string) => {
+	const handleValueInput = (next: number | string | boolean) => {
 		if (isEditMode) return;
 		if (typeof next === 'number' && Number.isNaN(next)) {
 			return;
@@ -144,15 +167,9 @@
 		}
 		const oscPayload = event.dataTransfer?.getData('application/osc-node');
 		if (oscPayload) {
-			const osc = JSON.parse(oscPayload) as { path: string; min?: number; max?: number; step?: number; name?: string };
-			const slider = structuredClone(sliderTemplate);
-			slider.id = createId('slider');
-			slider.label = osc.name ?? osc.path;
-			slider.value = oscBinding(osc.path);
-			slider.props.min = literal(osc.min ?? 0);
-			slider.props.max = literal(osc.max ?? 1);
-			slider.props.step = literal(osc.step ?? 0.01);
-			insertWidgetInstance(slider, widget.id);
+			const osc = JSON.parse(oscPayload) as OscDropPayload;
+			const newWidget = createWidgetFromOsc(osc);
+			insertWidgetInstance(newWidget, widget.id);
 			dropIndicator = null;
 			activeGapIndex = null;
 			event.stopPropagation();
@@ -303,16 +320,10 @@
 		}
 		const oscPayload = event.dataTransfer?.getData('application/osc-node');
 		if (oscPayload) {
-			const osc = JSON.parse(oscPayload) as { path: string; min?: number; max?: number; step?: number; name?: string };
-			const slider = structuredClone(sliderTemplate);
-			slider.id = createId('slider');
-			slider.label = osc.name ?? osc.path;
-			slider.value = oscBinding(osc.path);
-			slider.props.min = literal(osc.min ?? 0);
-			slider.props.max = literal(osc.max ?? 1);
-			slider.props.step = literal(osc.step ?? 0.01);
-			insertWidgetInstance(slider, containerWidget.id);
-			repositionNewWidget(slider.id, gapIndex);
+			const osc = JSON.parse(oscPayload) as OscDropPayload;
+			const newWidget = createWidgetFromOsc(osc);
+			insertWidgetInstance(newWidget, containerWidget.id);
+			repositionNewWidget(newWidget.id, gapIndex);
 			dropIndicator = null;
 			activeGapIndex = null;
 			event.stopPropagation();
@@ -361,6 +372,50 @@
 		css: ''
 	};
 
+	const toggleTemplate: ToggleWidget = {
+		id: createId('toggle'),
+		type: 'toggle',
+		label: 'Toggle',
+		value: literal(false),
+		props: {},
+		css: ''
+	};
+
+	const momentaryTemplate: MomentaryButtonWidget = {
+		id: createId('momentary'),
+		type: 'momentary-button',
+		label: 'Trigger',
+		value: literal(false),
+		props: {},
+		css: ''
+	};
+
+	const createWidgetFromOsc = (osc: OscDropPayload): Widget => {
+		const label = osc.name ?? osc.description ?? osc.path;
+		if (osc.type === 'boolean') {
+			const toggle = structuredClone(toggleTemplate);
+			toggle.id = createId('toggle');
+			toggle.label = label;
+			toggle.value = oscBinding(osc.path);
+			return toggle;
+		}
+		if (osc.type === 'trigger') {
+			const button = structuredClone(momentaryTemplate);
+			button.id = createId('momentary');
+			button.label = label;
+			button.value = oscBinding(osc.path);
+			return button;
+		}
+		const slider = structuredClone(sliderTemplate);
+		slider.id = createId('slider');
+		slider.label = label;
+		slider.value = oscBinding(osc.path);
+		slider.props.min = literal(osc.min ?? 0);
+		slider.props.max = literal(osc.max ?? 1);
+		slider.props.step = literal(osc.step ?? 0.01);
+		return slider;
+	};
+
 </script>
 
 <div
@@ -391,20 +446,6 @@
 	on:dragleave={handleDragLeave}
 	on:drop={handleDrop}
 >
-	{#if isEditMode && widget.id !== rootId}
-		<button
-			type="button"
-			class="widget-drag-handle"
-			title="Drag to move"
-			tabindex="-1"
-			aria-hidden="true"
-			on:click|stopPropagation
-			on:mousedown|stopPropagation
-			on:dragstart={handleMoveDragStart}
-		>
-			⋮⋮
-		</button>
-	{/if}
 	{#if containerWidget}
 		<div class="widget-header">
 			<h4>{metaLabel}</h4>
@@ -458,6 +499,16 @@
 					onChange={handleValueInput}
 				/>
 			</div>
+		{:else if widget.type === 'button'}
+			<div class="widget-button-block">
+				<span class="widget-label widget-label-stack">{metaLabel}</span>
+				<ButtonWidgetView {widget} {isEditMode} value={value} label={metaLabel} onChange={handleValueInput} />
+			</div>
+		{:else if widget.type === 'momentary-button'}
+			<div class="widget-button-block">
+				<span class="widget-label widget-label-stack">{metaLabel}</span>
+				<MomentaryButtonWidgetView {widget} {isEditMode} value={value} label={metaLabel} onChange={handleValueInput} />
+			</div>
 		{:else}
 			<div class="widget-inline">
 				<span class="widget-label">{metaLabel}</span>
@@ -470,6 +521,10 @@
 						<ColorPickerWidgetView {isEditMode} value={value ?? '#ffffff'} onInput={handleStringInput} />
 					{:else if widget.type === 'rotary'}
 						<RotaryWidgetView {widget} {ctx} {isEditMode} value={value as number | string | null} onChange={handleValueInput} />
+					{:else if widget.type === 'toggle'}
+						<ToggleWidgetView {widget} {isEditMode} value={value} label={metaLabel} onChange={handleValueInput} />
+					{:else if widget.type === 'checkbox'}
+						<CheckboxWidgetView {widget} {isEditMode} value={value} label={metaLabel} onChange={handleValueInput} />
 					{/if}
 				</div>
 			</div>
@@ -515,6 +570,18 @@
 		width: 100%;
 		display: block;
 		padding: 0.1rem 0;
+	}
+
+	.widget-button-block {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.widget-label-stack {
+		flex: none;
+		width: auto;
+		white-space: normal;
 	}
 
 	:global(.widget[data-mode='edit'] input:disabled),
@@ -612,32 +679,4 @@
 		background: var(--accent);
 		color: #0b0902;
 	}
-
-	.widget-drag-handle {
-		position: absolute;
-		top: 6px;
-		right: 6px;
-		width: 24px;
-		height: 24px;
-		border: none;
-		border-radius: 4px;
-		background: rgba(255, 255, 255, 0.08);
-		color: var(--muted);
-		font-size: 0.75rem;
-		cursor: grab;
-		opacity: 0;
-		transition: opacity 120ms ease, background 120ms ease;
-	}
-
-	.widget[data-mode='edit']:hover .widget-drag-handle,
-	.widget[data-mode='edit'].selected .widget-drag-handle {
-		opacity: 1;
-	}
-
-	.widget-drag-handle:active {
-		cursor: grabbing;
-		background: rgba(255, 255, 255, 0.15);
-	}
-
-
 </style>

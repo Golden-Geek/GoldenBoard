@@ -15,7 +15,11 @@ export type WidgetKind =
 	| 'int-stepper'
 	| 'text-field'
 	| 'color-picker'
-	| 'rotary';
+	| 'rotary'
+	| 'toggle'
+	| 'checkbox'
+	| 'button'
+	| 'momentary-button';
 
 export type MetaBindingKey = 'id' | 'type' | 'label';
 
@@ -74,13 +78,33 @@ export interface RotaryWidget extends WidgetBase {
 	};
 }
 
+export interface ToggleWidget extends WidgetBase {
+	type: 'toggle';
+}
+
+export interface CheckboxWidget extends WidgetBase {
+	type: 'checkbox';
+}
+
+export interface ButtonWidget extends WidgetBase {
+	type: 'button';
+}
+
+export interface MomentaryButtonWidget extends WidgetBase {
+	type: 'momentary-button';
+}
+
 export type Widget =
 	| ContainerWidget
 	| SliderWidget
 	| IntStepperWidget
 	| TextFieldWidget
 	| ColorPickerWidget
-	| RotaryWidget;
+	| RotaryWidget
+	| ToggleWidget
+	| CheckboxWidget
+	| ButtonWidget
+	| MomentaryButtonWidget;
 
 export interface WidgetTemplate {
 	id: string;

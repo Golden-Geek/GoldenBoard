@@ -4,7 +4,7 @@ A Svelte 5 dashboard editor for building OSC-driven control boards with nested l
 
 ## Features
 - **OSCQuery integration** – Connect to a remote OSCQuery endpoint (or fall back to the built-in mock tree) to browse, drag, and bind parameters bi-directionally.
-- **Board + widget modeling** – Infinite container nesting, sliders, steppers, text fields, color pickers, and rotary controls. Entire board structure stored and exportable as JSON.
+- **Board + widget modeling** – Infinite container nesting with sliders, steppers, text fields, color pickers, rotary controls, toggles, checkboxes, latching buttons, and momentary triggers. Entire board structure stored and exportable as JSON.
 - **Photoshop-style tooling** – Palette for native widgets, OSC tree drag-and-drop, custom widget import/export, and multi-board management.
 - **Inspector + bindings** – Inspect any widget, edit bindings (literal / OSC / widget / expression), tweak per-widget CSS, and preview the backing JSON snippet.
 - **Styling system** – Dark, modern theme with small radii, subtle shadows, and per-board/per-widget CSS overrides.
