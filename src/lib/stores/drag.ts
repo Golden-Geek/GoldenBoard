@@ -41,3 +41,9 @@ export type ActiveDragOperation = {
 
 export const draggingWidgetId = writable<string | null>(null);
 export const activeDragOperation = writable<ActiveDragOperation | null>(null);
+export type ActiveContainerDropTarget = {
+	id: string;
+	depth: number;
+};
+
+export const activeContainerDropTarget = writable<ActiveContainerDropTarget | null>(null);

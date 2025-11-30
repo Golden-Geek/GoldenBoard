@@ -25,6 +25,8 @@
 	import {
 		activeDragOperation,
 		draggingWidgetId,
+		activeContainerDropTarget,
+		type ActiveContainerDropTarget,
 		type WidgetMoveDrag,
 		type WidgetTemplateDrag,
 		type OscNodeDrag,
@@ -53,6 +55,7 @@
 	export let widget: Widget;
 	export let selectedId: string | undefined;
 	export let rootId: string;
+	export let depth = 0;
 
 	let ctx: BindingContext = { oscValues: {}, widgetValues: {}, functions: {} };
 	$: ctx = $bindingContext;
@@ -66,6 +69,14 @@
 	}
 	let draggingId: string | null = null;
 	$: draggingId = $draggingWidgetId;
+	let activeDropTarget: ActiveContainerDropTarget | null = null;
+	let isDropPreviewOwner = false;
+	let visibleGapTargets = false;
+	let dropActiveFlag = false;
+	$: activeDropTarget = $activeContainerDropTarget;
+	$: isDropPreviewOwner = (activeDropTarget?.id ?? null) === widget.id;
+	$: visibleGapTargets = showGapTargets && isDropPreviewOwner;
+	$: dropActiveFlag = isDropPreviewOwner && isContainerDropActive;
 	let mode: EditorMode = 'edit';
 	$: mode = $editorMode;
 	let isEditMode = mode === 'edit';
@@ -100,6 +111,9 @@
 	$: showGapTargets = isEditMode && containerGapEnabled;
 	$: if (!showGapTargets) {
 		activeGapIndex = null;
+		if (activeDropTarget?.id === widget.id) {
+			activeContainerDropTarget.set(null);
+		}
 	}
 	$: if (!containerWidget || !isEditMode) {
 		isContainerDropActive = false;
@@ -293,21 +307,28 @@
 			resetDropPreview();
 			return;
 		}
-		const pointer = resolvePointerPosition(payload);
-		const placement: ContainerPlacement = isContainerDropActive
-			? pendingPlacement
-			: pointer
-				? resolveContainerPlacementFromPoint(pointer)
-				: createInsidePlacement();
-		pendingPlacement = placement;
-		if (intent.kind === 'widget-move') {
-			applyWidgetMoveIntent(intent, placement);
-		} else if (intent.kind === 'widget-template') {
-			applyWidgetTemplateIntent(intent, placement);
-		} else if (intent.kind === 'osc-node') {
-			applyOscNodeIntent(intent, placement);
+		if (!beginDropHandling()) {
+			return;
 		}
-		resetDropPreview();
+		try {
+			const pointer = resolvePointerPosition(payload);
+			const placement: ContainerPlacement = isContainerDropActive
+				? pendingPlacement
+				: pointer
+					? resolveContainerPlacementFromPoint(pointer)
+					: createInsidePlacement();
+			pendingPlacement = placement;
+			if (intent.kind === 'widget-move') {
+				applyWidgetMoveIntent(intent, placement);
+			} else if (intent.kind === 'widget-template') {
+				applyWidgetTemplateIntent(intent, placement);
+			} else if (intent.kind === 'osc-node') {
+				applyOscNodeIntent(intent, placement);
+			}
+			resetDropPreview(false);
+		} finally {
+			finishDropHandling();
+		}
 	};
 
 	const applyWidgetMoveIntent = (intent: WidgetMoveDrag, placement: ContainerPlacement | null) => {
@@ -361,23 +382,79 @@
 
 	const updatePlacementPreview = (point: PointerPosition | null) => {
 		if (!containerWidget) return;
+		if (!claimDropPreviewOwnership()) {
+			isContainerDropActive = false;
+			activeGapIndex = null;
+			return;
+		}
 		isContainerDropActive = true;
 		const placement: ContainerPlacement = point ? resolveContainerPlacementFromPoint(point) : createInsidePlacement();
 		pendingPlacement = placement;
 		activeGapIndex = placementToGapIndex(placement);
 	};
 
-	const resetDropPreview = () => {
+
+	const resetDropPreview = (releaseOwnership = true) => {
 		cancelDropPreviewReset();
 		isContainerDropActive = false;
 		activeGapIndex = null;
 		pendingPlacement = createInsidePlacement();
+	 	if (releaseOwnership) {
+			releaseDropPreviewOwnership();
+		}
 	};
 
 	type ContainerPlacement = { type: 'inside' } | { type: 'before' | 'after'; targetId: string };
 
 	function createInsidePlacement(): ContainerPlacement {
 		return { type: 'inside' };
+	}
+
+	let dropHandlingOwner: string | null = null;
+
+	const runAfterDrop = (callback: () => void) => {
+		if (typeof queueMicrotask === 'function') {
+			queueMicrotask(callback);
+		} else {
+			Promise.resolve().then(callback);
+		}
+	};
+
+	function claimDropPreviewOwnership(): boolean {
+		const current = get(activeContainerDropTarget);
+		if (current && current.id !== widget.id && current.depth > depth) {
+			return false;
+		}
+		activeContainerDropTarget.set({ id: widget.id, depth });
+		return true;
+	}
+
+	function releaseDropPreviewOwnership(ownerId = widget.id): void {
+		const current = get(activeContainerDropTarget);
+		if (current?.id === ownerId) {
+			activeContainerDropTarget.set(null);
+		}
+	}
+
+	function beginDropHandling(): boolean {
+		const current = get(activeContainerDropTarget);
+		if (current && current.id !== widget.id) {
+			return false;
+		}
+		if (dropHandlingOwner && dropHandlingOwner !== widget.id) {
+			return false;
+		}
+		dropHandlingOwner = widget.id;
+		return true;
+	}
+
+	function finishDropHandling(ownerId = widget.id): void {
+		runAfterDrop(() => {
+			if (dropHandlingOwner === ownerId) {
+				dropHandlingOwner = null;
+			}
+			releaseDropPreviewOwnership(ownerId);
+		});
 	}
 
 const resolveContainerPlacementFromPoint = (point: PointerPosition | null): ContainerPlacement => {
@@ -441,6 +518,7 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 		if (!isEditMode || !containerWidget) return;
 		if (!hasActiveContainerIntent()) return;
 		event.preventDefault();
+		event.stopPropagation();
 		updatePlacementPreview({ clientX: event.clientX, clientY: event.clientY });
 	};
 
@@ -452,7 +530,15 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 		if (current && related && current.contains(related)) {
 			return;
 		}
+		event.stopPropagation();
 		scheduleDropPreviewReset();
+	};
+
+	const handleNativeDrop = (event: DragEvent) => {
+		if (!isEditMode || !containerWidget) return;
+		if (!hasActiveContainerIntent()) return;
+		event.preventDefault();
+		event.stopPropagation();
 	};
 
 
@@ -589,13 +675,14 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 			</div>
 		{/if}
 		<div
-			class={`container-body layout-${containerWidget.layout} ${showGapTargets ? 'has-drop-gaps' : ''}`}
-			data-drop-active={isContainerDropActive ? 'true' : undefined}
+			class={`container-body layout-${containerWidget.layout} ${visibleGapTargets ? 'has-drop-gaps' : ''}`}
+			data-drop-active={dropActiveFlag ? 'true' : undefined}
 			bind:this={containerBodyRef}
 			use:pragmaticDropTarget={containerDropTargetConfig}
 			role="group"
 			on:dragover={handleNativeDragOver}
 			on:dragleave={handleNativeDragLeave}
+			on:drop={handleNativeDrop}
 		>
 			{#if containerWidget.layout === 'tabs'}
 				<div class="tabs">
@@ -606,7 +693,7 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 				{#if selectedTab}
 					{#each containerWidget.children as child (child.id)}
 						{#if child.id === selectedTab}
-							<svelte:self widget={child} {selectedId} {rootId} />
+							<svelte:self widget={child} {selectedId} {rootId} depth={depth + 1} />
 						{/if}
 					{/each}
 				{/if}
@@ -614,16 +701,16 @@ const resolveContainerPlacementFromPoint = (point: PointerPosition | null): Cont
 				{#each containerWidget.children as child (child.id)}
 					<details open>
 						<summary>{childLabel(child, ctx)}</summary>
-						<svelte:self widget={child} {selectedId} {rootId} />
+						<svelte:self widget={child} {selectedId} {rootId} depth={depth + 1} />
 					</details>
 				{/each}
 			{:else}
-				{#if showGapTargets}
+				{#if visibleGapTargets}
 					<div class={`drop-placeholder drop-placeholder-${containerDropAxis}`} data-active={activeGapIndex === 0 ? 'true' : undefined}></div>
 				{/if}
 				{#each containerWidget.children as child, index (child.id)}
-					<svelte:self widget={child} {selectedId} {rootId} />
-					{#if showGapTargets}
+					<svelte:self widget={child} {selectedId} {rootId} depth={depth + 1} />
+					{#if visibleGapTargets}
 						<div
 							class={`drop-placeholder drop-placeholder-${containerDropAxis}`}
 							data-active={activeGapIndex === index + 1 ? 'true' : undefined}
