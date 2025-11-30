@@ -44,7 +44,12 @@
 					? (event.preventDefault(), selectWidget($activeBoard.root.id))
 					: null}
 		>
-			<WidgetRenderer widget={$activeBoard.root} selectedId={$selectedWidget?.widget.id} rootId={$activeBoard.root.id} />
+			<WidgetRenderer
+				widget={$activeBoard.root}
+				selectedId={$selectedWidget?.widget.id}
+				rootId={$activeBoard.root.id}
+				parentLayout={undefined}
+			/>
 		</div>
 	{:else}
 		<p class="muted">No board selected.</p>

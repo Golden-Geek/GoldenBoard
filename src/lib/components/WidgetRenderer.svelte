@@ -6,7 +6,7 @@
 	import TextFieldWidgetView from '$lib/components/widgets/TextFieldWidget.svelte';
 	import ColorPickerWidgetView from '$lib/components/widgets/ColorPickerWidget.svelte';
 	import RotaryWidgetView from '$lib/components/widgets/RotaryWidget.svelte';
-	import type { ContainerWidget, SliderWidget, Widget, MetaBindingKey } from '$lib/types/widgets';
+	import type { ContainerWidget, SliderWidget, Widget, MetaBindingKey, LayoutType } from '$lib/types/widgets';
 	import { literal, oscBinding, resolveBinding, type Binding, type BindingContext, type BindingValue } from '$lib/types/binding';
 	import { bindingContext } from '$lib/stores/runtime';
 	import {
@@ -23,6 +23,7 @@
 	export let widget: Widget;
 	export let selectedId: string | undefined;
 	export let rootId: string;
+	export let parentLayout: LayoutType | undefined = undefined;
 
 	let ctx: BindingContext = { oscValues: {}, widgetValues: {}, functions: {} };
 	$: ctx = $bindingContext;
@@ -42,6 +43,9 @@
 	let metaType: string = widget.type;
 	let dropIndicator: 'before' | 'after' | 'inside' | null = null;
 	let isDraggable = false;
+	let dropAxis: 'vertical' | 'horizontal' = 'vertical';
+	const horizontalLikeLayouts: LayoutType[] = ['horizontal', 'fixed-grid', 'smart-grid'];
+	$: dropAxis = parentLayout && horizontalLikeLayouts.includes(parentLayout) ? 'horizontal' : 'vertical';
 	$: metaLabel = resolveMetaField('label', widget.label, ctx);
 	$: metaId = resolveMetaField('id', widget.id, ctx);
 	$: metaType = resolveMetaField('type', widget.type, ctx);
@@ -94,7 +98,7 @@
 			if (containerWidget) {
 				dropIndicator = 'inside';
 			} else if (hostRect) {
-				dropIndicator = event.clientY < hostRect.top + hostRect.height / 2 ? 'before' : 'after';
+				dropIndicator = resolvePointerPosition(event, hostRect);
 			}
 			const { widgetId } = JSON.parse(movePayload) as { widgetId?: string };
 			if (!widgetId || widgetId === widget.id) {
@@ -104,8 +108,8 @@
 			if (containerWidget) {
 				moveWidget(widgetId, widget.id, 'inside');
 			} else {
-				const before = hostRect ? event.clientY < hostRect.top + hostRect.height / 2 : false;
-				moveWidget(widgetId, widget.id, before ? 'before' : 'after');
+				const position = resolvePointerPosition(event, hostRect);
+				moveWidget(widgetId, widget.id, position);
 			}
 			dropIndicator = null;
 			event.stopPropagation();
@@ -149,7 +153,7 @@
 			} else {
 				const rect = (event.currentTarget as HTMLElement | null)?.getBoundingClientRect();
 				if (rect) {
-					dropIndicator = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+					dropIndicator = resolvePointerPosition(event, rect);
 				}
 			}
 			return;
@@ -185,6 +189,14 @@
 		dropIndicator = null;
 	};
 
+	const resolvePointerPosition = (event: DragEvent, rect?: DOMRect | null): 'before' | 'after' => {
+		if (!rect) return 'after';
+		if (dropAxis === 'horizontal') {
+			return event.clientX < rect.left + rect.width / 2 ? 'before' : 'after';
+		}
+		return event.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+	};
+
 	let selectedTab = '';
 	$: if (containerWidget?.layout === 'tabs') {
 		if (!selectedTab) {
@@ -216,6 +228,7 @@
 	data-meta-id={metaId}
 	data-meta-type={metaType}
 	data-drop-position={dropIndicator ?? undefined}
+	data-drop-axis={dropAxis}
 	draggable={isDraggable}
 	role="button"
 	tabindex="0"
@@ -265,7 +278,7 @@
 				{#if selectedTab}
 					{#each containerWidget.children as child}
 						{#if child.id === selectedTab}
-							<svelte:self widget={child} {selectedId} {rootId} />
+							<svelte:self widget={child} {selectedId} {rootId} parentLayout={containerWidget.layout} />
 						{/if}
 					{/each}
 				{/if}
@@ -273,12 +286,12 @@
 				{#each containerWidget.children as child}
 					<details open>
 						<summary>{childLabel(child, ctx)}</summary>
-						<svelte:self widget={child} {selectedId} {rootId} />
+						<svelte:self widget={child} {selectedId} {rootId} parentLayout={containerWidget.layout} />
 					</details>
 				{/each}
 			{:else}
 				{#each containerWidget.children as child}
-					<svelte:self widget={child} {selectedId} {rootId} />
+					<svelte:self widget={child} {selectedId} {rootId} parentLayout={containerWidget.layout} />
 				{/each}
 			{/if}
 		</div>

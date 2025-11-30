@@ -251,14 +251,25 @@ textarea {
 .widget::before {
 	content: '';
 	position: absolute;
-	left: 8px;
-	right: 8px;
-	height: 2px;
 	border-radius: 999px;
-	background: transparent;
+	background: var(--accent);
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.widget[data-drop-axis='vertical']::before {
+	left: 8px;
+	right: 8px;
+	height: 2px;
+	background: var(--accent);
+}
+
+.widget[data-drop-axis='horizontal']::before {
+	top: 8px;
+	bottom: 8px;
+	width: 2px;
+	background: var(--accent);
 }
 
 .widget[data-mode='edit'] {
@@ -293,15 +304,25 @@ textarea {
 .widget[data-mode='edit'].selected:hover::after {
 	background: rgba(245, 182, 76, 0.18);
 }
-.widget[data-drop-position='before']::before {
+.widget[data-drop-axis='vertical'][data-drop-position='before']::before {
 	top: 6px;
+	bottom: auto;
 	opacity: 1;
-	background: var(--accent);
 }
-.widget[data-drop-position='after']::before {
+.widget[data-drop-axis='vertical'][data-drop-position='after']::before {
 	bottom: 6px;
+	top: auto;
 	opacity: 1;
-	background: var(--accent);
+}
+.widget[data-drop-axis='horizontal'][data-drop-position='before']::before {
+	left: 6px;
+	right: auto;
+	opacity: 1;
+}
+.widget[data-drop-axis='horizontal'][data-drop-position='after']::before {
+	right: 6px;
+	left: auto;
+	opacity: 1;
 }
 .widget[data-drop-position='inside'] {
 	border-color: rgba(245, 182, 76, 0.65);
