@@ -15,7 +15,8 @@
 		MetaBindingKey,
 		LayoutType,
 		ToggleWidget,
-		MomentaryButtonWidget
+		MomentaryButtonWidget,
+		ColorPickerWidget
 	} from '$lib/types/widgets';
 	import type { OscValueType } from '$lib/services/oscquery';
 	import { literal, oscBinding, resolveBinding, type Binding, type BindingContext, type BindingValue } from '$lib/types/binding';
@@ -390,6 +391,15 @@
 		css: ''
 	};
 
+	const colorTemplate: ColorPickerWidget = {
+		id: createId('color'),
+		type: 'color-picker',
+		label: 'Color',
+		value: literal('#ffffff'),
+		props: {},
+		css: ''
+	};
+
 	const createWidgetFromOsc = (osc: OscDropPayload): Widget => {
 		const label = osc.name ?? osc.description ?? osc.path;
 		if (osc.type === 'boolean') {
@@ -405,6 +415,13 @@
 			button.label = label;
 			button.value = oscBinding(osc.path);
 			return button;
+		}
+		if (osc.type === 'color') {
+			const picker = structuredClone(colorTemplate);
+			picker.id = createId('color');
+			picker.label = label;
+			picker.value = oscBinding(osc.path);
+			return picker;
 		}
 		const slider = structuredClone(sliderTemplate);
 		slider.id = createId('slider');

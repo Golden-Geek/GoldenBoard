@@ -59,6 +59,7 @@ type OscQueryNode = {
 };
 
 type HostInfoResponse = Record<string, unknown> & { HOST_INFO?: Record<string, unknown> };
+type ValueResponse = { VALUE?: BindingValue[] } & Record<string, unknown>;
 
 export type OscStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -410,11 +411,13 @@ export function createOscClient() {
 	let streamingEnabled = false;
 	let currentEndpoint = '';
 	let currentNodeIndex = buildNodeIndex(mockTree);
-	let desiredSubscriptions = new Set<string>(collectLeafPaths(mockTree));
+	let userSubscriptions = new Set<string>();
+	let desiredSubscriptions = new Set<string>();
 	let activeSubscriptions = new Set<string>();
 	let lastHostInfo: OscHostInfo = mockHostInfo;
 	let connectionAttempt = 0;
 	const triggerResetTimers = new Map<string, ReturnType<typeof setTimeout>>();
+	const pendingValueFetches = new Map<string, Promise<void>>();
 
 	function stopMockUpdates() {
 		if (mockInterval) {
@@ -454,11 +457,15 @@ export function createOscClient() {
 		triggerResetTimers.clear();
 	}
 
+	function rebuildDesiredSubscriptions() {
+		desiredSubscriptions = new Set<string>(userSubscriptions);
+	}
+
 	function useMockData() {
 		streamingEnabled = false;
 		currentEndpoint = '';
 		activeSubscriptions.clear();
-		desiredSubscriptions = new Set<string>(collectLeafPaths(mockTree));
+		rebuildDesiredSubscriptions();
 		currentNodeIndex = buildNodeIndex(mockTree);
 		pendingFrames = [];
 		clearReconnectTimer();
@@ -541,13 +548,23 @@ export function createOscClient() {
 
 	function syncSubscriptions() {
 		if (!streamingEnabled) return;
+		if (!desiredSubscriptions.size) {
+			for (const path of [...activeSubscriptions]) {
+				sendCommand('IGNORE', path);
+				activeSubscriptions.delete(path);
+			}
+			return;
+		}
 		for (const path of desiredSubscriptions) {
 			if (activeSubscriptions.has(path)) continue;
 			activeSubscriptions.add(path);
+			console.log('OSCQuery subscribing to', path);
 			sendCommand('LISTEN', path);
+			ensureValueSnapshot(path);
 		}
 		for (const path of [...activeSubscriptions]) {
 			if (desiredSubscriptions.has(path)) continue;
+			console.log('OSCQuery unsubscribing from', path);
 			sendCommand('IGNORE', path);
 			activeSubscriptions.delete(path);
 		}
@@ -611,8 +628,10 @@ export function createOscClient() {
 		const nextValue = coerceIncomingValue(message);
 		if (nextValue === undefined) return;
 		values.update((prev) => {
-			if (!(message.address in prev)) return prev;
-			if (prev[message.address] === nextValue) return prev;
+			const current = prev[message.address];
+			if (current === nextValue) {
+				return prev;
+			}
 			return { ...prev, [message.address]: nextValue };
 		});
 		if (message.types.startsWith('N')) {
@@ -662,7 +681,7 @@ export function createOscClient() {
 			currentNodeIndex = buildNodeIndex(tree);
 			const defaults = flatten(tree);
 			values.update((prev) => mergeValues(prev, defaults));
-			desiredSubscriptions = new Set<string>(collectLeafPaths(tree));
+			rebuildDesiredSubscriptions();
 			syncSubscriptions();
 		} catch (error) {
 			console.warn('OSCQuery structure refresh failed', error);
@@ -819,7 +838,10 @@ export function createOscClient() {
 			currentNodeIndex = buildNodeIndex(tree);
 			const defaults = flatten(tree);
 			values.update((prev) => mergeValues(prev, defaults));
-			desiredSubscriptions = new Set<string>(collectLeafPaths(tree));
+			rebuildDesiredSubscriptions();
+			for (const path of userSubscriptions) {
+				ensureValueSnapshot(path);
+			}
 			streamingEnabled = supportsStreaming(info);
 			status.set('connected');
 			if (streamingEnabled) {
@@ -850,6 +872,42 @@ export function createOscClient() {
 		sendFallbackOsc(path, value);
 	}
 
+	function setSubscriptions(paths: Iterable<string>) {
+		const next = new Set<string>();
+		for (const raw of paths) {
+			if (!raw) continue;
+			next.add(normalizePath(raw));
+		}
+		userSubscriptions = next;
+		rebuildDesiredSubscriptions();
+		for (const path of userSubscriptions) {
+			ensureValueSnapshot(path);
+		}
+		syncSubscriptions();
+	}
+
+	function ensureValueSnapshot(path: string) {
+		if (!currentEndpoint) return;
+		if (pendingValueFetches.has(path)) return;
+		const task = fetchNodeValue(path).finally(() => pendingValueFetches.delete(path));
+		pendingValueFetches.set(path, task);
+	}
+
+	async function fetchNodeValue(path: string) {
+		if (!currentEndpoint) return;
+		try {
+			const response = await requestJson<ValueResponse>(`${currentEndpoint}${path}?VALUE`);
+			const value = Array.isArray(response.VALUE) ? response.VALUE[0] : undefined;
+			if (value === undefined) return;
+			values.update((prev) => {
+				if (prev[path] === value) return prev;
+				return { ...prev, [path]: (value ?? null) as BindingValue };
+			});
+		} catch (error) {
+			console.warn('OSCQuery value fetch failed', path, error);
+		}
+	}
+
 	return {
 		status: { subscribe: status.subscribe },
 		structure: { subscribe: structure.subscribe },
@@ -857,7 +915,8 @@ export function createOscClient() {
 		values: { subscribe: values.subscribe },
 		connect,
 		disconnect: () => disconnect(),
-		setValue
+		setValue,
+		setSubscriptions
 	};
 }
 

@@ -5,8 +5,8 @@ import { isExpressionValid, literal, oscBinding, type Binding, type BindingValue
 import type { Board, BoardsState } from '$lib/types/board';
 import type { Widget, WidgetKind, WidgetTemplate, ContainerWidget } from '$lib/types/widgets';
 import { createId } from '$lib/utils/ids';
-import { containsWidget, findWidget, insertIntoContainer, removeWidget, updateWidget } from '$lib/utils/tree';
-import { pushOscValue } from '$lib/stores/oscquery';
+import { containsWidget, findWidget, insertIntoContainer, removeWidget, updateWidget, traverseWidgets } from '$lib/utils/tree';
+import { pushOscValue, updateOscSubscriptions } from '$lib/stores/oscquery';
 
 const STORAGE_KEY = 'goldenboard:boards';
 const HISTORY_LIMIT = 50;
@@ -65,6 +65,27 @@ function loadState(): BoardsState {
 
 export const boardsStore = writable<BoardsState>(loadState());
 
+function collectOscPaths(state: BoardsState): string[] {
+	const paths = new Set<string>();
+	const register = (binding?: Binding) => {
+		if (binding?.kind === 'osc' && binding.path) {
+			paths.add(binding.path);
+		}
+	};
+	for (const board of state.boards) {
+		traverseWidgets(board.root, (widget) => {
+			register(widget.value);
+			for (const binding of Object.values(widget.props ?? {})) {
+				register(binding);
+			}
+			for (const binding of Object.values(widget.meta ?? {})) {
+				register(binding);
+			}
+		});
+	}
+	return [...paths];
+}
+
 function updateBoardsState(updater: (state: BoardsState) => BoardsState): void {
 	boardsStore.update((state) => {
 		const next = updater(state);
@@ -103,8 +124,10 @@ export const canUndoBoardChange = (): boolean => undoStack.length > 0;
 export const canRedoBoardChange = (): boolean => redoStack.length > 0;
 
 if (browser) {
+	updateOscSubscriptions(collectOscPaths(get(boardsStore)));
 	boardsStore.subscribe((state) => {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+		updateOscSubscriptions(collectOscPaths(state));
 	});
 }
 

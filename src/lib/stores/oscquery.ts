@@ -28,3 +28,8 @@ export function pushOscValue(path: string, value: BindingValue): void {
 export function disconnectOsc(): void {
 	client.disconnect();
 }
+
+export function updateOscSubscriptions(paths: Iterable<string>): void {
+	if (!browser) return;
+	client.setSubscriptions(paths);
+}

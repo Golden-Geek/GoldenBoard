@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import type { SliderWidget } from '$lib/types/widgets';
-	import type { BindingContext } from '$lib/types/binding';
-	import { resolveBinding } from '$lib/types/binding';
+	import { resolveBinding, type Binding, type BindingContext } from '$lib/types/binding';
 
 	export let widget: SliderWidget;
 	export let ctx: BindingContext;
@@ -11,18 +10,21 @@
 	export let onChange: (value: number) => void = () => {};
 	export let label = '';
 
-	const resolveProp = (key: 'min' | 'max' | 'step', fallback: number): number => {
-		const binding = widget.props?.[key];
-		const resolved = binding ? resolveBinding(binding, ctx) : undefined;
-		return typeof resolved === 'number' ? resolved : fallback;
-	};
-
-	const numericValue = () => {
-		const num = Number(value);
+	const toNumeric = (input: number | string | null): number => {
+		const num = Number(input);
 		return Number.isNaN(num) ? 0 : num;
 	};
 
-	let resolvedValue = numericValue();
+	const resolveNumericProp = (
+		binding: Binding | undefined,
+		context: BindingContext,
+		fallback: number
+	): number => {
+		const resolved = binding ? resolveBinding(binding, context) : undefined;
+		return typeof resolved === 'number' ? resolved : fallback;
+	};
+
+	let resolvedValue = toNumeric(value);
 	let pendingValue: number | null = null;
 	let currentValue = resolvedValue;
 
@@ -39,10 +41,10 @@
 	let percentage = 0;
 	let suppressNextDrag = false;
 
-	$: resolvedValue = numericValue();
-	$: minValue = resolveProp('min', 0);
-	$: maxValue = resolveProp('max', 1);
-	$: stepValue = resolveProp('step', 0.01);
+	$: resolvedValue = toNumeric(value);
+	$: minValue = resolveNumericProp(widget.props?.min, ctx, 0);
+	$: maxValue = resolveNumericProp(widget.props?.max, ctx, 1);
+	$: stepValue = resolveNumericProp(widget.props?.step, ctx, 0.01);
 	$: range = Math.max(0.000001, maxValue - minValue);
 	$: {
 		if (pendingValue !== null) {
