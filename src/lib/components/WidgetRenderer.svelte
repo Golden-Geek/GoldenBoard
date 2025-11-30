@@ -45,7 +45,16 @@
 	let isDraggable = false;
 	let dropAxis: 'vertical' | 'horizontal' = 'vertical';
 	const horizontalLikeLayouts: LayoutType[] = ['horizontal', 'fixed-grid', 'smart-grid'];
+	const gapLayouts: LayoutType[] = ['vertical', 'horizontal'];
 	$: dropAxis = parentLayout && horizontalLikeLayouts.includes(parentLayout) ? 'horizontal' : 'vertical';
+	$: containerGapEnabled = !!containerWidget && gapLayouts.includes(containerWidget.layout);
+	$: containerDropAxis = containerWidget && horizontalLikeLayouts.includes(containerWidget.layout) ? 'horizontal' : 'vertical';
+	let activeGapIndex: number | null = null;
+	let showGapTargets = false;
+	$: showGapTargets = isEditMode && containerGapEnabled;
+	$: if (!showGapTargets) {
+		activeGapIndex = null;
+	}
 	$: metaLabel = resolveMetaField('label', widget.label, ctx);
 	$: metaId = resolveMetaField('id', widget.id, ctx);
 	$: metaType = resolveMetaField('type', widget.type, ctx);
@@ -112,10 +121,16 @@
 				moveWidget(widgetId, widget.id, position);
 			}
 			dropIndicator = null;
+			activeGapIndex = null;
 			event.stopPropagation();
 			return;
 		}
-		if (!containerWidget) return;
+		if (!containerWidget) {
+			dropIndicator = null;
+			activeGapIndex = null;
+			event.stopPropagation();
+			return;
+		}
 		event.preventDefault();
 		const widgetPayload = event.dataTransfer?.getData('application/goldenboard-widget');
 		if (widgetPayload) {
@@ -123,6 +138,7 @@
 			parsed.id = createId(parsed.type);
 			insertWidgetInstance(parsed, widget.id);
 			dropIndicator = null;
+			activeGapIndex = null;
 			event.stopPropagation();
 			return;
 		}
@@ -138,6 +154,7 @@
 			slider.props.step = literal(osc.step ?? 0.01);
 			insertWidgetInstance(slider, widget.id);
 			dropIndicator = null;
+			activeGapIndex = null;
 			event.stopPropagation();
 		}
 	};
@@ -145,7 +162,8 @@
 	const handleDragOver = (event: DragEvent) => {
 		if (!isEditMode) return;
 		const types = Array.from(event.dataTransfer?.types ?? []);
-		if (types.includes('application/goldenboard-move')) {
+		const isMove = types.includes('application/goldenboard-move');
+		if (isMove) {
 			event.preventDefault();
 			event.dataTransfer && (event.dataTransfer.dropEffect = 'move');
 			if (containerWidget) {
@@ -158,7 +176,13 @@
 			}
 			return;
 		}
-		if (!containerWidget) return;
+		if (!containerWidget) {
+			if (types.includes('application/goldenboard-widget') || types.includes('application/osc-node')) {
+				event.stopPropagation();
+				dropIndicator = null;
+			}
+			return;
+		}
 		if (types.includes('application/goldenboard-widget') || types.includes('application/osc-node')) {
 			event.preventDefault();
 			dropIndicator = 'inside';
@@ -187,6 +211,7 @@
 
 	const handleDragEnd = () => {
 		dropIndicator = null;
+		activeGapIndex = null;
 	};
 
 	const resolvePointerPosition = (event: DragEvent, rect?: DOMRect | null): 'before' | 'after' => {
@@ -195,6 +220,122 @@
 			return event.clientX < rect.left + rect.width / 2 ? 'before' : 'after';
 		}
 		return event.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+	};
+
+	const commitMoveToGap = (widgetId: string, gapIndex: number): void => {
+		if (!containerWidget) return;
+		const children = containerWidget.children;
+		if (!children.length) {
+			moveWidget(widgetId, containerWidget.id, 'inside');
+			return;
+		}
+		if (gapIndex <= 0) {
+			moveWidget(widgetId, children[0].id, 'before');
+			return;
+		}
+		if (gapIndex >= children.length) {
+			const last = children[children.length - 1];
+			moveWidget(widgetId, last.id, 'after');
+			return;
+		}
+		const target = children[gapIndex];
+		moveWidget(widgetId, target.id, 'before');
+	};
+
+	const handleGapDragOver = (event: DragEvent, gapIndex: number) => {
+		if (!showGapTargets || !containerWidget) return;
+		const types = Array.from(event.dataTransfer?.types ?? []);
+		const isMove = types.includes('application/goldenboard-move');
+		const isPalette = types.includes('application/goldenboard-widget');
+		const isOsc = types.includes('application/osc-node');
+		dropIndicator = null;
+		if (isMove) {
+			event.preventDefault();
+			event.stopPropagation();
+			activeGapIndex = gapIndex;
+			if (event.dataTransfer) {
+				event.dataTransfer.dropEffect = 'move';
+			}
+			return;
+		}
+		if (isPalette || isOsc) {
+			event.preventDefault();
+			event.stopPropagation();
+			activeGapIndex = gapIndex;
+		}
+	};
+
+	const handleGapDragLeave = (event: DragEvent) => {
+		if (!showGapTargets) return;
+		const current = event.currentTarget as HTMLElement | null;
+		const related = event.relatedTarget as Node | null;
+		if (current && related && current.contains(related)) {
+			return;
+		}
+		activeGapIndex = null;
+		dropIndicator = null;
+	};
+
+	const handleGapDrop = (event: DragEvent, gapIndex: number) => {
+		if (!showGapTargets || !containerWidget) return;
+		event.preventDefault();
+		const movePayload = event.dataTransfer?.getData('application/goldenboard-move');
+		if (movePayload) {
+			const { widgetId } = JSON.parse(movePayload) as { widgetId?: string };
+			if (widgetId && widgetId !== containerWidget.id) {
+				commitMoveToGap(widgetId, gapIndex);
+			}
+			dropIndicator = null;
+			activeGapIndex = null;
+			event.stopPropagation();
+			return;
+		}
+		const widgetPayload = event.dataTransfer?.getData('application/goldenboard-widget');
+		if (widgetPayload) {
+			const parsed = JSON.parse(widgetPayload) as Widget;
+			parsed.id = createId(parsed.type);
+			insertWidgetInstance(parsed, containerWidget.id);
+			repositionNewWidget(parsed.id, gapIndex);
+			dropIndicator = null;
+			activeGapIndex = null;
+			event.stopPropagation();
+			return;
+		}
+		const oscPayload = event.dataTransfer?.getData('application/osc-node');
+		if (oscPayload) {
+			const osc = JSON.parse(oscPayload) as { path: string; min?: number; max?: number; step?: number; name?: string };
+			const slider = structuredClone(sliderTemplate);
+			slider.id = createId('slider');
+			slider.label = osc.name ?? osc.path;
+			slider.value = oscBinding(osc.path);
+			slider.props.min = literal(osc.min ?? 0);
+			slider.props.max = literal(osc.max ?? 1);
+			slider.props.step = literal(osc.step ?? 0.01);
+			insertWidgetInstance(slider, containerWidget.id);
+			repositionNewWidget(slider.id, gapIndex);
+			dropIndicator = null;
+			activeGapIndex = null;
+			event.stopPropagation();
+		}
+	};
+
+	const repositionNewWidget = (widgetId: string, gapIndex: number) => {
+		if (!containerWidget) return;
+		const children = containerWidget.children;
+		if (!children.length) {
+			return;
+		}
+		if (gapIndex <= 0) {
+			moveWidget(widgetId, children[0].id, 'before');
+			return;
+		}
+		if (gapIndex >= children.length) {
+			const last = children[children.length - 1];
+			moveWidget(widgetId, last.id, 'after');
+			return;
+		}
+		const target = children[gapIndex];
+		moveWidget(widgetId, target.id, 'before');
 	};
 
 	let selectedTab = '';
@@ -268,7 +409,7 @@
 		<div class="widget-header">
 			<h4>{metaLabel}</h4>
 		</div>
-		<div class={`container-body layout-${containerWidget.layout}`}>
+		<div class={`container-body layout-${containerWidget.layout} ${showGapTargets ? 'has-drop-gaps' : ''}`}>
 			{#if containerWidget.layout === 'tabs'}
 				<div class="tabs">
 					{#each containerWidget.children as child}
@@ -290,8 +431,18 @@
 					</details>
 				{/each}
 			{:else}
-				{#each containerWidget.children as child}
+				{#each containerWidget.children as child, index}
 					<svelte:self widget={child} {selectedId} {rootId} parentLayout={containerWidget.layout} />
+					{#if showGapTargets && index < containerWidget.children.length - 1}
+						<div
+							class={`drop-gap drop-gap-${containerDropAxis}`}
+							data-active={activeGapIndex === index + 1 ? 'true' : undefined}
+							role="presentation"
+							on:dragover={(event) => handleGapDragOver(event, index + 1)}
+							on:dragleave={handleGapDragLeave}
+							on:drop={(event) => handleGapDrop(event, index + 1)}
+						></div>
+					{/if}
 				{/each}
 			{/if}
 		</div>
@@ -377,6 +528,10 @@
 		gap: 0.5rem;
 	}
 
+	.container-body.has-drop-gaps {
+		gap: 0;
+	}
+
 	.container-body.layout-horizontal {
 		flex-direction: row;
 		flex-wrap: nowrap;
@@ -406,6 +561,45 @@
 	.container-body.layout-free {
 		position: relative;
 		flex-wrap: wrap;
+	}
+
+	.drop-gap {
+		position: relative;
+		flex: 0 0 auto;
+		opacity: 0;
+		transition: opacity 120ms ease;
+		border-radius: 999px;
+	}
+
+	.drop-gap::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: var(--accent);
+		border-radius: inherit;
+		opacity: 0.15;
+		transform: scale(0.4, 0.6);
+		transition: opacity 120ms ease, transform 120ms ease;
+	}
+
+	.drop-gap-vertical {
+		width: 100%;
+		height: 0.5rem;
+	}
+
+	.drop-gap-horizontal {
+		width: 0.5rem;
+		height: auto;
+		align-self: stretch;
+	}
+
+	.drop-gap[data-active='true'] {
+		opacity: 1;
+	}
+
+	.drop-gap[data-active='true']::after {
+		opacity: 0.9;
+		transform: scale(1);
 	}
 
 	.tabs {
