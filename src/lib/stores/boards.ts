@@ -6,6 +6,7 @@ import type { Board, BoardsState } from '$lib/types/board';
 import type { Widget, WidgetKind, WidgetTemplate, ContainerWidget } from '$lib/types/widgets';
 import { createId } from '$lib/utils/ids';
 import { containsWidget, findWidget, insertIntoContainer, removeWidget, updateWidget, traverseWidgets } from '$lib/utils/tree';
+import { widgetRegistry } from '$lib/widgets/registry';
 import { pushOscValue, updateOscSubscriptions } from '$lib/stores/oscquery';
 
 const STORAGE_KEY = 'goldenboard:boards';
@@ -387,115 +388,11 @@ function placeWidget(board: Board, widget: Widget, targetId?: string): Board {
 }
 
 export function createWidget(kind: WidgetKind): Widget {
-	switch (kind) {
-		case 'container':
-			return ensureMeta({
-				id: createId('container'),
-				type: 'container',
-				label: 'Container',
-				value: literal(null),
-				props: { showLabel: literal(true) },
-				layout: 'vertical',
-				css: '',
-				children: []
-			});
-		case 'slider':
-			return ensureMeta({
-				id: createId('slider'),
-				type: 'slider',
-				label: 'Slider',
-				value: literal(0),
-				props: {
-					min: literal(0),
-					max: literal(1),
-					step: literal(0.01)
-				},
-				css: ''
-			});
-		case 'int-stepper':
-			return ensureMeta({
-				id: createId('stepper'),
-				type: 'int-stepper',
-				label: 'Stepper',
-				value: literal(0),
-				props: {
-					step: literal(1)
-				},
-				css: ''
-			});
-		case 'text-field':
-			return ensureMeta({
-				id: createId('text'),
-				type: 'text-field',
-				label: 'Text',
-				value: literal('0'),
-				props: {
-					representation: literal('decimal'),
-					decimals: literal(2)
-				},
-				css: ''
-			});
-		case 'color-picker':
-			return ensureMeta({
-				id: createId('color'),
-				type: 'color-picker',
-				label: 'Color',
-				value: literal('#ff5500'),
-				props: {
-					model: literal('hex')
-				},
-				css: ''
-			});
-		case 'rotary':
-			return ensureMeta({
-				id: createId('rotary'),
-				type: 'rotary',
-				label: 'Rotary',
-				value: literal(0),
-				props: {
-					min: literal(0),
-					max: literal(1),
-					step: literal(0.01)
-				},
-				css: ''
-			});
-		case 'toggle':
-			return ensureMeta({
-				id: createId('toggle'),
-				type: 'toggle',
-				label: 'Toggle',
-				value: literal(false),
-				props: {},
-				css: ''
-			});
-		case 'checkbox':
-			return ensureMeta({
-				id: createId('checkbox'),
-				type: 'checkbox',
-				label: 'Checkbox',
-				value: literal(false),
-				props: {},
-				css: ''
-			});
-		case 'button':
-			return ensureMeta({
-				id: createId('button'),
-				type: 'button',
-				label: 'Button',
-				value: literal(false),
-				props: {},
-				css: ''
-			});
-		case 'momentary-button':
-			return ensureMeta({
-				id: createId('momentary'),
-				type: 'momentary-button',
-				label: 'Trigger',
-				value: literal(false),
-				props: {},
-				css: ''
-			});
+	const definition = widgetRegistry[kind];
+	if (!definition) {
+		throw new Error(`Unsupported widget kind: ${kind}`);
 	}
+	return ensureMeta(definition.create());
 }
 
 function ensureMeta<T extends Widget>(widget: T): T {

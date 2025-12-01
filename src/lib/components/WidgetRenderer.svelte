@@ -1,23 +1,11 @@
 <script lang="ts">
-	import SliderWidgetView from '$lib/components/widgets/SliderWidget.svelte';
-	import IntStepperWidgetView from '$lib/components/widgets/IntStepperWidget.svelte';
-	import TextFieldWidgetView from '$lib/components/widgets/TextFieldWidget.svelte';
-	import ColorPickerWidgetView from '$lib/components/widgets/ColorPickerWidget.svelte';
-	import RotaryWidgetView from '$lib/components/widgets/RotaryWidget.svelte';
-	import ToggleWidgetView from '$lib/components/widgets/ToggleWidget.svelte';
-	import CheckboxWidgetView from '$lib/components/widgets/CheckboxWidget.svelte';
-	import ButtonWidgetView from '$lib/components/widgets/ButtonWidget.svelte';
-	import MomentaryButtonWidgetView from '$lib/components/widgets/MomentaryButtonWidget.svelte';
-
 	import type {
 		ContainerWidget,
-		SliderWidget,
 		Widget,
 		MetaBindingKey,
 		LayoutType,
-		ToggleWidget,
-		MomentaryButtonWidget,
-		ColorPickerWidget
+		SliderWidget,
+		WidgetKind
 	} from '$lib/types/widgets';
 	import type { OscValueType } from '$lib/services/oscquery';
 	import {
@@ -59,6 +47,12 @@
 	import { createId } from '$lib/utils/ids';
 	import { editorMode } from '$lib/stores/ui';
 	import type { EditorMode } from '$lib/stores/ui';
+	import {
+		widgetRegistry,
+		type WidgetDefinition,
+		type WidgetPresentation,
+		type WidgetComponent
+	} from '$lib/widgets/registry';
 
 	export let widget: Widget;
 	export let selectedId: string | undefined;
@@ -123,6 +117,24 @@
 			: 'vertical';
 	let widgetDraggableConfig: PragmaticDraggableConfig | undefined;
 	let containerDropTargetConfig: PragmaticDropTargetConfig | undefined;
+	let widgetDefinition: WidgetDefinition | undefined;
+	let widgetPresentation: WidgetPresentation = 'inline';
+	let resolvedWidgetComponent: WidgetComponent | null = null;
+	let widgetComponentProps: Record<string, unknown> = {};
+	$: widgetDefinition = widget.type === 'container' ? undefined : widgetRegistry[widget.type];
+	$: widgetPresentation = widgetDefinition?.presentation ?? 'inline';
+	$: resolvedWidgetComponent = widgetDefinition?.component ?? null;
+	$: widgetComponentProps = widgetDefinition?.componentProps
+		? widgetDefinition.componentProps({
+			widget,
+			ctx,
+			value,
+			isEditMode,
+			label: metaLabel,
+			handleValueInput,
+			handleStringInput
+		})
+		: {};
 	$: widgetDraggableConfig = (isEditMode, buildWidgetDraggableConfig());
 	$: containerDropTargetConfig = (isEditMode, containerWidget, buildContainerDropTargetConfig());
 	let activeGapIndex: number | null = null;
@@ -130,6 +142,9 @@
 	let isContainerDropActive = false;
 	let pendingPlacement: ContainerPlacement = createInsidePlacement();
 	let dropPreviewResetHandle: number | null = null;
+	let metaLabel = widget.label;
+	let metaId = widget.id;
+	let metaType: string = widget.type;
 	$: showGapTargets = isEditMode && containerGapEnabled;
 	$: if (!showGapTargets) {
 		activeGapIndex = null;
@@ -619,69 +634,33 @@
 		selectedTab = '';
 	}
 
-	const sliderTemplate: SliderWidget = {
-		id: createId('slider'),
-		type: 'slider',
-		label: 'Slider',
-		value: literal(0),
-		props: { min: literal(0), max: literal(1), step: literal(0.01) },
-		css: ''
-	};
-
-	const toggleTemplate: ToggleWidget = {
-		id: createId('toggle'),
-		type: 'toggle',
-		label: 'Toggle',
-		value: literal(false),
-		props: {},
-		css: ''
-	};
-
-	const momentaryTemplate: MomentaryButtonWidget = {
-		id: createId('momentary'),
-		type: 'momentary-button',
-		label: 'Trigger',
-		value: literal(false),
-		props: {},
-		css: ''
-	};
-
-	const colorTemplate: ColorPickerWidget = {
-		id: createId('color'),
-		type: 'color-picker',
-		label: 'Color',
-		value: literal('#ffffff'),
-		props: {},
-		css: ''
-	};
-
 	const createWidgetFromOsc = (osc: OscDropPayload): Widget => {
 		const label = osc.name ?? osc.description ?? osc.path;
+		const binding = oscBinding(osc.path);
+		const withLabel = <T extends Widget>(instance: T): T => {
+			instance.label = label;
+			instance.meta = {
+				...instance.meta,
+				label: literal(label)
+			};
+			return instance;
+		};
+		const withBinding = <T extends Widget>(instance: T): T => {
+			instance.value = binding;
+			return instance;
+		};
+		const instantiate = <K extends Widget>(kind: WidgetKind): K =>
+			(withBinding(withLabel(createWidget(kind))) as K);
 		if (osc.type === 'boolean') {
-			const toggle = structuredClone(toggleTemplate);
-			toggle.id = createId('toggle');
-			toggle.label = label;
-			toggle.value = oscBinding(osc.path);
-			return toggle;
+			return instantiate('toggle');
 		}
 		if (osc.type === 'trigger') {
-			const button = structuredClone(momentaryTemplate);
-			button.id = createId('momentary');
-			button.label = label;
-			button.value = oscBinding(osc.path);
-			return button;
+			return instantiate('momentary-button');
 		}
 		if (osc.type === 'color') {
-			const picker = structuredClone(colorTemplate);
-			picker.id = createId('color');
-			picker.label = label;
-			picker.value = oscBinding(osc.path);
-			return picker;
+			return instantiate('color-picker');
 		}
-		const slider = structuredClone(sliderTemplate);
-		slider.id = createId('slider');
-		slider.label = label;
-		slider.value = oscBinding(osc.path);
+		const slider = instantiate('slider') as SliderWidget;
 		slider.props.min = literal(osc.min ?? 0);
 		slider.props.max = literal(osc.max ?? 1);
 		slider.props.step = literal(osc.step ?? 0.01);
@@ -770,83 +749,25 @@
 				{/each}
 			{/if}
 		</div>
-	{:else if widget.type === 'slider'}
-		<div class="widget-slider">
-			<SliderWidgetView
-				{widget}
-				{ctx}
-				{isEditMode}
-				label={metaLabel}
-				value={value as number | string | null}
-				onChange={handleValueInput}
-			/>
-		</div>
-	{:else if widget.type === 'button'}
-		<div class="widget-button-block">
-			<!-- <span class="widget-label widget-label-stack">{metaLabel}</span> -->
-			<ButtonWidgetView
-				{widget}
-				{isEditMode}
-				{value}
-				label={metaLabel}
-				onChange={handleValueInput}
-			/>
-		</div>
-	{:else if widget.type === 'momentary-button'}
-		<div class="widget-button-block">
-			<!-- <span class="widget-label widget-label-stack">{metaLabel}</span> -->
-			<MomentaryButtonWidgetView
-				{widget}
-				{isEditMode}
-				{value}
-				label={metaLabel}
-				onChange={handleValueInput}
-			/>
-		</div>
+	{:else if resolvedWidgetComponent}
+		{#if widgetPresentation === 'slider'}
+			<div class="widget-slider">
+				<svelte:component this={resolvedWidgetComponent} {...widgetComponentProps} />
+			</div>
+		{:else if widgetPresentation === 'button-block'}
+			<div class="widget-button-block">
+				<svelte:component this={resolvedWidgetComponent} {...widgetComponentProps} />
+			</div>
+		{:else}
+			<div class="widget-inline">
+				<span class="widget-label">{metaLabel}</span>
+				<svelte:component this={resolvedWidgetComponent} {...widgetComponentProps} />
+			</div>
+		{/if}
 	{:else}
 		<div class="widget-inline">
 			<span class="widget-label">{metaLabel}</span>
-			{#if widget.type === 'int-stepper'}
-				<IntStepperWidgetView
-					{widget}
-					{ctx}
-					{isEditMode}
-					value={value as number | string | null}
-					onChange={handleValueInput}
-				/>
-			{:else if widget.type === 'text-field'}
-				<TextFieldWidgetView {isEditMode} value={value ?? ''} onInput={handleStringInput} />
-			{:else if widget.type === 'color-picker'}
-				<ColorPickerWidgetView
-					{isEditMode}
-					value={value ?? '#ffffff'}
-					onInput={handleStringInput}
-				/>
-			{:else if widget.type === 'rotary'}
-				<RotaryWidgetView
-					{widget}
-					{ctx}
-					{isEditMode}
-					value={value as number | string | null}
-					onChange={handleValueInput}
-				/>
-			{:else if widget.type === 'toggle'}
-				<ToggleWidgetView
-					{widget}
-					{isEditMode}
-					{value}
-					label={metaLabel}
-					onChange={handleValueInput}
-				/>
-			{:else if widget.type === 'checkbox'}
-				<CheckboxWidgetView
-					{widget}
-					{isEditMode}
-					{value}
-					label={metaLabel}
-					onChange={handleValueInput}
-				/>
-			{/if}
+			<span class="widget-unsupported">Unsupported widget</span>
 		</div>
 	{/if}
 </div>
@@ -901,6 +822,11 @@
 		flex: none;
 		width: auto;
 		white-space: normal;
+	}
+
+	.widget-unsupported {
+		color: var(--muted);
+		font-size: 0.8rem;
 	}
 
 	:global(.widget[data-mode='edit'] input:disabled),

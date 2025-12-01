@@ -6,24 +6,15 @@
 		registerCustomWidget,
 		removeCustomWidgetTemplate
 	} from '$lib/stores/boards';
-	import type { WidgetKind, WidgetTemplate } from '$lib/types/widgets';
+	import type { WidgetTemplate } from '$lib/types/widgets';
 	import { activeDragOperation, type WidgetTemplateDrag } from '$lib/stores/drag';
 	import { createDragData, pragmaticDraggable, type PragmaticDraggableConfig } from '$lib/drag/pragmatic';
+	import { widgetDefinitions, type WidgetDefinition } from '$lib/widgets/registry';
 
 	export let iconOnly = false;
 
-	const widgetOptions: { type: WidgetKind; label: string; icon: string }[] = [
-		{ type: 'container', label: 'Container', icon: '▣' },
-		{ type: 'slider', label: 'Slider', icon: '⎯' },
-		{ type: 'int-stepper', label: 'Stepper', icon: '±' },
-		{ type: 'text-field', label: 'Text', icon: '𝚊' },
-		{ type: 'color-picker', label: 'Color', icon: '◎' },
-		{ type: 'rotary', label: 'Rotary', icon: '⟳' },
-		{ type: 'toggle', label: 'Toggle', icon: '⭘' },
-		{ type: 'checkbox', label: 'Checkbox', icon: '☑' },
-		{ type: 'button', label: 'Button', icon: '⬚' },
-		{ type: 'momentary-button', label: 'Trigger', icon: '●' }
-	];
+	let paletteWidgets: WidgetDefinition[] = [];
+	$: paletteWidgets = widgetDefinitions.filter((definition) => definition.showInToolbar !== false);
 
 	let customInput: HTMLInputElement;
 
@@ -42,11 +33,11 @@
 		}
 	});
 
-	const createBuiltinTemplateIntent = (option: { type: WidgetKind; label: string }): WidgetTemplateDrag => ({
+	const createBuiltinTemplateIntent = (definition: WidgetDefinition): WidgetTemplateDrag => ({
 		kind: 'widget-template',
 		source: 'builtin',
-		widgetKind: option.type,
-		label: option.label
+		widgetKind: definition.kind,
+		label: definition.label
 	});
 
 	const createCustomTemplateIntent = (template: WidgetTemplate): WidgetTemplateDrag => ({
@@ -82,17 +73,17 @@
 
 <div class={`widget-toolbar ${iconOnly ? 'icon-only' : ''}`} role="toolbar" aria-label="Widget palette">
 	<div class="widget-buttons">
-		{#each widgetOptions as option}
+		{#each paletteWidgets as definition}
 			<button
 				type="button"
-				title={option.label}
-				aria-label={option.label}
-				on:click={() => addWidgetToBoard(option.type)}
-				use:pragmaticDraggable={buildToolbarDraggable(createBuiltinTemplateIntent(option))}
+				title={definition.label}
+				aria-label={definition.label}
+				on:click={() => addWidgetToBoard(definition.kind)}
+				use:pragmaticDraggable={buildToolbarDraggable(createBuiltinTemplateIntent(definition))}
 			>
-				<span class="icon">{option.icon}</span>
+				<span class="icon">{definition.icon}</span>
 				{#if !iconOnly}
-					<span class="label">{option.label}</span>
+					<span class="label">{definition.label}</span>
 				{/if}
 			</button>
 		{/each}
