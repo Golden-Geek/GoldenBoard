@@ -312,7 +312,7 @@
 		justify-content: space-between;
 		padding: 0 1rem;
 		pointer-events: none;
-		font-size: 0.85rem;
+		font-size: 0.7rem;
 		color: #eafff5;
 		font-weight: 600;
 		letter-spacing: 0.08em;

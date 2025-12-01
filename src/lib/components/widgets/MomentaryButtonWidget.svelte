@@ -82,7 +82,7 @@
 		color: inherit;
 		font-size: 0.85rem;
 		letter-spacing: 0.12em;
-		text-transform: uppercase;
+		/* text-transform: uppercase; */
 		transition: transform 60ms ease, background 120ms ease, border-color 120ms ease;
 	}
 

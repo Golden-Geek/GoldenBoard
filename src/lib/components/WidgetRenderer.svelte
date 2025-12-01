@@ -783,7 +783,7 @@
 		</div>
 	{:else if widget.type === 'button'}
 		<div class="widget-button-block">
-			<span class="widget-label widget-label-stack">{metaLabel}</span>
+			<!-- <span class="widget-label widget-label-stack">{metaLabel}</span> -->
 			<ButtonWidgetView
 				{widget}
 				{isEditMode}
@@ -794,7 +794,7 @@
 		</div>
 	{:else if widget.type === 'momentary-button'}
 		<div class="widget-button-block">
-			<span class="widget-label widget-label-stack">{metaLabel}</span>
+			<!-- <span class="widget-label widget-label-stack">{metaLabel}</span> -->
 			<MomentaryButtonWidgetView
 				{widget}
 				{isEditMode}
@@ -874,7 +874,7 @@
 	.widget-label {
 		font-size: 0.72rem;
 		letter-spacing: 0.12em;
-		text-transform: uppercase;
+		/* text-transform: uppercase; */
 		color: var(--muted);
 		flex: 0 0 130px;
 		white-space: nowrap;
@@ -912,6 +912,9 @@
 	.container-body {
 		width: 100%;
 		height: 100%;
+		min-width: 1rem;
+		min-height:1rem;
+
 		display: flex;
 	}
 
