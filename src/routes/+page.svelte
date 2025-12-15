@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import BoardPanel from '$lib/editor/BoardPanel.svelte';
 	import InspectorPanel from '$lib/editor/InspectorPanel.svelte';
 	import OutlinerPanel from '$lib/editor/OutlinerPanel.svelte';
@@ -7,31 +7,33 @@
 	import Split from 'split-grid';
 	import { onMount, tick } from 'svelte';
 
-	let leftSplitter, rightSplitter, leftPaneSplitter;
+    let leftSplitter: HTMLDivElement | null = null;
+    let rightSplitter: HTMLDivElement | null = null;
+    let leftPaneSplitter: HTMLDivElement | null = null;
 
-	onMount(async () => {
-		await tick();
-		if (!leftSplitter || !rightSplitter || !leftPaneSplitter) return;
+    onMount(async () => {
+        await tick();
+        if (!leftSplitter || !rightSplitter || !leftPaneSplitter) return;
 
-		Split({
-			columnGutters: [
-				{
-					track: 1,
-					element: leftSplitter,
-				},
-				{
-					track: 3,
-					element: rightSplitter,
-				}
-			],
-			rowGutters: [
-				{
+        Split({
+            columnGutters: [
+                {
                     track: 1,
-					element: leftPaneSplitter,
-				}
-			]
-		});
-	});
+                    element: leftSplitter,
+                },
+                {
+                    track: 3,
+                    element: rightSplitter,
+                }
+            ],
+            rowGutters: [
+                {
+                    track: 1,
+                    element: leftPaneSplitter,
+                }
+            ]
+        });
+    });
 </script>
 
 <div class="root">
