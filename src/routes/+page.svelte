@@ -1,114 +1,128 @@
-<script lang="ts">
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import OscTreePanel from '$lib/components/OscTreePanel.svelte';
-	import BoardCanvas from '$lib/components/BoardCanvas.svelte';
-	import InspectorPanel from '$lib/components/InspectorPanel.svelte';
-	import ModeToggle from '$lib/components/ModeToggle.svelte';
-	import { editorMode, mainSettings, toggleEditorMode } from '$lib/stores/ui';
-	import type { EditorMode } from '$lib/stores/ui';
-	import {
-		activeBoard,
-		selectedWidget,
-		removeWidgetFromBoard,
-		undoBoardChange,
-		redoBoardChange
-	} from '$lib/stores/boards';
-	import type { ContainerWidget, Widget } from '$lib/types/widgets';
+<script>
+	import BoardPanel from '$lib/editor/BoardPanel.svelte';
+	import InspectorPanel from '$lib/editor/InspectorPanel.svelte';
+	import OutlinerPanel from '$lib/editor/OutlinerPanel.svelte';
+	import ServerPanel from '$lib/editor/ServerPanel.svelte';
+	import TopBar from '$lib/editor/TopBar.svelte';
+	import Split from 'split-grid';
+	import { onMount, tick } from 'svelte';
 
-	let boardCss = '';
-	let globalCss = '';
-	let selection: { widget: Widget; parent?: ContainerWidget } | null = null;
-	$: mode = $editorMode;
-	$: isLive = mode === 'live';
-	$: showLiveBoards = $mainSettings.showLiveBoards;
-	$: showEditLiveButtons = $mainSettings.showEditLiveButtons;
-	$: canvasShowsHeader = !isLive || showLiveBoards;
-	$: canvasShowsPanel = !isLive;
-	$: globalCss = $mainSettings.globalCss;
-	$: boardCss = $activeBoard?.css ?? '';
-	$: selection = $selectedWidget;
+	let leftSplitter, rightSplitter, leftPaneSplitter;
 
-	const isEditableTarget = (target: EventTarget | null): target is HTMLElement => {
-		if (!(target instanceof HTMLElement)) return false;
-		const tag = target.tagName;
-		if (target.isContentEditable) return true;
-		return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
-	};
+	onMount(async () => {
+		await tick();
+		if (!leftSplitter || !rightSplitter || !leftPaneSplitter) return;
 
-	const handleGlobalKeydown = (event: KeyboardEvent) => {
-
-		if (event.key === 'e' && event.ctrlKey) {
-			event.preventDefault();
-			toggleEditorMode();
-			return;
-		}
-
-
-		if (isLive) return;
-		const targetIsEditable = isEditableTarget(event.target);
-		const metaPressed = event.metaKey || event.ctrlKey;
-		const key = event.key;
-		const normalizedKey = key.toLowerCase();
-
-		if (metaPressed && !targetIsEditable) {
-			if (normalizedKey === 'z') {
-				event.preventDefault();
-				if (event.shiftKey) {
-					redoBoardChange();
-				} else {
-					undoBoardChange();
+		Split({
+			columnGutters: [
+				{
+					track: 1,
+					element: leftSplitter,
+				},
+				{
+					track: 3,
+					element: rightSplitter,
 				}
-				return;
-			}
-			if (normalizedKey === 'y') {
-				event.preventDefault();
-				redoBoardChange();
-				return;
-			}
-			
-		}
-
-		if (targetIsEditable) return;
-		if (!selection || !$activeBoard) return;
-		if (selection.widget.id === $activeBoard.root.id) return;
-		if (!['Delete', 'Backspace'].includes(key)) return;
-		event.preventDefault();
-		removeWidgetFromBoard(selection.widget.id);
-
-		
-	};
+			],
+			rowGutters: [
+				{
+                    track: 1,
+					element: leftPaneSplitter,
+				}
+			]
+		});
+	});
 </script>
 
-<svelte:head>
-	{#if globalCss.trim()}
-		<style id="goldenboard-global-css">{globalCss}</style>
-	{/if}
-	{#if boardCss.trim()}
-		<style id="goldenboard-board-css">{boardCss}</style>
-	{/if}
-</svelte:head>
+<div class="root">
+	<TopBar />
 
-<svelte:window on:keydown={handleGlobalKeydown} />
+	<div class="content">
+        <div class="outliner-area">
+		<OutlinerPanel />
+        </div>
 
-{#if mode !== 'loading'}
-<div class={`app-root mode-${mode}`}>
-	{#if !showEditLiveButtons}
-	<ModeToggle />
-	{/if}
-	<div class={`toolbar-wrapper ${isLive ? 'toolbar-collapsed' : ''}`} aria-hidden={isLive}>
-		<Toolbar  />
-	</div>
+        <div class="server-area">
+		<ServerPanel />
+        </div>
 
-	<div class={`workspace ${isLive ? 'workspace-live' : 'workspace-edit'}`}>
-		<aside class={`panel-column panel-left ${isLive ? 'panel-collapsed' : ''}`} aria-hidden={isLive}>
-			<OscTreePanel />
-		</aside>
-		<main class={`canvas-wrapper ${isLive ? 'live-only' : ''}`}>
-			<BoardCanvas showHeader={canvasShowsHeader} showPanel={canvasShowsPanel} />
-		</main>
-		<aside class={`panel-column panel-right ${isLive ? 'panel-collapsed' : ''}`} aria-hidden={isLive}>
+		<div class="editor-area">
+			<BoardPanel />
+		</div>
+
+		<div class="inspector-area">
 			<InspectorPanel />
-		</aside>
+		</div>
+
+		<div class="left-splitter" bind:this={leftSplitter} />
+		<div class="right-splitter" bind:this={rightSplitter} />
+		<div class="leftpane-splitter" bind:this={leftPaneSplitter} />
 	</div>
 </div>
-{/if}
+
+<style>
+	.root {
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+
+	.content {
+		flex: 1 1 auto;
+		display: grid;
+		grid-template-areas: 
+			'outliner       left-split content right-split inspector'
+			'leftpane-split left-split content right-split inspector'
+			'server         left-split content right-split inspector';
+
+		grid-template-rows: 1fr 8px 1fr;
+		grid-template-columns: 250px 8px 1fr 8px 300px;
+		width: 100%;
+		height: 100%;
+		min-width: 0;
+	}
+
+	.outliner-area {
+		grid-area: outliner;
+        min-width: 100px;
+		min-height: 100px;
+	}
+
+    .server-area {
+        grid-area: server;
+        min-width: 100px;
+        min-height: 100px;
+    }
+
+	.inspector-area {
+		grid-area: inspector;
+		min-width: 100px;
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+
+	.editor-area {
+		grid-area: content;
+		min-width: 0;
+	}
+
+	.left-splitter {
+		grid-area: left-split;
+		cursor: col-resize;
+		width: 8px;
+	}
+
+	.right-splitter {
+		grid-area: right-split;
+		cursor: col-resize;
+		width: 8px;
+	}
+
+    .leftpane-splitter {
+        grid-area: leftpane-split;
+        cursor: row-resize;
+        height: 8px;
+    }
+</style>
