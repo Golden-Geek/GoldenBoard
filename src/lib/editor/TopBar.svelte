@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { EditMode, editMode } from '$lib/editor/editor.ts';
+    import { EditMode, editMode } from '$lib/editor/editor.svelte';
 </script>
 
 <div class="topbar">

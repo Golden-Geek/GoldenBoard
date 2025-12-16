@@ -6,9 +6,10 @@
 	import TopBar from '$lib/editor/TopBar.svelte';
 	import Split from 'split-grid';
 	import { onMount, tick } from 'svelte';
-	import { editMode, EditMode } from '$lib/editor/editor.ts';
-	import { fade, fly } from 'svelte/transition';
+	import { editMode, EditMode } from '$lib/editor/editor.svelte';
+	import { fly } from 'svelte/transition';
 	import Panel from '$lib/editor/Panel.svelte';
+	import { loadServerConfigs } from '$lib/oscquery/servers.svelte';
 
 	let leftSplitter: HTMLDivElement | null = null;
 	let rightSplitter: HTMLDivElement | null = null;
@@ -28,8 +29,10 @@
 
 	onMount(() => {
 		initSplitter();
+		loadServerConfigs();
 
 		window.addEventListener('keydown', handleKeydown);
+
 		return () => {
 			window.removeEventListener('keydown', handleKeydown);
 		};
@@ -43,17 +46,17 @@
 				columnGutters: [
 					{
 						track: 1,
-						element: leftSplitter
+						element: leftSplitter!
 					},
 					{
 						track: 3,
-						element: rightSplitter
+						element: rightSplitter!
 					}
 				],
 				rowGutters: [
 					{
 						track: 1,
-						element: leftPaneSplitter
+						element: leftPaneSplitter!
 					}
 				],
 				onDragEnd: () => {
@@ -129,7 +132,7 @@
 			</div>
 
 			<div class="server-area">
-				<Panel name="Server">
+				<Panel name="Servers">
 					<ServerPanel />
 				</Panel>
 			</div>
