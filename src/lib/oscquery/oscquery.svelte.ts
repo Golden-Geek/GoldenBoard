@@ -9,21 +9,21 @@ export enum ConnectionStatus {
 
 export class OSCQueryClient {
 
-    //Connection
+	//Connection
 	ws: WebSocket | null = null;
 	ip: string = $state('127.0.0.1');
 	port: number = $state(42000);
 	name: string = $state("[OSCQueryClient]");
 	status: ConnectionStatus = $state(ConnectionStatus.Disconnected);
 
-    //Data
+	//Data
 	hostInfo: any = $state({});
 	structureReady: boolean = $state(false);
 	data: any = $state({});
 	addressMap: any = {};
 
 
-    //Fixed rate sending
+	//Fixed rate sending
 	useFixedRateSending: boolean = $state(false);
 	fixedSendRateHz: number = $state(60);
 	private outboundConflater: Map<string, { address: string; args: any[] }> = new Map();
@@ -238,7 +238,7 @@ export class OSCQueryClient {
 	buildAddressMap(node?: any): void {
 		if (!node) {
 			node = this.data;
-            this.addressMap = {};
+			this.addressMap = {};
 		}
 
 		if (node.FULL_PATH) {
@@ -250,6 +250,21 @@ export class OSCQueryClient {
 	}
 
 	processCommandMessage(msg: any): boolean {
+		console.log("Processing command message: ", msg);
+
+		//TODO : be more selective about what to do on these messages with partial structure update
+		if (msg.COMMAND === 'PATH_ADDED') {
+			this.requestStructure();
+		} else if (msg.COMMAND === 'PATH_REMOVED') {
+			this.requestStructure();
+		} else if (msg.COMMAND === 'PATH_CHANGED') {
+			this.requestStructure();
+		} else if (msg.COMMAND == "PATH_RENAMED") {
+			this.requestStructure();
+		} else {
+			console.warn("Unknown command message: ", msg);
+		}
+
 		return false;
 	}
 
@@ -323,8 +338,8 @@ export class OSCQueryClient {
 		}
 	}
 
-    //Fixed rate sending
-    	private startOutboundPump() {
+	//Fixed rate sending
+	private startOutboundPump() {
 		if (!this.useFixedRateSending) return;
 		if (this.outboundTimer != null) return;
 		const hz = Number(this.fixedSendRateHz);
