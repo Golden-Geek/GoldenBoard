@@ -2,16 +2,21 @@
 	import { onMount } from 'svelte';
 	import Self from './TreeViewItem.svelte';
 	import { getNodeIcon } from '$lib/editor/editor.svelte';
-	import { fade, fly } from 'svelte/transition';
+	import { slide } from 'svelte/transition';
 	let { node, level } = $props();
-	let isExpanded: boolean = $state(true);
+
+	let isExpanded: boolean = $state(level < 3);
 	let hasChildren = $state(false);
 	let extendedType: string | undefined = $state(undefined);
 
 	$effect(() => {
 		hasChildren = node.CONTENTS != null;
-		extendedType = node.EXTENDED_TYPE ? node.EXTENDED_TYPE[0] : undefined;
-	});
+		if(!hasChildren)
+        {
+            if(node.EXTENDED_TYPE) extendedType = node.EXTENDED_TYPE[0];
+            else if(node.TYPE == "N") extendedType = "Trigger";
+        }
+    });
 
 	onMount(() => {
 		// You can perform any setup here if needed
@@ -41,7 +46,7 @@
 		</p>
 	{/if}
 	{#if isExpanded && hasChildren}
-		<div class="children {level == 0 ? 'first-level' : ''}" transition:fly={{ x: -100, duration: 1000 }}>
+		<div class="children {level == 0 ? 'first-level' : ''}" transition:slide|local={{ duration: 300 }}>
 			{#each Object.entries(node.CONTENTS) as [key, child]}
 				<Self node={child} level={level + 1}></Self>
 			{/each}
@@ -59,11 +64,12 @@
 		display: inline;
 		padding: 0.4rem;
 		border-radius: 0.25rem;
-        transition: background-color 0.1s ease;
+		transition: background-color 0.1s ease;
 	}
 
 	.treeview-item .title.container {
 		font-weight: bold;
+        color: rgba(from var(--text-color) r g b / 60%);
 	}
 
 	.treeview-item .title.level-1 {

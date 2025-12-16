@@ -49,7 +49,7 @@ const nodeTypes = [
     { type: "Float", icon: "🔣" },
     { type: "String", icon: "🔤" },
     { type: "Color", icon: "🎨" },
-    { type: "Impulse", icon: "⚡" },
+    { type: "Trigger", icon: "⚡" },
     { type: "Enum", icon: "🎛️" },
     { type: "Point2D", icon: "📐" },
     { type: "Point3D", icon: "🧊" },
