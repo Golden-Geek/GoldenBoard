@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { EditMode, editMode } from '$lib/editor/editor.svelte';
+    import { EditMode, editorState } from '$lib/editor/editor.svelte';
 </script>
 
 <div class="topbar">
@@ -11,9 +11,9 @@
     <div class="spacer"></div>
 	<div class="mode-switch">
 		<button on:click={() => {
-            $editMode = $editMode === EditMode.Live ? EditMode.Edit : EditMode.Live;
+            editorState.editMode = editorState.editMode === EditMode.Live ? EditMode.Edit : EditMode.Live;
         }}>
-			Switch to {$editMode === EditMode.Edit ? 'Live' : 'Edit'}
+			Switch to {editorState.editMode === EditMode.Edit ? 'Live' : 'Edit'}
 		</button>
 	</div>
 </div>

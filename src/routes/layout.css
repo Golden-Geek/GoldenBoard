@@ -20,6 +20,7 @@ body {
     overflow: hidden;
     background: radial-gradient(circle at center, var(--bg-color) 0%, var(--bg-color2) 200%);
     color: var(--text-color);
+    user-select: none;
 }
 
 button {

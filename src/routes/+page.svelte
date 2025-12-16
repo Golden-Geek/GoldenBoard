@@ -6,30 +6,38 @@
 	import TopBar from '$lib/editor/TopBar.svelte';
 	import Split from 'split-grid';
 	import { onMount, tick } from 'svelte';
-	import { editMode, EditMode } from '$lib/editor/editor.svelte';
+	import {
+		editorState,
+		EditMode,
+		loadEditorState,
+		saveEditorState
+	} from '$lib/editor/editor.svelte';
 	import { fly } from 'svelte/transition';
 	import Panel from '$lib/editor/Panel.svelte';
 	import { loadServerConfigs } from '$lib/oscquery/servers.svelte';
 
+	let contentDiv: HTMLDivElement | null = null;
 	let leftSplitter: HTMLDivElement | null = null;
 	let rightSplitter: HTMLDivElement | null = null;
 	let leftPaneSplitter: HTMLDivElement | null = null;
 
-	let layoutLoaded = false;
+	let layoutLoaded = $state(false);
 
-	$: {
-		if ($editMode === EditMode.Edit) {
-			// Wait for DOM update
-			tick().then(() => {
-				// Re-initialize splitter to ensure gutters are active
-				initSplitter();
-			});
-		}
-	}
+	$effect(() => {
+		if (editorState.layout) return;
+		loadLayout();
+	});
+
+	$effect(() => {
+		if (editorState.editMode !== EditMode.Edit) return;
+		tick().then(() => {
+			initSplitter();
+		});
+	});
 
 	onMount(() => {
-		initSplitter();
 		loadServerConfigs();
+		loadEditorState();
 
 		window.addEventListener('keydown', handleKeydown);
 
@@ -39,8 +47,7 @@
 	});
 
 	function initSplitter() {
-		if (!leftSplitter || !rightSplitter || !leftPaneSplitter) return;
-		loadLayout();
+		if (!leftSplitter || !rightSplitter || !leftPaneSplitter || !contentDiv) return;
 		tick().then(() => {
 			Split({
 				columnGutters: [
@@ -69,24 +76,26 @@
 	}
 
 	function loadLayout() {
-		layoutLoaded = true;
-		const savedLayout = localStorage.getItem('layout');
-		if (savedLayout) {
-			const { inspectorWidth, leftPaneWidth, outlinerHeight } = JSON.parse(savedLayout);
-			const content = document.querySelector('.content') as HTMLElement;
-			if (content) {
-				content.style.gridTemplateColumns = `${leftPaneWidth} 8px 1fr 8px ${inspectorWidth}`;
-				content.style.gridTemplateRows = `${outlinerHeight} 8px 1fr`;
+		if (contentDiv == null) return;
+		if (editorState.layout) {
+			const { inspectorWidth, leftPaneWidth, outlinerHeight } = editorState.layout as {
+				inspectorWidth: string;
+				leftPaneWidth: string;
+				outlinerHeight: string;
+			};
+			if (contentDiv) {
+				contentDiv.style.gridTemplateColumns = `${leftPaneWidth} 8px 1fr 8px ${inspectorWidth}`;
+				contentDiv.style.gridTemplateRows = `${outlinerHeight} 8px 1fr`;
 			}
 		}
+		layoutLoaded = true;
 	}
 
 	function saveLayout() {
-		const content = document.querySelector('.content') as HTMLElement;
-		if (!content) return;
+		if (!contentDiv) return;
 
 		// Get computed grid sizes
-		const style = getComputedStyle(content);
+		const style = getComputedStyle(contentDiv);
 		const columns = style.gridTemplateColumns.split(' ').map((s) => s.trim());
 		const rows = style.gridTemplateRows.split(' ').map((s) => s.trim());
 
@@ -97,34 +106,32 @@
 		// Outliner height: first row
 		const outlinerHeight = rows[0];
 
-		// Save to localStorage (or any storage you prefer)
-		localStorage.setItem(
-			'layout',
-			JSON.stringify({
-				inspectorWidth,
-				leftPaneWidth,
-				outlinerHeight
-			})
-		);
+		editorState.layout = {
+			inspectorWidth,
+			leftPaneWidth,
+			outlinerHeight
+		};
+
+		saveEditorState();
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.ctrlKey && (event.key === 'e' || event.key === 'E')) {
 			event.preventDefault();
-			$editMode = $editMode === EditMode.Live ? EditMode.Edit : EditMode.Live;
+			editorState.editMode = editorState.editMode === EditMode.Live ? EditMode.Edit : EditMode.Live;
 		}
 	}
 </script>
 
-<div class="root mode-{$editMode}">
-	{#if $editMode === EditMode.Edit}
+<div class="root mode-{editorState.editMode}">
+	{#if editorState.editMode === EditMode.Edit}
 		<div class="topbar-area" transition:fly={{ y: -50 }}>
 			<TopBar />
 		</div>
 	{/if}
 
-	<div class="content {layoutLoaded ? '' : 'loading'}">
-		{#if $editMode === EditMode.Edit}
+	<div class="content {layoutLoaded ? '' : 'loading'}" bind:this={contentDiv}>
+		{#if editorState.editMode === EditMode.Edit}
 			<div class="outliner-area">
 				<Panel name="Outliner">
 					<OutlinerPanel />
@@ -144,7 +151,7 @@
 			</Panel>
 		</div>
 
-		{#if $editMode === EditMode.Edit}
+		{#if editorState.editMode === EditMode.Edit}
 			<div class="inspector-area">
 				<Panel name="Inspector">
 					<InspectorPanel />
@@ -187,9 +194,8 @@
 		width: 100%;
 		height: 100%;
 		opacity: 1;
-		transition: opacity 0.2s ease;
 		padding: 0.5rem;
-		transition: padding 0.3s ease;
+		transition: opacity .2s ease, padding 0.3s ease;
 	}
 
 	.content.loading {
