@@ -7,15 +7,77 @@
 	import Split from 'split-grid';
 	import { onMount, tick } from 'svelte';
 	import { editMode, EditMode } from '$lib/editor/editor.ts';
-	import { fade } from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
 
 	let leftSplitter: HTMLDivElement | null = null;
 	let rightSplitter: HTMLDivElement | null = null;
 	let leftPaneSplitter: HTMLDivElement | null = null;
 
-	function saveLayout() {
-		console.log('Saving layout...');
+	let layoutLoaded = false;
 
+	$: {
+		if ($editMode === EditMode.Edit) {
+			// Wait for DOM update
+			tick().then(() => {
+				// Re-initialize splitter to ensure gutters are active
+				initSplitter();
+			});
+		}
+	}
+
+	onMount(() => {
+		initSplitter();
+
+		window.addEventListener('keydown', handleKeydown);
+		return () => {
+			window.removeEventListener('keydown', handleKeydown);
+		};
+	});
+
+	function initSplitter() {
+		if (!leftSplitter || !rightSplitter || !leftPaneSplitter) return;
+		loadLayout();
+		tick().then(() => {
+			Split({
+				columnGutters: [
+					{
+						track: 1,
+						element: leftSplitter
+					},
+					{
+						track: 3,
+						element: rightSplitter
+					}
+				],
+				rowGutters: [
+					{
+						track: 1,
+						element: leftPaneSplitter
+					}
+				],
+				onDragEnd: () => {
+					saveLayout();
+				}
+			});
+
+			loadLayout();
+		});
+	}
+
+	function loadLayout() {
+		layoutLoaded = true;
+		const savedLayout = localStorage.getItem('layout');
+		if (savedLayout) {
+			const { inspectorWidth, leftPaneWidth, outlinerHeight } = JSON.parse(savedLayout);
+			const content = document.querySelector('.content') as HTMLElement;
+			if (content) {
+				content.style.gridTemplateColumns = `${leftPaneWidth} 8px 1fr 8px ${inspectorWidth}`;
+				content.style.gridTemplateRows = `${outlinerHeight} 8px 1fr`;
+			}
+		}
+	}
+
+	function saveLayout() {
 		const content = document.querySelector('.content') as HTMLElement;
 		if (!content) return;
 
@@ -42,49 +104,6 @@
 		);
 	}
 
-	onMount(async () => {
-		if (!leftSplitter || !rightSplitter || !leftPaneSplitter) return;
-
-		Split({
-			columnGutters: [
-				{
-					track: 1,
-					element: leftSplitter
-				},
-				{
-					track: 3,
-					element: rightSplitter
-				}
-			],
-			rowGutters: [
-				{
-					track: 1,
-					element: leftPaneSplitter
-				}
-			],
-			onDragEnd: () => {
-				saveLayout();
-			}
-		});
-
-		// Load saved layout
-
-		const savedLayout = localStorage.getItem('layout');
-		if (savedLayout) {
-			const { inspectorWidth, leftPaneWidth, outlinerHeight } = JSON.parse(savedLayout);
-			const content = document.querySelector('.content') as HTMLElement;
-			if (content) {
-				content.style.gridTemplateColumns = `${leftPaneWidth} 8px 1fr 8px ${inspectorWidth}`;
-				content.style.gridTemplateRows = `${outlinerHeight} 8px 1fr`;
-			}
-		}
-
-		window.addEventListener('keydown', handleKeydown);
-		return () => {
-			window.removeEventListener('keydown', handleKeydown);
-		};
-	});
-
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.ctrlKey && (event.key === 'e' || event.key === 'E')) {
 			event.preventDefault();
@@ -93,39 +112,37 @@
 	}
 </script>
 
-{#key $editMode}
-	<div class="root mode-{$editMode}">
+<div class="root mode-{$editMode}">
+	{#if $editMode === EditMode.Edit}
+		<TopBar />
+	{/if}
+
+	<div class="content {layoutLoaded ? '' : 'loading'}">
 		{#if $editMode === EditMode.Edit}
-			<TopBar />
-		{/if}
-
-		<div class="content">
-			{#if $editMode === EditMode.Edit}
-                <div class="outliner-area" transition:fade>
-                    <OutlinerPanel />
-                </div>
-
-				<div class="server-area">
-					<ServerPanel />
-				</div>
-			{/if}
-
-			<div class="board-area">
-				<BoardPanel />
+			<div class="outliner-area">
+				<OutlinerPanel />
 			</div>
 
-			{#if $editMode === EditMode.Edit}
-				<div class="inspector-area">
-					<InspectorPanel />
-				</div>
+			<div class="server-area">
+				<ServerPanel />
+			</div>
+		{/if}
 
-				<div class="left-splitter" bind:this={leftSplitter}></div>
-				<div class="right-splitter" bind:this={rightSplitter}></div>
-				<div class="leftpane-splitter" bind:this={leftPaneSplitter}></div>
-			{/if}
+		<div class="board-area">
+			<BoardPanel />
 		</div>
+
+		{#if $editMode === EditMode.Edit}
+			<div class="inspector-area">
+				<InspectorPanel />
+			</div>
+
+			<div class="left-splitter" bind:this={leftSplitter}></div>
+			<div class="right-splitter" bind:this={rightSplitter}></div>
+			<div class="leftpane-splitter" bind:this={leftPaneSplitter}></div>
+		{/if}
 	</div>
-{/key}
+</div>
 
 <style>
 	.root {
@@ -133,17 +150,29 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
+		padding: 0.5rem;
+		transition: padding 0.3s ease;
 	}
 
-	.mode-live {
+	.root.mode-live {
+		padding: 0;
+	}
+
+	.root.mode-live {
 		--panel-bg: #ffffff;
 		--border-color: #cccccc;
 	}
 
-    .content {
-        width: 100%;
+	.content {
+		width: 100%;
 		height: 100%;
-    }
+		opacity: 1;
+		transition: opacity 0.2s ease;
+	}
+
+	.content.loading {
+		opacity: 0;
+	}
 
 	.mode-edit .content {
 		flex: 1 1 auto;
@@ -160,10 +189,10 @@
 		min-width: 0;
 	}
 
-    .mode-live .content {
-        width: 100%;
-        height: 100%;
-    }
+	.mode-live .content {
+		width: 100%;
+		height: 100%;
+	}
 
 	.outliner-area {
 		grid-area: outliner;
@@ -185,16 +214,22 @@
 		gap: 0.2rem;
 	}
 
+	.board-area {
+		/* transition:
+			width 1s ease,
+			height 1s ease; */
+	}
+
 	.mode-edit .board-area {
 		grid-area: content;
 		min-width: 0;
 	}
 
-    .mode-live .board-area {
-        width:100%;
-        height:100%;
-        min-width: 0;
-    }
+	.mode-live .board-area {
+		width: 100%;
+		height: 100%;
+		min-width: 0;
+	}
 
 	.left-splitter {
 		grid-area: left-split;
