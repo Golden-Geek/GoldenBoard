@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import Self from './TreeViewItem.svelte';
 	import { getNodeIcon } from '$lib/editor/editor.svelte';
+	import { fade, fly } from 'svelte/transition';
 	let { node, level } = $props();
 	let isExpanded: boolean = $state(true);
 	let hasChildren = $state(false);
@@ -40,7 +41,7 @@
 		</p>
 	{/if}
 	{#if isExpanded && hasChildren}
-		<div class="children {level == 0 ? 'first-level' : ''}">
+		<div class="children {level == 0 ? 'first-level' : ''}" transition:fly={{ x: -100, duration: 1000 }}>
 			{#each Object.entries(node.CONTENTS) as [key, child]}
 				<Self node={child} level={level + 1}></Self>
 			{/each}
@@ -88,8 +89,8 @@
 	}
 
 	.treeview-item .children:not(.first-level) {
-		margin-left: 0.3rem;
-		padding-left: 0.5rem;
+		margin-left: 0.7rem;
+		padding-left: 0.1rem;
 		border-left: solid 1px rgba(200, 200, 200, 0.2);
 	}
 </style>
