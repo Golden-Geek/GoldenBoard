@@ -55,11 +55,15 @@
 		align-items: center;
 		cursor: pointer;
 		user-select: none;
+		display: inline;
+		padding: 0.4rem;
+		border-radius: 0.25rem;
+        transition: background-color 0.1s ease;
 	}
 
-    .treeview-item .title.container {
-        font-weight: bold;
-    }
+	.treeview-item .title.container {
+		font-weight: bold;
+	}
 
 	.treeview-item .title.level-1 {
 		font-size: 0.9rem;
@@ -68,6 +72,10 @@
 	.treeview-item .title .icon {
 		margin-right: 0.25rem;
 		font-size: 0.9rem;
+	}
+
+	.treeview-item .title:hover {
+		background-color: rgba(200, 200, 200, 0.2);
 	}
 
 	.treeview-item .expand-btn {
@@ -81,7 +89,7 @@
 
 	.treeview-item .children:not(.first-level) {
 		margin-left: 0.3rem;
-        padding-left:0.5rem;
-        border-left: solid 1px rgba(200, 200, 200, 0.2);
+		padding-left: 0.5rem;
+		border-left: solid 1px rgba(200, 200, 200, 0.2);
 	}
 </style>
