@@ -9,6 +9,9 @@
     --panel-bg-color: rgba(255, 255, 255, 0.05);
     --text-color: #f5f5f5;
     --button-text-color: #9f9f9f;
+
+    --border-radius-large: 0.5rem;
+    --border-radius-medium: 0.25rem;
 }
 
 html,
@@ -23,12 +26,72 @@ body {
     user-select: none;
 }
 
+/* UI */
+
 button {
     cursor: pointer;
     background-color: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.05);
     color: var(--button-text-color);
     padding: 0.2rem 0.4rem;
-    border-radius: 0.25rem;
+    border-radius: var(--border-radius-medium);
     font-size: .9rem;
+}
+
+input 
+{
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-color);
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--border-radius-medium);
+    font-size: .8rem;
+}
+
+/* Custom dark mode, rounded scrollbar */
+::-webkit-scrollbar {
+    width: .3rem;
+    background: var(--bg-color);
+    border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.10);
+    border-radius: 8px;
+    transition: background-color 1s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ::-webkit-scrollbar-corner {
+    background: var(--bg-color2);
+    border-radius: 8px;
+} */
+
+/* Firefox */
+/* * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.12) var(--bg-color);
+} */
+
+/* ICONS */
+
+.connected-icon
+{
+    width: 1.2em;
+    height: 1.2em;
+    display: inline-block;
+    background: url('/icons/connected.svg') no-repeat center center / contain;
+    vertical-align: middle;
+}
+
+.disconnected-icon
+{
+    width: 1.2em;
+    height: 1.2em;
+    display: inline-block;
+    background: url('/icons/disconnected.svg') no-repeat center center / contain;
+    vertical-align: middle;
 }

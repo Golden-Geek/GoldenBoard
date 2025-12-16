@@ -196,6 +196,7 @@
 		opacity: 1;
 		padding: 0.5rem;
 		transition: opacity .2s ease, padding 0.3s ease;
+		overflow: auto;
 	}
 
 	.content.loading {
