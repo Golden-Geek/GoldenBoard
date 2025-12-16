@@ -2,5 +2,16 @@ import devtoolsJson from 'vite-plugin-devtools-json';
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
 
-export default defineConfig({ plugins: [tailwindcss(), sveltekit(), devtoolsJson()] });
+const file = fileURLToPath(new URL('package.json', import.meta.url));
+const json = readFileSync(file, 'utf8');
+const pkg = JSON.parse(json);
+
+export default defineConfig({
+    plugins: [tailwindcss(), sveltekit(), devtoolsJson()],
+    define: {
+        PKG: pkg
+    }
+});

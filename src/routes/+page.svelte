@@ -8,6 +8,7 @@
 	import { onMount, tick } from 'svelte';
 	import { editMode, EditMode } from '$lib/editor/editor.ts';
 	import { fade, fly } from 'svelte/transition';
+	import Panel from '$lib/editor/Panel.svelte';
 
 	let leftSplitter: HTMLDivElement | null = null;
 	let rightSplitter: HTMLDivElement | null = null;
@@ -114,27 +115,37 @@
 
 <div class="root mode-{$editMode}">
 	{#if $editMode === EditMode.Edit}
-		<TopBar />
+		<div class="topbar-area" transition:fly={{ y: -50 }}>
+			<TopBar />
+		</div>
 	{/if}
 
 	<div class="content {layoutLoaded ? '' : 'loading'}">
 		{#if $editMode === EditMode.Edit}
 			<div class="outliner-area">
-				<OutlinerPanel />
+				<Panel name="Outliner">
+					<OutlinerPanel />
+				</Panel>
 			</div>
 
 			<div class="server-area">
-				<ServerPanel />
+				<Panel name="Server">
+					<ServerPanel />
+				</Panel>
 			</div>
 		{/if}
 
 		<div class="board-area">
-			<BoardPanel />
+			<Panel name="Board">
+				<BoardPanel />
+			</Panel>
 		</div>
 
 		{#if $editMode === EditMode.Edit}
 			<div class="inspector-area">
-				<InspectorPanel />
+				<Panel name="Inspector">
+					<InspectorPanel />
+				</Panel>
 			</div>
 
 			<div class="left-splitter" bind:this={leftSplitter}></div>
@@ -150,17 +161,23 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
-		padding: 0.5rem;
-		transition: padding 0.3s ease;
-	}
-
-	.root.mode-live {
-		padding: 0;
+		transition: gap 0.3s ease;
 	}
 
 	.root.mode-live {
 		--panel-bg: #ffffff;
 		--border-color: #cccccc;
+		gap: 0;
+	}
+
+	.topbar-area {
+		width: 100%;
+		height: 2rem;
+		transition: height 0.3s ease;
+	}
+
+	.mode-live .topbar-area {
+		height: 0;
 	}
 
 	.content {
@@ -168,6 +185,8 @@
 		height: 100%;
 		opacity: 1;
 		transition: opacity 0.2s ease;
+		padding: 0.5rem;
+		transition: padding 0.3s ease;
 	}
 
 	.content.loading {
@@ -192,6 +211,7 @@
 	.mode-live .content {
 		width: 100%;
 		height: 100%;
+		padding: 0;
 	}
 
 	.outliner-area {
