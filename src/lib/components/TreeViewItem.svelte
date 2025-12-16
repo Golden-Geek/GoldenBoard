@@ -18,10 +18,6 @@
         }
     });
 
-	onMount(() => {
-		// You can perform any setup here if needed
-		console.log('TreeViewItem node:', extendedType, $state.snapshot(node)); //DESCRIPTION, extendedType);
-	});
 </script>
 
 <div class="treeview-item {isExpanded ? 'expanded' : 'collapsed'}">
