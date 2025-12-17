@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { EditMode } from '$lib/editor/editor.svelte';
 	import { clearData, mainData, saveData } from '$lib/engine.svelte';
+	import WidgetBar from '$lib/widget/WidgetBar.svelte';
 
 	let editorState: any = $derived(mainData.editor);
 </script>
@@ -9,7 +10,7 @@
 	<p class="title">Golden Board v{PKG.version}</p>
 
 	<div class="spacer"></div>
-	<div class="menu"></div>
+	<WidgetBar></WidgetBar>
 
 	<div class="spacer"></div>
 	<div class="mode-switch">
@@ -30,8 +31,6 @@
 <style>
 	.topbar {
 		height: 40px;
-		border-bottom: 1px solid var(--border-color);
-		/* background-color: var(--panel-bg); */
 		display: flex;
 		align-items: center;
 		padding: 0 10px;
@@ -40,6 +39,7 @@
 		color: rgba(from var(--text-color) r g b / 30%);
 		font-weight: bold;
 		text-transform: uppercase;
+		box-shadow: 1px 1px 5px rgba(0, 0, 0, 1);
 	}
 
 	.spacer {

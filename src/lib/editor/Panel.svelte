@@ -33,4 +33,8 @@
 	:global(.mode-live) .panel-title {
 		display: none;
 	}
+
+	:global(.mode-edit) .panel {
+		box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.5);
+	}
 </style>
