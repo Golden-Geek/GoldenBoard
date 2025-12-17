@@ -13,8 +13,10 @@ export class OSCQueryClient {
 	ws: WebSocket | null = null;
 	ip: string = $state('127.0.0.1');
 	port: number = $state(42000);
-	name: string = $state("[OSCQueryClient]");
+	name: string = $state("New Server");
 	status: ConnectionStatus = $state(ConnectionStatus.Disconnected);
+
+
 
 	//Data
 	hostInfo: any = $state({});
@@ -31,6 +33,20 @@ export class OSCQueryClient {
 
 	pendingMessages: string[] = [];
 
+	nameEffectDestroy = $effect.root(() => {
+		$effect(() => {
+			// setup
+			if ((this.name == "" || this.name == "New Server") && this.hostInfo.NAME) {
+				this.name = this.hostInfo.NAME;
+			}
+		});
+
+		return () => {
+			// cleanup
+		};
+	});
+
+
 	constructor(config: any = { name: "New Server", ip: "127.0.0.1", port: 42000 }) {
 		this.name = config.name || this.name;
 		this.ip = config.ip || this.ip;
@@ -41,14 +57,19 @@ export class OSCQueryClient {
 		this.connect();
 	}
 
+	cleanup() {
+		this.nameEffectDestroy();
+	}
 
 	//WS Connection 
+
+
 
 	connect(): void {
 		this.disconnect();
 		this.setStatus(ConnectionStatus.Connecting);
 
-		console.log(`[${this.name}] Connecting to: ${this.ip} : ${this.port}...`);
+		// console.log(`[${this.name}] Connecting to: ${this.ip} : ${this.port}...`);
 		try {
 			this.ws = new WebSocket("ws://" + this.ip + ":" + this.port);
 			this.ws.binaryType = 'arraybuffer';
@@ -85,7 +106,8 @@ export class OSCQueryClient {
 
 	setStatus(status: ConnectionStatus): void {
 		if (this.status === status) return;
-		console.log(`[${this.name}] Status changed: ${this.status} -> ${status}`);
+
+		// console.log(`[${this.name}] Status changed: ${this.status} -> ${status}`);
 		this.status = status;
 		switch (this.status) {
 
@@ -232,7 +254,7 @@ export class OSCQueryClient {
 
 	parseHostInfo(json: any): void {
 		this.hostInfo = json;
-		// console.log("Host Info: ", json);
+
 	}
 
 	buildAddressMap(node?: any): void {

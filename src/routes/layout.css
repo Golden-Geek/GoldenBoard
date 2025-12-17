@@ -28,7 +28,8 @@ body {
 
 /* UI */
 
-button {
+button,
+.button {
     cursor: pointer;
     background-color: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -38,8 +39,16 @@ button {
     font-size: .9rem;
 }
 
-input 
-{
+button.icon-button {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    color: var(--button-text-color);
+}
+
+input {
     background-color: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.05);
     color: var(--text-color);
@@ -78,8 +87,7 @@ input
 
 /* ICONS */
 
-.connected-icon
-{
+.connected-icon {
     width: 1.2em;
     height: 1.2em;
     display: inline-block;
@@ -87,8 +95,7 @@ input
     vertical-align: middle;
 }
 
-.disconnected-icon
-{
+.disconnected-icon {
     width: 1.2em;
     height: 1.2em;
     display: inline-block;

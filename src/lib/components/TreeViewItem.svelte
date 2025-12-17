@@ -1,27 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Self from './TreeViewItem.svelte';
-	import { getNodeIcon } from '$lib/editor/editor.svelte';
+	import { getNodeIcon } from '$lib/oscquery/servers.svelte';
 	import { slide } from 'svelte/transition';
-	let { node, level } = $props();
+	let { node, level, showRoot = false, getChildren, getType, getIcon = null, getTitle, isContainer = null } = $props();
 
-	let isExpanded: boolean = $state(level < 3);
-	let hasChildren = $state(false);
-	let extendedType: string | undefined = $state(undefined);
+	let isExpanded: any = $derived(() => level < 3);
 
-	$effect(() => {
-		hasChildren = node.CONTENTS != null;
-		if(!hasChildren)
-        {
-            if(node.EXTENDED_TYPE) extendedType = node.EXTENDED_TYPE[0];
-            else if(node.TYPE == "N") extendedType = "Trigger";
-        }
-    });
+	let type: any = $derived(getType(node));
 
+	let children: any = $derived(getChildren(node));
+	let hasChildren: any = $derived(isContainer ? isContainer(node) : children.length > 0);
 </script>
 
 <div class="treeview-item {isExpanded ? 'expanded' : 'collapsed'}">
-	{#if level > 0}
+	{#if level > 0 || showRoot}
 		<p class="title level-{level} {hasChildren ? 'container' : 'controllable'}">
 			{#if hasChildren}
 				<button
@@ -33,18 +26,23 @@
 				>
 					{isExpanded ? '▾' : '▸'}
 				</button>
-			{:else if extendedType}
-				<span class="icon">
-					{getNodeIcon(extendedType)}
-				</span>
+			{:else if type}
+				{#if getIcon}
+					<span class="icon">
+						{getIcon(type)}
+					</span>
+				{/if}
 			{/if}
-			{node.DESCRIPTION}
+			{getTitle(node)}
 		</p>
 	{/if}
-	{#if isExpanded && hasChildren}
-		<div class="children {level == 0 ? 'first-level' : ''}" transition:slide|local={{ duration: 300 }}>
-			{#each Object.entries(node.CONTENTS) as [key, child]}
-				<Self node={child} level={level + 1}></Self>
+	{#if isExpanded && node != null && hasChildren}
+		<div
+			class="children {level == 0 ? 'first-level' : ''}"
+			transition:slide|local={{ duration: 300 }}
+		>
+			{#each children as child}
+				<Self node={child} level={level + 1} {getChildren} {getType} {getIcon} {getTitle} {isContainer}></Self>
 			{/each}
 		</div>
 	{/if}
@@ -65,7 +63,7 @@
 
 	.treeview-item .title.container {
 		font-weight: bold;
-        color: rgba(from var(--text-color) r g b / 60%);
+		color: rgba(from var(--text-color) r g b / 60%);
 	}
 
 	.treeview-item .title.level-1 {

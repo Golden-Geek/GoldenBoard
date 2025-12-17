@@ -1,20 +1,29 @@
 <script lang="ts">
-    import { EditMode, editorState } from '$lib/editor/editor.svelte';
+	import { EditMode } from '$lib/editor/editor.svelte';
+	import { clearData, mainData, saveData } from '$lib/engine.svelte';
+
+	let editorState: any = $derived(mainData.editor);
 </script>
 
 <div class="topbar">
 	<p class="title">Golden Board v{PKG.version}</p>
 
-    <div class="spacer"></div>
+	<div class="spacer"></div>
 	<div class="menu"></div>
 
-    <div class="spacer"></div>
+	<div class="spacer"></div>
 	<div class="mode-switch">
-		<button on:click={() => {
-            editorState.editMode = editorState.editMode === EditMode.Live ? EditMode.Edit : EditMode.Live;
-        }}>
+		<button
+			onclick={() => {
+				editorState.editMode =
+					editorState.editMode === EditMode.Live ? EditMode.Edit : EditMode.Live;
+			}}
+		>
 			Switch to {editorState.editMode === EditMode.Edit ? 'Live' : 'Edit'}
 		</button>
+
+		<button onclick={() => saveData()}> Save </button>
+		<button onclick={() => clearData()}> Clear </button>
 	</div>
 </div>
 
@@ -28,12 +37,12 @@
 		padding: 0 10px;
 		box-sizing: border-box;
 		background-color: var(--panel-bg-color);
-        color: rgba(from var(--text-color) r g b / 30%);
-        font-weight: bold;
-        text-transform: uppercase;
+		color: rgba(from var(--text-color) r g b / 30%);
+		font-weight: bold;
+		text-transform: uppercase;
 	}
 
-    .spacer {
-        flex-grow: 1;
-    }
+	.spacer {
+		flex-grow: 1;
+	}
 </style>
