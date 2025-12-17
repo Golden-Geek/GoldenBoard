@@ -6,15 +6,13 @@
 	import TopBar from '$lib/editor/TopBar.svelte';
 	import Split from 'split-grid';
 	import { onMount, tick } from 'svelte';
-	import {
-		editorState,
-		EditMode,
-		loadEditorState,
-		saveEditorState
-	} from '$lib/editor/editor.svelte';
+	import { mainData, loadData, saveData } from '$lib/engine.svelte';
+	import { EditMode } from '$lib/editor/editor.svelte';
 	import { fly } from 'svelte/transition';
 	import Panel from '$lib/editor/Panel.svelte';
-	import { loadServerConfigs } from '$lib/oscquery/servers.svelte';
+
+
+	let editorState: any = $derived(mainData.editor);
 
 	let contentDiv: HTMLDivElement | null = null;
 	let leftSplitter: HTMLDivElement | null = null;
@@ -36,8 +34,7 @@
 	});
 
 	onMount(() => {
-		loadServerConfigs();
-		loadEditorState();
+		loadData();
 
 		window.addEventListener('keydown', handleKeydown);
 
@@ -112,7 +109,7 @@
 			outlinerHeight
 		};
 
-		saveEditorState();
+		saveData();
 	}
 
 	function handleKeydown(event: KeyboardEvent) {

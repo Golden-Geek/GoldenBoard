@@ -1,73 +1,90 @@
 <script lang="ts">
-	import { addServer, servers } from '$lib/oscquery/servers.svelte';
-	import { editorState } from './editor.svelte';
+	import { servers, addServer, removeServer, getNodeIcon } from '$lib/oscquery/servers.svelte';
+	import { mainData } from '$lib/engine.svelte';
 	import { ConnectionStatus, OSCQueryClient } from '$lib/oscquery/oscquery.svelte';
 	import TreeView from '$lib/components/TreeView.svelte';
+	import AddButton from '$lib/components/AddButton.svelte';
+	import RemoveButton from '$lib/components/RemoveButton.svelte';
+	import EditableButton from '$lib/components/EditableButton.svelte';
 
-	let currentServer: OSCQueryClient | undefined = $state(undefined);
+	let selectedServerName: string | null = $derived(mainData.serverData.selectedServer);
+
+	let currentServer: OSCQueryClient | undefined = $derived(
+		selectedServerName ? servers.find((server) => server.name === selectedServerName) : undefined
+	);
+
 	let ip = $state('');
 	let port = $state(0);
 
 	$effect(() => {
-		if (editorState.selectedServerName == null && servers.length > 0) {
-			editorState.selectedServerName = servers[0].name;
+		if (currentServer == undefined && servers.length > 0) {
+			selectedServerName = servers[0].name;
 		}
 
-		currentServer = servers.find((server) => server.name === editorState.selectedServerName);
 		if (currentServer) {
-			ip = currentServer.ip;
-			port = currentServer.port;
+			ip = currentServer!.ip;
+			port = currentServer!.port;
 		}
 	});
 </script>
 
 <div class="server-content">
-<div class="header">
-	<button aria-label="Add server" class="icon-btn" onclick={addServer}>
-		<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-			<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-			<line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" stroke-width="2" />
-			<line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
-		</svg>
-	</button>
+	<div class="header">
+		<AddButton onclick={() => addServer()} />
 
-	<div class="server-bar">
-		{#each servers as server (server.name)}
+		<div class="server-bar">
+			{#each servers as server}
+				<EditableButton
+					onselect={() => {
+						selectedServerName = server.name;
+					}}
+					hasRemoveButton={servers.length > 1}
+					selected={selectedServerName === server.name}
+					bind:value={server.name}
+					onremove={() => {
+						removeServer(server);
+						if (currentServer == server) currentServer = undefined;
+					}}
+				></EditableButton>
+			{/each}
+		</div>
+	</div>
+
+	{#if currentServer != undefined}
+		<div class="server-info">
+			<input class="server-ip" type="text" bind:value={ip} placeholder="IP" />
+			<input class="server-port" type="text" bind:value={port} placeholder="Port" />
 			<button
-				class="server-btn {currentServer == server ? 'selected' : ''}"
-				aria-label={server.name}
 				onclick={() => {
-					editorState.selectedServerName = server.name;
-				}}
+					if (currentServer?.status == ConnectionStatus.Connected) {
+						currentServer?.disconnect();
+					} else {
+						currentServer?.setIPAndPort(ip, port);
+					}
+				}}>{currentServer!.status == ConnectionStatus.Connected ? 'Disconnect' : 'Connect'}</button
 			>
-				{server.name}
-			</button>
-		{/each}
-	</div>
-</div>
+			<div
+				class="icon {currentServer!.status == ConnectionStatus.Connected
+					? 'connected'
+					: 'disconnected'}-icon"
+			></div>
+		</div>
 
-{#if currentServer != undefined}
-	<div class="server-info">
-		<input class="server-ip" type="text" bind:value={ip} placeholder="IP" />
-		<input class="server-port" type="text" bind:value={port} placeholder="Port" />
-		<button
-			onclick={() => {
-				if (currentServer?.status == ConnectionStatus.Connected) {
-					currentServer?.disconnect();
-				} else {
-					currentServer?.setIPAndPort(ip, port);
-				}
-			}}>{currentServer!.status == ConnectionStatus.Connected ? 'Disconnect' : 'Connect'}</button
-		>
-		<div
-			class="icon {currentServer!.status == ConnectionStatus.Connected
-				? 'connected'
-				: 'disconnected'}-icon"
-		></div>
-	</div>
-
-	<TreeView data={currentServer!.data} />
-{/if}
+		<TreeView
+			data={currentServer!.data}
+			showRoot={false}
+			getChildren={(node: any) => node.CONTENTS ? Object.values(node.CONTENTS) || [] : []}
+			isContainer={(node: any) => node.CONTENTS}
+			getType={(node: any) => {
+				if(node.CONTENTS) return 'Container';
+				if (node.EXTENDED_TYPE) return node.EXTENDED_TYPE[0];
+				if (!node.CONTENTS && node.TYPE == 'N') return 'Trigger';
+				return undefined;
+			}}
+			getIcon={getNodeIcon}
+			getTitle={(node: any) => node.DESCRIPTION || node.NAME || '/'}
+		></TreeView>
+	{/if}
 </div>
 
 <style>
@@ -84,41 +101,9 @@
 		gap: 0.5rem;
 	}
 
-	.icon-btn {
-		background: none;
-		border: none;
-		padding: 0;
-		border-radius: 50%;
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	svg {
-		display: block;
-		color: #1ea7d5;
-		transition: color 0.2s;
-	}
-
-	.icon-btn:hover svg {
-		color: #ffffff;
-	}
-
 	.server-bar {
 		display: flex;
 		gap: 0.5rem;
-	}
-
-	.server-btn.selected {
-		background-color: #1e89d5;
-		color: #222;
-		font-weight: bold;
-	}
-
-	.server-btn:hover {
-		background-color: #1348a4;
-		color: #222;
 	}
 
 	.server-info {
