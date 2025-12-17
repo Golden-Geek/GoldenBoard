@@ -11,8 +11,8 @@
 	import { fly } from 'svelte/transition';
 	import Panel from '$lib/editor/Panel.svelte';
 
-
 	let editorState: any = $derived(mainData.editor);
+	let editMode = $derived(editorState.editMode == EditMode.Edit);
 
 	let contentDiv: HTMLDivElement | null = null;
 	let leftSplitter: HTMLDivElement | null = null;
@@ -27,7 +27,7 @@
 	});
 
 	$effect(() => {
-		if (editorState.editMode !== EditMode.Edit) return;
+		if (!editMode) return;
 		tick().then(() => {
 			initSplitter();
 		});
@@ -121,14 +121,14 @@
 </script>
 
 <div class="root mode-{editorState.editMode}">
-	{#if editorState.editMode === EditMode.Edit}
+	{#if editMode}
 		<div class="topbar-area" transition:fly={{ y: -50 }}>
 			<TopBar />
 		</div>
 	{/if}
 
 	<div class="content {layoutLoaded ? '' : 'loading'}" bind:this={contentDiv}>
-		{#if editorState.editMode === EditMode.Edit}
+		{#if editMode}
 			<div class="outliner-area">
 				<Panel name="Outliner">
 					<OutlinerPanel />
@@ -148,7 +148,7 @@
 			</Panel>
 		</div>
 
-		{#if editorState.editMode === EditMode.Edit}
+		{#if editMode}
 			<div class="inspector-area">
 				<Panel name="Inspector">
 					<InspectorPanel />
@@ -192,7 +192,9 @@
 		height: 100%;
 		opacity: 1;
 		padding: 0.5rem;
-		transition: opacity .2s ease, padding 0.3s ease;
+		transition:
+			opacity 0.2s ease,
+			padding 0.3s ease;
 		overflow: auto;
 	}
 

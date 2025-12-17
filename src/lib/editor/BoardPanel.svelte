@@ -20,10 +20,12 @@
 			mainData.boardData.selectedBoard = boards[0].name;
 		}
 	});
+
+	let editMode = $derived(mainData.editor.editMode == EditMode.Edit);
 </script>
 
 <div class="board-list">
-	{#if mainData.editor.editMode === EditMode.Edit}
+	{#if editMode}
 		<AddButton onclick={() => addBoard()} />
 	{/if}
 

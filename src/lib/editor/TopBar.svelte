@@ -3,7 +3,7 @@
 	import { clearData, mainData, saveData } from '$lib/engine.svelte';
 	import WidgetBar from '$lib/widget/WidgetBar.svelte';
 
-	let editorState: any = $derived(mainData.editor);
+	let editMode = $derived(mainData.editor.editMode == EditMode.Edit);
 </script>
 
 <div class="topbar">
@@ -16,11 +16,10 @@
 	<div class="mode-switch">
 		<button
 			onclick={() => {
-				editorState.editMode =
-					editorState.editMode === EditMode.Live ? EditMode.Edit : EditMode.Live;
+				mainData.editor.editMode = editMode ? EditMode.Live : EditMode.Edit;
 			}}
 		>
-			Switch to {editorState.editMode === EditMode.Edit ? 'Live' : 'Edit'}
+			Switch to {editMode ? 'Live' : 'Edit'}
 		</button>
 
 		<button onclick={() => saveData()}> Save </button>
