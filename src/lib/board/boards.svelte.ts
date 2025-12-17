@@ -1,4 +1,4 @@
-import { rootWidgetContainerData, type WidgetData } from "../widget/widget.svelte.ts";
+import { rootWidgetContainerData, type WidgetData } from "../widget/widgets.svelte.ts";
 import { mainData, saveData } from "../engine.svelte.ts";
 
 

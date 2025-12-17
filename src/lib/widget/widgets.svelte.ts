@@ -64,7 +64,7 @@ const rangeContainerDefinition: PropertyContainerDefinition = {
     }
 };
 
-const widgetDefinitions: WidgetDefinition[] = [
+export const widgetDefinitions: WidgetDefinition[] = [
     {
         name: 'Button', icon: '🔘', type: 'button', description: 'A clickable button widget', props: {
             ...globalWidgetProperties,
@@ -127,7 +127,7 @@ const widgetDefinitions: WidgetDefinition[] = [
         }
     }];
 
-const widgetContainerDefinition: WidgetDefinition[] = [
+export const widgetContainerDefinitions: WidgetDefinition[] = [
     {
         name: 'Container', icon: '📦', type: 'container', description: 'A basic container widget that can hold other widgets in different layouts', props: {
             layout: { name: 'Layout', type: PropertyType.ENUM, default: 'vertical', options: ['vertical', 'horizontal', 'grid', 'free', 'custom'] } as PropertySingleDefinition

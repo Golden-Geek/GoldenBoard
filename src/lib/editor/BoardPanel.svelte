@@ -4,6 +4,7 @@
 	import Board from '$lib/board/Board.svelte';
 	import { addBoard, removeBoard, type BoardData } from '$lib/board/boards.svelte';
 	import { mainData } from '$lib/engine.svelte';
+	import { EditMode } from './editor.svelte';
 
 	let selectedBoard: BoardData | null = $derived(
 		mainData.boardData.selectedBoard
@@ -22,7 +23,10 @@
 </script>
 
 <div class="board-list">
-	<AddButton onclick={() => addBoard()} />
+	{#if mainData.editor.editMode === EditMode.Edit}
+		<AddButton onclick={() => addBoard()} />
+	{/if}
+
 	{#each boards as board}
 		<EditableButton
 			onselect={() => {

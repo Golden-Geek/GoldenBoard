@@ -5,5 +5,4 @@
 </script>
 
 <div class="board-panel">
-	<h2>{board}</h2>
 </div>
