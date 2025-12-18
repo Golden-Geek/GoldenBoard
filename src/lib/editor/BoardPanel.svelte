@@ -3,7 +3,7 @@
 	import EditableButton from '$lib/components/EditableButton.svelte';
 	import Board from '$lib/board/Board.svelte';
 	import { addBoard, removeBoard, type BoardData } from '$lib/board/boards.svelte';
-	import { mainData } from '$lib/engine.svelte';
+	import { mainData, saveData } from '$lib/engine.svelte';
 	import { EditMode } from './editor.svelte';
 
 	let selectedBoard: BoardData | null = $derived(
@@ -33,6 +33,7 @@
 		<EditableButton
 			onselect={() => {
 				mainData.boardData.selectedBoard = board.name;
+				saveData("Select Board");
 			}}
 			bind:value={board.name}
 			hasRemoveButton={boards.length > 1}

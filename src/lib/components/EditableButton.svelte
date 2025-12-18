@@ -14,7 +14,7 @@
 	function setAndSave() {
 		value = internalValue;
 		isEditing = false;
-        saveData();
+        saveData("Edit Button Value");
 	}
 </script>
 

@@ -1,5 +1,4 @@
-import type { PropertyContainerData, PropertyData } from '$lib/property.svelte.ts';
-import type { PropertyContainerDefinition, PropertySingleDefinition } from '../property.svelte.ts';
+import type { PropertyContainerDefinition, PropertySingleDefinition, PropertyContainerData, PropertyData } from '../property.svelte.ts';
 import { PropertyType } from '../property.svelte.ts';
 
 //WIDGET
@@ -29,7 +28,9 @@ export type WidgetContainerData = WidgetData & {
 export const rootWidgetContainerData: WidgetContainerData = {
     id: 'root',
     type: "container",
-    props: { label: { children: { text: 'Root' } } },
+    props: {
+        label: { children: { text: { value: 'Root' } } }
+    },
     children: []
 };
 

@@ -39,7 +39,7 @@ export function addBoard(): BoardData {
         rootWidget: defaultBoard.rootWidget
     };
     boards.push(newBoard);
-    saveData();
+    saveData("Add Board " + newBoard.name);//+ " (" + boards.length + ")");
     return newBoard;
 }
 
@@ -48,7 +48,7 @@ export function removeBoard(board: BoardData) {
     if (index !== -1) {
         boards.splice(index, 1);
     }
-    saveData();
+    saveData("Remove Board " + board.name);// + " (" + boards.length + ")");
 }
 
 
