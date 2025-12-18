@@ -15,7 +15,8 @@
 		isContainer = null,
 		highlightColor = '',
 		onSelect = null,
-		isSelected = null
+		isSelected = null,
+		contextMenu = null
 	} = $props();
 
 	let isExpanded: any = $derived(() => level < 3);
@@ -24,7 +25,6 @@
 
 	let children: any = $derived(getChildren(node));
 	let hasChildren: any = $derived(isContainer ? isContainer(node) : children.length > 0);
-
 </script>
 
 <div
@@ -38,6 +38,12 @@
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<p
 			class="title level-{level} {hasChildren ? 'container' : 'controllable'}"
+			oncontextmenu={(e) => {
+				if (contextMenu) {
+					contextMenu(node, e);
+					e.preventDefault();
+				}
+			}}
 			onclick={(e) => {
 				if (onSelect) {
 					onSelect(node, e);
@@ -81,6 +87,7 @@
 					{highlightColor}
 					{onSelect}
 					{isSelected}
+					{contextMenu}
 				></Self>
 			{/each}
 		</div>

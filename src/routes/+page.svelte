@@ -10,6 +10,7 @@
 	import { fly } from 'svelte/transition';
 	import Panel from '$lib/editor/Panel.svelte';
 	import Footer from '$lib/editor/Footer.svelte';
+	import ContextMenu from '$lib/components/ContextMenu.svelte';
 
 	let editorState: any = $derived(mainData.editor);
 	let editMode = $derived(editorState.editMode == EditMode.Edit);
@@ -183,6 +184,8 @@
 		</div>
 	{/if}
 </div>
+
+<ContextMenu />
 
 <style>
 	.root {
