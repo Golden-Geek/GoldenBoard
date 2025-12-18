@@ -3,9 +3,6 @@
 	import { clearData, mainData, saveData } from '$lib/engine.svelte';
 	import WidgetBar from '$lib/widget/WidgetBar.svelte';
 
-	// if (PKG == undefined) {
-	// 	var PKG = { version: 'dev' };
-	// }
 </script>
 
 <div class="topbar">

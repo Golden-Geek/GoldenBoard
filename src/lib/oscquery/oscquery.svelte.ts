@@ -37,6 +37,9 @@ export class OSCQueryClient {
 	nameEffectDestroy = $effect.root(() => {
 		$effect(() => {
 			// setup
+			console.log(`Server name changed to: ${this.name}`);
+			debugger;
+			
 			if ((this.name == "" || this.name == "New Server" || this.name == "Default") && this.hostInfo.NAME) {
 				this.name = this.hostInfo.NAME;
 			}
@@ -167,6 +170,7 @@ export class OSCQueryClient {
 	}
 
 	setIPAndPort(ip: string, port: number): void {
+		debugger;
 		if( this.ip === ip && this.port === port) return;
 		this.ip = ip;
 		this.port = port;

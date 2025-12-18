@@ -17,6 +17,7 @@
 	let port = $state(0);
 
 	$effect(() => {
+		debugger;
 		if (currentServer == undefined && servers.length > 0) {
 			selectedServerName = servers[0].name;
 		}
@@ -41,6 +42,7 @@
 					hasRemoveButton={servers.length > 1}
 					selected={selectedServerName === server.name}
 					bind:value={server.name}
+					separator={" - "}
 					onremove={() => {
 						removeServer(server);
 						if (currentServer == server) currentServer = undefined;
