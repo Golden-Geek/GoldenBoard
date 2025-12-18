@@ -6,23 +6,23 @@
 	import TopBar from '$lib/editor/TopBar.svelte';
 	import Split from 'split-grid';
 	import { onMount, tick } from 'svelte';
-	import { mainData, loadData, saveData } from '$lib/engine.svelte';
+	import { mainData, loadData, redo, saveData, undo } from '$lib/engine.svelte';
 	import { EditMode } from '$lib/editor/editor.svelte';
 	import { fly } from 'svelte/transition';
 	import Panel from '$lib/editor/Panel.svelte';
+	import Footer from '$lib/editor/Footer.svelte';
 
 	let editorState: any = $derived(mainData.editor);
 	let editMode = $derived(editorState.editMode == EditMode.Edit);
 
-	let contentDiv: HTMLDivElement | null = null;
-	let leftSplitter: HTMLDivElement | null = null;
-	let rightSplitter: HTMLDivElement | null = null;
-	let leftPaneSplitter: HTMLDivElement | null = null;
+	let contentDiv = $state<HTMLDivElement | null>(null);
+	let leftSplitter = $state<HTMLDivElement | null>(null);
+	let rightSplitter = $state<HTMLDivElement | null>(null);
+	let leftPaneSplitter = $state<HTMLDivElement | null>(null);
 
 	let layoutLoaded = $state(false);
 
 	$effect(() => {
-		if (editorState.layout) return;
 		loadLayout();
 	});
 
@@ -34,8 +34,6 @@
 	});
 
 	onMount(() => {
-		loadData();
-
 		window.addEventListener('keydown', handleKeydown);
 
 		return () => {
@@ -84,6 +82,12 @@
 				contentDiv.style.gridTemplateColumns = `${leftPaneWidth} 8px 1fr 8px ${inspectorWidth}`;
 				contentDiv.style.gridTemplateRows = `${outlinerHeight} 8px 1fr`;
 			}
+		} else {
+			// Set defaults
+			if (contentDiv) {
+				contentDiv.style.gridTemplateColumns = `250px 8px 1fr 8px 300px`;
+				contentDiv.style.gridTemplateRows = `1fr 8px 1fr`;
+			}
 		}
 		layoutLoaded = true;
 	}
@@ -109,13 +113,26 @@
 			outlinerHeight
 		};
 
-		saveData();
+		saveData('Save Layout');
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
+		const mod = event.ctrlKey || event.metaKey;
+		if (mod && (event.key === 'z' || event.key === 'Z')) {
+			event.preventDefault();
+			if (event.shiftKey) redo();
+			else undo();
+			return;
+		}
+		if (event.ctrlKey && (event.key === 'y' || event.key === 'Y')) {
+			event.preventDefault();
+			redo();
+			return;
+		}
 		if (event.ctrlKey && (event.key === 'e' || event.key === 'E')) {
 			event.preventDefault();
 			editorState.editMode = editorState.editMode === EditMode.Live ? EditMode.Edit : EditMode.Live;
+			saveData('Toggle Edit Mode', { skipHistory: true });
 		}
 	}
 </script>
@@ -160,6 +177,12 @@
 			<div class="leftpane-splitter" bind:this={leftPaneSplitter}></div>
 		{/if}
 	</div>
+
+	{#if editMode}
+		<div class="footer-area" transition:fly={{ y: 50 }}>
+			<Footer />
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -167,7 +190,6 @@
 		height: 100%;
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
 		transition: gap 0.3s ease;
 	}
 
@@ -177,13 +199,14 @@
 		gap: 0;
 	}
 
-	.topbar-area {
+	.topbar-area,
+	.footer-area {
 		width: 100%;
-		height: 2rem;
 		transition: height 0.3s ease;
 	}
 
-	.mode-live .topbar-area {
+	.mode-live .topbar-area,
+	.mode-live .footer-area {
 		height: 0;
 	}
 
@@ -241,12 +264,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.2rem;
-	}
-
-	.board-area {
-		/* transition:
-			width 1s ease,
-			height 1s ease; */
 	}
 
 	.mode-edit .board-area {

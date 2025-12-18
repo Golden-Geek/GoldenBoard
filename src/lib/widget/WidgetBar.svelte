@@ -9,7 +9,7 @@
 		</button>
 	{/each}
 
-	<div class="separation" />
+	<div class="separation" ></div>
 	{#each widgetContainerDefinitions as widget}
 		<button class="widget-button" title={widget.name + "\n" + widget.description}>
 			<span class="widget-icon">{widget.icon}</span>

@@ -23,7 +23,6 @@ export class OSCQueryClient {
 	data: any = $state({});
 	addressMap: any = {};
 
-
 	//Fixed rate sending
 	useFixedRateSending: boolean = $state(false);
 	fixedSendRateHz: number = $state(60);
@@ -32,21 +31,25 @@ export class OSCQueryClient {
 
 	pendingMessages: string[] = [];
 
+
+
 	nameEffectDestroy = $effect.root(() => {
 		$effect(() => {
 			// setup
-			if ((this.name == "" || this.name == "New Server") && this.hostInfo.NAME) {
+			if ((this.name == "" || this.name == "New Server" || this.name == "Default") && this.hostInfo.NAME) {
 				this.name = this.hostInfo.NAME;
 			}
+
 		});
 
 		return () => {
 			// cleanup
-		};
+		}
 	});
 
 
 	constructor(config: any = { name: "New Server", ip: null, port: null }) {
+
 		this.name = config.name || this.name;
 		this.ip = config.ip || this.ip;
 		this.port = config.port || this.port;
@@ -59,10 +62,8 @@ export class OSCQueryClient {
 	cleanup() {
 		// console.log(`[${this.name}] Cleaning up OSCQueryClient...`);
 		this.nameEffectDestroy();
-		clearTimeout(this.reconnectTimeout!);
-		this.reconnectTimeout = null;
-		this.ws = null;
 		this.disconnect();
+		this.ws = null;
 	}
 
 	//WS Connection 
@@ -87,8 +88,8 @@ export class OSCQueryClient {
 				this.setStatus(ConnectionStatus.Disconnected);
 			};
 			this.ws.onerror = (e: any) => {
-				if (this.ws) {
-					console.error("Connection error");
+				if (this.ws && this.status == ConnectionStatus.Connecting &&
+					this.ws.readyState !== WebSocket.OPEN && this.ws.readyState !== WebSocket.CONNECTING) {
 					this.setStatus(ConnectionStatus.Disconnected);
 
 					this.reconnectTimeout = setTimeout(() => {
@@ -109,10 +110,19 @@ export class OSCQueryClient {
 	}
 
 	disconnect(): void {
+
 		if (this.status === ConnectionStatus.Disconnected) return;
 		if (!this.ws) return;
+
+		clearTimeout(this.reconnectTimeout!);
+		this.reconnectTimeout = null;
+
 		this.stopOutboundPump();
-		this.ws.close();
+		this.ws.onerror = null;
+
+		if (this.ws.readyState === WebSocket.OPEN) {
+			this.ws.close();
+		}
 		this.setStatus(ConnectionStatus.Disconnected);
 
 	}

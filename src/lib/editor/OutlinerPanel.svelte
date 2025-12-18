@@ -13,6 +13,6 @@
 		showRoot={true}
 		getChildren={(node: any) => node.children || []}
 		getType={(node: any) => node.type}
-		getTitle={(node: any) => node.props.label?.children?.text || node.id || node.type || 'Widget'}
+		getTitle={(node: any) => node.props.label?.children?.text?.value || node.id || node.type || 'Widget'}
 	></TreeView>
 {/if}

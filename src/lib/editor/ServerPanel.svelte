@@ -52,17 +52,39 @@
 
 	{#if currentServer != undefined}
 		<div class="server-info">
-			<input class="server-ip" type="text" bind:value={ip} placeholder="IP" />
-			<input class="server-port" type="text" bind:value={port} placeholder="Port" />
-			<button
+			<input
+				class="server-ip"
+				type="text"
+				bind:value={ip}
+				placeholder="IP"
+				onblur={() => currentServer?.setIPAndPort(ip, port)}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') {
+						currentServer?.setIPAndPort(ip, port);
+					}
+				}}
+			/>
+			<input
+				class="server-port"
+				type="text"
+				bind:value={port}
+				placeholder="Port"
+				onblur={() => currentServer?.setIPAndPort(ip, port)}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') {
+						currentServer?.setIPAndPort(ip, port);
+					}
+				}}
+			/>
+			<!-- <button
 				onclick={() => {
 					if (currentServer?.status == ConnectionStatus.Connected) {
 						currentServer?.disconnect();
 					} else {
-						currentServer?.setIPAndPort(ip, port);
+						currentServer?.connect();
 					}
 				}}>{currentServer!.status == ConnectionStatus.Connected ? 'Disconnect' : 'Connect'}</button
-			>
+			> -->
 			<div
 				class="icon {currentServer!.status == ConnectionStatus.Connected
 					? 'connected'
@@ -73,10 +95,10 @@
 		<TreeView
 			data={currentServer!.data}
 			showRoot={false}
-			getChildren={(node: any) => node.CONTENTS ? Object.values(node.CONTENTS) || [] : []}
+			getChildren={(node: any) => (node.CONTENTS ? Object.values(node.CONTENTS) || [] : [])}
 			isContainer={(node: any) => node.CONTENTS}
 			getType={(node: any) => {
-				if(node.CONTENTS) return 'Container';
+				if (node.CONTENTS) return 'Container';
 				if (node.EXTENDED_TYPE) return node.EXTENDED_TYPE[0];
 				if (!node.CONTENTS && node.TYPE == 'N') return 'Trigger';
 				return undefined;

@@ -18,7 +18,7 @@ export enum PropertyMode {
 
 export type PropertyContainerDefinition = {
     name: string;
-    children: { [key: string]: (PropertyDefinition | PropertyContainerDefinition) };
+    children?: { [key: string]: (PropertyDefinition | PropertyContainerDefinition) };
     collapsedByDefault?: boolean;
 }
 
