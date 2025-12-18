@@ -12,11 +12,10 @@ export class OSCQueryClient {
 	//Connection
 	ws: WebSocket | null = null;
 	ip: string = $state('127.0.0.1');
-	port: number = $state(42000);
+	port: number = $state(45000);
 	name: string = $state("New Server");
 	status: ConnectionStatus = $state(ConnectionStatus.Disconnected);
-
-
+	reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	//Data
 	hostInfo: any = $state({});
@@ -47,7 +46,7 @@ export class OSCQueryClient {
 	});
 
 
-	constructor(config: any = { name: "New Server", ip: "127.0.0.1", port: 42000 }) {
+	constructor(config: any = { name: "New Server", ip: null, port: null }) {
 		this.name = config.name || this.name;
 		this.ip = config.ip || this.ip;
 		this.port = config.port || this.port;
@@ -58,7 +57,12 @@ export class OSCQueryClient {
 	}
 
 	cleanup() {
+		// console.log(`[${this.name}] Cleaning up OSCQueryClient...`);
 		this.nameEffectDestroy();
+		clearTimeout(this.reconnectTimeout!);
+		this.reconnectTimeout = null;
+		this.ws = null;
+		this.disconnect();
 	}
 
 	//WS Connection 
@@ -83,8 +87,17 @@ export class OSCQueryClient {
 				this.setStatus(ConnectionStatus.Disconnected);
 			};
 			this.ws.onerror = (e: any) => {
-				console.error("Connection error");
-				this.setStatus(ConnectionStatus.Disconnected);
+				if (this.ws) {
+					console.error("Connection error");
+					this.setStatus(ConnectionStatus.Disconnected);
+
+					this.reconnectTimeout = setTimeout(() => {
+						if (this.status === ConnectionStatus.Disconnected) {
+							this.connect();
+						}
+					}, 1000);
+				}
+
 			};
 			this.ws.onmessage = (e: MessageEvent) => this.wsMessageReceived(e);
 		} catch (e) {
@@ -115,19 +128,13 @@ export class OSCQueryClient {
 				break;
 
 			case ConnectionStatus.Connected:
+				clearTimeout(this.reconnectTimeout!);
+				this.reconnectTimeout = null;
 				this.requestStructure();
 				break;
 
 			case ConnectionStatus.Disconnected:
 				this.stopOutboundPump();
-				if (this.ws) {
-					// Attempt to reconnect after 1 second if disconnected
-					setTimeout(() => {
-						if (this.status === ConnectionStatus.Disconnected) {
-							this.connect();
-						}
-					}, 1000);
-				}
 				break;
 		}
 	}
