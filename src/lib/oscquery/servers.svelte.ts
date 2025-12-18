@@ -15,6 +15,10 @@ let serverConfigs = $derived(mainData.serverData.serverConfigs);
 
 $effect.root(() => {
     $effect(() => {
+        if (serverConfigs.length === 0) {
+            serverConfigs.push(defaultServerConfig);
+        }
+
         syncServerFromConfigs(serverConfigs);
     });
 
@@ -53,6 +57,8 @@ export const clearServers = function () {
 }
 
 function syncServerFromConfigs(configs: ServerConfig[]) {
+
+
     // Remove servers that are no longer in configs
     for (let i = servers.length - 1; i >= 0; i--) {
         const server = servers[i];
@@ -63,6 +69,7 @@ function syncServerFromConfigs(configs: ServerConfig[]) {
             servers.splice(i, 1);
         }
     }
+
 
     // Add or update servers from configs
     for (let config of configs) {
@@ -87,19 +94,6 @@ export function getServerConfigs(): ServerConfig[] {
     }
 
     return configs;
-}
-
-export function loadServerConfigs() {
-    clearServers();
-
-    if (serverConfigs.length === 0) {
-        serverConfigs.push(defaultServerConfig);
-    }
-
-    for (let config of serverConfigs) {
-        const client = new OSCQueryClient(config);
-        servers.push(client);
-    }
 }
 
 
