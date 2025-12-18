@@ -1,3 +1,4 @@
+import { saveData } from '$lib/engine.svelte.js';
 import type { OscPacket } from './osc.js';
 import { decodeOscPacket, encodeOscPacket } from './osc.js';
 
@@ -166,8 +167,10 @@ export class OSCQueryClient {
 	}
 
 	setIPAndPort(ip: string, port: number): void {
+		if( this.ip === ip && this.port === port) return;
 		this.ip = ip;
 		this.port = port;
+		saveData("Update Server " + this.name);
 		this.connect();
 	}
 
