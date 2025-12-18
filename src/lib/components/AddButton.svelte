@@ -17,8 +17,9 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border-radius: 4px;
+		border-radius: 16px;
 		padding: 4px;
+		transition: background-color 0.2s;
 	}
 
 	.add-button:hover {
@@ -30,11 +31,13 @@
 	}
 
     svg {
+        color: #0f6c9b;
 		display: block;
 		transition: color 0.2s;
 	}
 
-    .add-button svg {
-        color: #0f6c9b;
-    }
+	.add-button:hover svg{
+		color: #61b4e4;
+	}
+
 </style>

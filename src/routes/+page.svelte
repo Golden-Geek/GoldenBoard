@@ -6,8 +6,7 @@
 	import TopBar from '$lib/editor/TopBar.svelte';
 	import Split from 'split-grid';
 	import { onMount, tick } from 'svelte';
-	import { mainData, loadData, redo, saveData, undo } from '$lib/engine.svelte';
-	import { EditMode } from '$lib/editor/editor.svelte';
+	import { EditMode, mainData, loadData, redo, saveData, undo } from '$lib/engine.svelte';
 	import { fly } from 'svelte/transition';
 	import Panel from '$lib/editor/Panel.svelte';
 	import Footer from '$lib/editor/Footer.svelte';

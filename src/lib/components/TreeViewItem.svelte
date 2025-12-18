@@ -3,7 +3,20 @@
 	import Self from './TreeViewItem.svelte';
 	import { getNodeIcon } from '$lib/oscquery/servers.svelte';
 	import { slide } from 'svelte/transition';
-	let { node, level, showRoot = false, getChildren, getType, getIcon = null, getTitle, isContainer = null } = $props();
+	import { isWidgetSelected } from '$lib/engine.svelte';
+	let {
+		node,
+		level,
+		showRoot = false,
+		getChildren,
+		getType,
+		getIcon = null,
+		getTitle,
+		isContainer = null,
+		highlightColor = '',
+		onSelect = null,
+		isSelected = null
+	} = $props();
 
 	let isExpanded: any = $derived(() => level < 3);
 
@@ -11,11 +24,26 @@
 
 	let children: any = $derived(getChildren(node));
 	let hasChildren: any = $derived(isContainer ? isContainer(node) : children.length > 0);
+
 </script>
 
-<div class="treeview-item {isExpanded ? 'expanded' : 'collapsed'}">
+<div
+	class="treeview-item {isExpanded ? 'expanded' : 'collapsed'} {isSelected && isSelected(node)
+		? 'selected'
+		: ''}"
+	style={highlightColor != '' ? `--highlight-color: ${highlightColor}` : ''}
+>
 	{#if level > 0 || showRoot}
-		<p class="title level-{level} {hasChildren ? 'container' : 'controllable'}">
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+		<p
+			class="title level-{level} {hasChildren ? 'container' : 'controllable'}"
+			onclick={(e) => {
+				if (onSelect) {
+					onSelect(node, e);
+				}
+			}}
+		>
 			{#if hasChildren}
 				<button
 					class="expand-btn"
@@ -42,13 +70,28 @@
 			transition:slide|local={{ duration: 300 }}
 		>
 			{#each children as child}
-				<Self node={child} level={level + 1} {getChildren} {getType} {getIcon} {getTitle} {isContainer}></Self>
+				<Self
+					node={child}
+					level={level + 1}
+					{getChildren}
+					{getType}
+					{getIcon}
+					{getTitle}
+					{isContainer}
+					{highlightColor}
+					{onSelect}
+					{isSelected}
+				></Self>
 			{/each}
 		</div>
 	{/if}
 </div>
 
 <style>
+	.treeview-item {
+		--highlight-color: rgba(200, 200, 200);
+	}
+
 	.treeview-item .title {
 		font-size: 0.8rem;
 		display: flex;
@@ -57,7 +100,7 @@
 		user-select: none;
 		display: inline;
 		padding: 0.4rem;
-		border-radius: 0.25rem;
+		border-radius: 0.5rem;
 		transition: background-color 0.1s ease;
 	}
 
@@ -70,13 +113,17 @@
 		font-size: 0.9rem;
 	}
 
-	.treeview-item .title .icon {
-		margin-right: 0.25rem;
-		font-size: 0.9rem;
+	.treeview-item.selected .title {
+		background-color: rgba(from var(--highlight-color) r g b / 60%) !important;
 	}
 
 	.treeview-item .title:hover {
-		background-color: rgba(200, 200, 200, 0.2);
+		background-color: rgba(from var(--highlight-color) r g b / 40%);
+	}
+
+	.treeview-item .title .icon {
+		margin-right: 0.25rem;
+		font-size: 0.9rem;
 	}
 
 	.treeview-item .expand-btn {

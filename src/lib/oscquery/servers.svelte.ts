@@ -6,6 +6,7 @@ export const ssr = false;
 export const prerender = false;
 
 export type ServerConfig = {
+    id: string;
     ip: string;
     port: number;
     name: string;
@@ -15,7 +16,7 @@ let serverConfigs = $derived(mainData.serverData.serverConfigs);
 
 export const servers: OSCQueryClient[] = $state([]);
 
-export const defaultServerConfig: ServerConfig = { ip: '127.0.0.1', port: 42000, name: "Default" };
+export const defaultServerConfig: ServerConfig = { id: 'server-' + crypto.randomUUID(), ip: '127.0.0.1', port: 42000, name: "Default" };
 
 export const addServer = function (): OSCQueryClient {
     const client = new OSCQueryClient();
@@ -51,7 +52,7 @@ export function syncServerFromConfigs() {
     // Remove servers that are no longer in configs
     for (let i = servers.length - 1; i >= 0; i--) {
         const server = servers[i];
-        const match = serverConfigs.find(c => c.ip === server.ip && c.port === server.port && c.name === server.name);
+        const match = serverConfigs.find(c => c.id === server.id);
         if (!match) {
             console.log("Removing server:", server.name);
             server.disconnect();
@@ -63,7 +64,7 @@ export function syncServerFromConfigs() {
 
     // Add or update servers from configs
     for (let config of serverConfigs) {
-        let server = servers.find(s => s.ip === config.ip && s.port === config.port && s.name === config.name);
+        let server = servers.find(s => s.id === config.id);
         if (!server) {
             server = new OSCQueryClient(config);
             servers.push(server);
@@ -77,6 +78,7 @@ export function getServerConfigs(): ServerConfig[] {
     const configs: ServerConfig[] = [];
     for (let client of servers) {
         configs.push({
+            id: client.id,
             ip: client.ip,
             port: client.port,
             name: client.name

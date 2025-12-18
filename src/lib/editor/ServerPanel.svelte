@@ -7,19 +7,18 @@
 	import RemoveButton from '$lib/components/RemoveButton.svelte';
 	import EditableButton from '$lib/components/EditableButton.svelte';
 
-	let selectedServerName: string | null = $derived(mainData.serverData.selectedServer);
+	let selectedServerID: string | null = $derived(mainData.serverData.selectedServer);
 
 	let currentServer: OSCQueryClient | undefined = $derived(
-		selectedServerName ? servers.find((server) => server.name === selectedServerName) : undefined
+		selectedServerID ? servers.find((server) => server.id === selectedServerID) : undefined
 	);
 
 	let ip = $state('');
 	let port = $state(0);
 
 	$effect(() => {
-		debugger;
 		if (currentServer == undefined && servers.length > 0) {
-			selectedServerName = servers[0].name;
+			selectedServerID = servers[0].id;
 		}
 
 		if (currentServer) {
@@ -37,16 +36,18 @@
 			{#each servers as server}
 				<EditableButton
 					onselect={() => {
-						selectedServerName = server.name;
+						selectedServerID = server.id;
 					}}
 					hasRemoveButton={servers.length > 1}
-					selected={selectedServerName === server.name}
+					selected={selectedServerID === server.id}
 					bind:value={server.name}
-					separator={" - "}
+					separator={' - '}
 					onremove={() => {
 						removeServer(server);
 						if (currentServer == server) currentServer = undefined;
 					}}
+					warning={server.status != ConnectionStatus.Connected ? 'Server Disconnected' : ''}
+					color={'var(--server-color)'}
 				></EditableButton>
 			{/each}
 		</div>
@@ -107,6 +108,7 @@
 			}}
 			getIcon={getNodeIcon}
 			getTitle={(node: any) => node.DESCRIPTION || node.NAME || '/'}
+			highlightColor={'var(--server-color)'}
 		></TreeView>
 	{/if}
 </div>
@@ -128,11 +130,14 @@
 	.server-bar {
 		display: flex;
 		gap: 0.5rem;
+		width: 100%;
+		overflow: auto;
+		padding: 0.3em;
 	}
 
 	.server-info {
 		display: flex;
-		margin-top: 0.5rem;
+		margin: 0.5rem 0 0.2rem;
 		gap: 0.5rem;
 		width: 100%;
 		align-items: center;

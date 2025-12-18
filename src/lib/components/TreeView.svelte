@@ -2,12 +2,35 @@
 	import TreeViewItem from '$lib/components/TreeViewItem.svelte';
 	import { onMount } from 'svelte';
 
-	let { showRoot, data, getChildren, getType, getIcon = null, getTitle, isContainer = null } = $props();
+	let {
+		showRoot,
+		data,
+		getChildren,
+		getType,
+		getIcon = null,
+		getTitle,
+		isContainer = null,
+		highlightColor = '',
+		onSelect = null,
+		isSelected = null
+	} = $props();
 </script>
 
 <div class="treeview">
 	{#if data}
-		<TreeViewItem node={data} {showRoot} level={0} {getChildren} {getType} {getIcon} {getTitle} {isContainer} />
+		<TreeViewItem
+			node={data}
+			{showRoot}
+			level={0}
+			{getChildren}
+			{getType}
+			{getIcon}
+			{getTitle}
+			{isContainer}
+			{highlightColor}
+			{onSelect}
+			{isSelected}
+		/>
 	{:else}
 		<p>No data available</p>
 	{/if}
@@ -15,9 +38,9 @@
 
 <style>
 	.treeview {
-		margin-top: 0.5rem;
+		padding-top: 0.2rem;
 		width: 100%;
-		height:100%;
+		height: 100%;
 		overflow: auto;
 	}
 </style>

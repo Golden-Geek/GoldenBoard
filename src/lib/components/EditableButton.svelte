@@ -9,7 +9,10 @@
 		hasRemoveButton,
 		onremove = null,
 		selected,
-		separator = ''
+		separator = '',
+		warning = '',
+		extraClass = '',
+		color = ''
 	} = $props();
 	let isEditing = $state(false);
 	let internalValue = $state(value);
@@ -29,7 +32,12 @@
 <div
 	class="button editable-button {selected ? 'selected' : ''} {editable
 		? 'editable'
-		: 'readonly'} {isEditing ? ' editing' : ''}"
+		: 'readonly'} {isEditing ? ' editing' : ''} 
+		{separator !== '' ? 'has-separator' : ''}
+		{warning !== '' ? 'warning' : ''}
+		{extraClass}"
+	style={color ? `--bt-color:${color}` : ''}
+	title={warning}
 	onclick={onselect}
 	ondblclick={() => {
 		if (!editable) return;
@@ -63,7 +71,7 @@
 			}}
 		/>
 	{:else if separator !== ''}
-		<span class="first-line">{value.split(separator)[0]}</span><br/>
+		<span class="first-line">{value.split(separator)[0]}</span><br />
 		<span class="second-line">{value.split(separator)[1]}</span>
 	{:else}
 		{value}
@@ -83,17 +91,26 @@
 <style>
 	.editable-button {
 		position: relative;
-		padding-right: 1rem;
+		--bt-color: var(--button-bg-color);
+		transition: background-color 0.1s ease;
+	}
+
+	.editable-button.has-separator {
 		line-height: 1rem;
 	}
 
+	.editable-button.warning {
+		color: var(--warning-color);
+	}
+
 	.editable-button.selected {
-		background-color: #0a3e7a !important;
+		background-color: var(--bt-color) !important;
 		font-weight: bold;
+		color: var(--text-color);
 	}
 
 	.editable-button:hover {
-		background-color: #081f46;
+		background-color: hsl(from var(--bt-color) h s l / 50%);
 	}
 
 	.editable-button.editing {
@@ -103,6 +120,7 @@
 	}
 
 	input {
+		height: 1.5rem;
 		background-color: var(--bg-color);
 		font-size: 0.8rem;
 		display: inline;
@@ -119,8 +137,8 @@
 
 	.remove-bt {
 		position: absolute;
-		top: 0;
-		right: 0;
+		top: -6px;
+		right: -6px;
 		display: none;
 	}
 </style>

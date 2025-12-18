@@ -1,12 +1,13 @@
 <script lang="ts">
-	import { history, redo, undo } from '$lib/engine.svelte';
+	import { history, redo, undo, widgetsMap } from '$lib/engine.svelte';
 </script>
 
 <div class="footer">
+	<div class="spacer"></div>
 	<div class="history-info">
 		{#if history.present != null}
 			{#each history.past as h, index (index)}
-				{#if index >= history.past.length - 5}
+				{#if index >= history.past.length - 3}
 					<button class="history-item undo" onclick={() => undo(history.past.length - index)}>
 						{h.label || 'Unnamed Action'}</button
 					>
@@ -28,6 +29,11 @@
 			<button> No history </button>
 		{/if}
 	</div>
+	<div class="spacer"></div>
+
+	<div class="widget-info">
+		{widgetsMap.size} widgets loaded
+	</div>
 </div>
 
 <style>
@@ -42,6 +48,11 @@
 		box-shadow: 1px -1px 5px rgba(0, 0, 0, 1);
 		align-items: center;
 		justify-content: center;
+	}
+
+	.spacer
+	{
+		flex-grow: 1;
 	}
 
 	.history-info {
@@ -62,6 +73,11 @@
 	}
 
 	.history-item.current {
-		color: #d18b47;
+		color: #4793d1;
+	}
+
+	.widget-info {
+		font-size: 0.7rem;
+		color: rgba(from var(--text-color) r g b / 50%);
 	}
 </style>
