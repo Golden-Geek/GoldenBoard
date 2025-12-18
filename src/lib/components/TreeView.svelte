@@ -12,7 +12,8 @@
 		isContainer = null,
 		highlightColor = '',
 		onSelect = null,
-		isSelected = null
+		isSelected = null,
+		contextMenu = null
 	} = $props();
 </script>
 
@@ -30,6 +31,7 @@
 			{highlightColor}
 			{onSelect}
 			{isSelected}
+			{contextMenu}
 		/>
 	{:else}
 		<p>No data available</p>

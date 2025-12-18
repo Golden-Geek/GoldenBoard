@@ -1,6 +1,7 @@
 import { registerAllWidgets, type BoardData } from "./board/boards.svelte.ts";
 import type { OSCQueryClient } from "./oscquery/oscquery.svelte.ts";
 import { getServerConfigs, servers, syncServerFromConfigs, type ServerConfig } from "./oscquery/servers.svelte.ts";
+import { widgetContextMenuItems, type WidgetContainerData, type WidgetData } from "./widget/widgets.svelte.ts";
 
 //-----------------------------
 // Editor
@@ -23,6 +24,39 @@ export const defaultEditorData: EditorData = {
     layout: null,
     selectedWidgetIDs: []
 };
+
+// -----------------------------
+// Context Menu
+// -----------------------------
+
+export enum MenuContextType {
+    Widget = "widget",
+    Board = "board",
+    Server = "server"
+}
+
+export type ContextMenuItem = {
+    separator?: boolean;
+    label?: string;
+    icon?: string;
+    action?: () => void;
+    disabled?: boolean;
+    checked?: boolean;
+    submenu?: ContextMenuItem[];
+};
+
+//using null as separators
+export const contextMenus : Record<MenuContextType, ContextMenuItem[]> = $state({
+    [MenuContextType.Widget]: widgetContextMenuItems,
+    [MenuContextType.Board]: [],
+    [MenuContextType.Server]: []
+});
+
+export const menuContext = $state({
+    type: MenuContextType.Widget,
+    target: null as any | null,
+    position: { x: 0, y: 0 }
+});
 
 
 // -----------------------------

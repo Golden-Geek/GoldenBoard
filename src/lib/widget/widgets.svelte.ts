@@ -1,3 +1,4 @@
+import type { ContextMenuItem } from '$lib/engine.svelte.ts';
 import type { PropertyContainerDefinition, PropertySingleDefinition, PropertyContainerData, PropertyData } from '../property.svelte.ts';
 import { PropertyType } from '../property.svelte.ts';
 
@@ -11,7 +12,6 @@ type WidgetDefinition = {
         [key: string]: PropertySingleDefinition | PropertyContainerDefinition
     }
 };
-
 
 export type WidgetData = {
     id: string;
@@ -144,4 +144,30 @@ export const widgetContainerDefinitions: WidgetDefinition[] = [
             allowMultipleOpen: { name: 'Allow Multiple Open', type: PropertyType.BOOLEAN, default: false } as PropertySingleDefinition
         }
     }
-]; 
+];
+
+
+// Context Menu Items
+
+export const widgetAddMenuItems: ContextMenuItem[] = widgetDefinitions.map(def => ({
+    label: def.name,
+    icon: def.icon,
+    action: () => {
+        // Action to add the widget
+        console.log(`Adding widget of type: ${def.type}`);
+        // Here you would implement the logic to add the widget to the board
+    }
+} as ContextMenuItem));
+
+export const widgetContextMenuItems: ContextMenuItem[] = [
+    { label: 'Add Widget', icon: '➕', submenu: widgetAddMenuItems },
+    { label: 'Delete Widget', icon: '❌' },
+    { label: 'Duplicate Widget', icon: '📄' },
+    { separator: true },
+    {
+        label: 'Convert to ...', submenu: [
+            { label: 'Slider', icon: '🎚️' },
+            { label: 'Button', icon: '🔘' }
+        ]
+    }
+]
