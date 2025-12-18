@@ -1,6 +1,6 @@
 import { type BoardData } from "./board/boards.svelte.ts";
 import { defaultEditorData, type EditorData } from "./editor/editor.svelte";
-import { getServerConfigs, type ServerConfig } from "./oscquery/servers.svelte.ts";
+import { getServerConfigs, syncServerFromConfigs, type ServerConfig } from "./oscquery/servers.svelte.ts";
 
 
 type MainDataSnapshot = {
@@ -144,6 +144,8 @@ export function clearData() {
     mainData.boardData = defaultMainData.boardData;
     mainData.serverData = defaultMainData.serverData;
     commitUndoPoint("Clear Data");
+
+    syncServerFromConfigs();
 }
 
 export function loadData() {
@@ -160,6 +162,8 @@ export function loadData() {
     history.past = [];
     history.future = [];
     history.present = { label: "Initial Load", data: snapshotMain() };
+
+    syncServerFromConfigs();
 }
 
 loadData(); //only called here

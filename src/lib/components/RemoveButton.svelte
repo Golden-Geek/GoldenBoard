@@ -10,13 +10,22 @@
 </button>
 
 <style>
+	.remove-button {
+		background-color: rgba(255, 0, 0, 0.5);
+		border-radius: 4px;
+	}
+
+	.remove-button:hover {
+		background-color: rgba(255, 0, 0, 0.8);
+	}
+
 	svg {
 		display: block;
 		transition: color 0.2s;
 	}
 
 	.remove-button svg {
-		color: #ff0000;
+		color: rgb(232, 169, 169);
 		width: 12px;
 		height: 12px;
 	}

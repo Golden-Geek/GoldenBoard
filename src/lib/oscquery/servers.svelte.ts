@@ -13,19 +13,6 @@ export type ServerConfig = {
 
 let serverConfigs = $derived(mainData.serverData.serverConfigs);
 
-$effect.root(() => {
-    $effect(() => {
-        if (serverConfigs.length === 0) {
-            serverConfigs.push(defaultServerConfig);
-        }
-
-        syncServerFromConfigs(serverConfigs);
-    });
-
-    return () => {
-    }
-});
-
 export const servers: OSCQueryClient[] = $state([]);
 
 export const defaultServerConfig: ServerConfig = { ip: '127.0.0.1', port: 42000, name: "Default" };
@@ -56,14 +43,17 @@ export const clearServers = function () {
     }
 }
 
-function syncServerFromConfigs(configs: ServerConfig[]) {
+export function syncServerFromConfigs() {
 
-
+    if (serverConfigs.length === 0) {
+        serverConfigs.push($state.snapshot(defaultServerConfig));
+    }
     // Remove servers that are no longer in configs
     for (let i = servers.length - 1; i >= 0; i--) {
         const server = servers[i];
-        const match = configs.find(c => c.ip === server.ip && c.port === server.port && c.name === server.name);
+        const match = serverConfigs.find(c => c.ip === server.ip && c.port === server.port && c.name === server.name);
         if (!match) {
+            console.log("Removing server:", server.name);
             server.disconnect();
             server.cleanup();
             servers.splice(i, 1);
@@ -72,8 +62,8 @@ function syncServerFromConfigs(configs: ServerConfig[]) {
 
 
     // Add or update servers from configs
-    for (let config of configs) {
-        let server = servers.find(s => s.ip === config.ip && s.port === config.port);
+    for (let config of serverConfigs) {
+        let server = servers.find(s => s.ip === config.ip && s.port === config.port && s.name === config.name);
         if (!server) {
             server = new OSCQueryClient(config);
             servers.push(server);

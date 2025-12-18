@@ -35,6 +35,7 @@
 				mainData.boardData.selectedBoard = board.name;
 				saveData("Select Board");
 			}}
+			editable={true}
 			bind:value={board.name}
 			hasRemoveButton={boards.length > 1}
 			selected={selectedBoard == board}
