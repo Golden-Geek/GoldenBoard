@@ -1,7 +1,33 @@
-import { type BoardData } from "./board/boards.svelte.ts";
-import { defaultEditorData, type EditorData } from "./editor/editor.svelte";
-import { getServerConfigs, syncServerFromConfigs, type ServerConfig } from "./oscquery/servers.svelte.ts";
+import { registerAllWidgets, type BoardData } from "./board/boards.svelte.ts";
+import type { OSCQueryClient } from "./oscquery/oscquery.svelte.ts";
+import { getServerConfigs, servers, syncServerFromConfigs, type ServerConfig } from "./oscquery/servers.svelte.ts";
 
+//-----------------------------
+// Editor
+//-----------------------------
+
+
+export type EditorData = {
+    editMode: EditMode,
+    layout: {} | null,
+    selectedWidgetIDs: string[];
+};
+
+export enum EditMode {
+    Edit = "edit",
+    Live = "live"
+};
+
+export const defaultEditorData: EditorData = {
+    editMode: EditMode.Edit,
+    layout: null,
+    selectedWidgetIDs: []
+};
+
+
+// -----------------------------
+// Main Data
+// -----------------------------
 
 type MainDataSnapshot = {
     editor: EditorData;
@@ -10,7 +36,7 @@ type MainDataSnapshot = {
         serverConfigs: ServerConfig[];
     };
     boardData: {
-        selectedBoard: string | null;
+        selectedBoardID: string | null;
         boards: BoardData[];
     };
 };
@@ -25,7 +51,7 @@ export const mainData: MainDataSnapshot = $state(
         },
         boardData:
         {
-            selectedBoard: null as string | null,
+            selectedBoardID: null as string | null,
             boards: [] as BoardData[]
         }
     }
@@ -33,6 +59,72 @@ export const mainData: MainDataSnapshot = $state(
 
 const defaultMainData = $state.snapshot(mainData);
 
+// -----------------------------
+// Selection
+// -----------------------------
+
+export function clearSelection() {
+    mainData.editor.selectedWidgetIDs = [];
+}
+
+export function selectOnlyWidget(widgetID: string) {
+    mainData.editor.selectedWidgetIDs = [widgetID];
+}
+
+export function addWidgetToSelection(widgetID: string) {
+    if (!mainData.editor.selectedWidgetIDs.includes(widgetID)) {
+        mainData.editor.selectedWidgetIDs.push(widgetID);
+    }
+}
+
+export function removeWidgetFromSelection(widgetID: string) {
+    const index = mainData.editor.selectedWidgetIDs.indexOf(widgetID);
+    if (index !== -1) {
+        mainData.editor.selectedWidgetIDs.splice(index, 1);
+    }
+}
+
+export function toggleWidgetSelection(widgetID: string) {
+    const index = mainData.editor.selectedWidgetIDs.indexOf(widgetID);
+    if (index === -1) {
+        mainData.editor.selectedWidgetIDs.push(widgetID);
+    } else {
+        mainData.editor.selectedWidgetIDs.splice(index, 1);
+    }
+}
+
+export function isWidgetSelected(widgetID: string): boolean {
+    return mainData.editor.selectedWidgetIDs.includes(widgetID);
+}
+
+// -----------------------------
+// Inspectable Map  
+// -----------------------------
+
+
+export const widgetsMap: Map<string, any> = $state(new Map());
+
+export function registerWidget(id: string, obj: any) {
+    widgetsMap.set(id, obj);
+}
+
+export function unregisterWidget(id: string) {
+    widgetsMap.delete(id);
+}
+
+export function getWidgetByID<T>(id: string): T | null {
+    return widgetsMap.get(id) as T || null;
+}
+
+export function getBoardByID(id: string): BoardData | null {
+    const board = mainData.boardData.boards.find(b => b.id === id);
+    return board || null;
+}
+
+export function getServerByID(id: string): OSCQueryClient | null {
+    const server = servers.find(s => s.id === id);
+    return server || null;
+}
 
 // -----------------------------
 // Undo/Redo (snapshot-based)
@@ -64,7 +156,7 @@ function applySnapshot(snap: MainDataSnapshot) {
     mainData.editor = snap.editor;
     mainData.serverData.selectedServer = snap.serverData.selectedServer;
     mainData.serverData.serverConfigs = snap.serverData.serverConfigs;
-    mainData.boardData.selectedBoard = snap.boardData.selectedBoard;
+    mainData.boardData.selectedBoardID = snap.boardData.selectedBoardID;
     mainData.boardData.boards = snap.boardData.boards;
 }
 
@@ -140,15 +232,15 @@ export function saveData(label: string | null = null, options?: { skipHistory?: 
 
 export function clearData() {
     localStorage.removeItem('data');
-    mainData.editor = defaultMainData.editor;
-    mainData.boardData = defaultMainData.boardData;
-    mainData.serverData = defaultMainData.serverData;
+    applySnapshot($state.snapshot(defaultMainData));
     commitUndoPoint("Clear Data");
 
     syncServerFromConfigs();
 }
 
 export function loadData() {
+    widgetsMap.clear();
+
     const stateStr = localStorage.getItem('data');
     if (stateStr) {
         const stateObj = JSON.parse(stateStr);
@@ -164,6 +256,11 @@ export function loadData() {
     history.present = { label: "Initial Load", data: snapshotMain() };
 
     syncServerFromConfigs();
+
+    registerAllWidgets();
 }
+
+
+
 
 loadData(); //only called here

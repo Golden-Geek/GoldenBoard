@@ -3,21 +3,25 @@
 	import EditableButton from '$lib/components/EditableButton.svelte';
 	import Board from '$lib/board/Board.svelte';
 	import { addBoard, removeBoard, type BoardData } from '$lib/board/boards.svelte';
-	import { mainData, saveData } from '$lib/engine.svelte';
-	import { EditMode } from './editor.svelte';
+	import { mainData, saveData, EditMode } from '$lib/engine.svelte';
+	import { color } from 'storybook/theming';
 
-	let selectedBoard: BoardData | null = $derived(
-		mainData.boardData.selectedBoard
-			? mainData.boardData.boards.find((b) => b.name === mainData.boardData.selectedBoard) || null
+	let selectedBoardID: BoardData | null = $derived(
+		mainData.boardData.selectedBoardID
+			? mainData.boardData.boards.find((b) => b.id === mainData.boardData.selectedBoardID) || null
 			: null
 	);
 
 	let boards = $derived(mainData.boardData.boards);
-	let board: BoardData = $derived(boards.find((b) => b.name === mainData.boardData.selectedBoard)!);
+	let board: BoardData = $derived(boards.find((b) => b.id === mainData.boardData.selectedBoardID)!);
 
 	$effect(() => {
-		if (selectedBoard == null && boards.length > 0) {
-			mainData.boardData.selectedBoard = boards[0].name;
+		if (boards.length === 0) {
+			addBoard();
+		}
+
+		if (selectedBoardID == null && boards.length > 0) {
+			mainData.boardData.selectedBoardID = boards[0].id;
 		}
 	});
 
@@ -32,16 +36,16 @@
 	{#each boards as board}
 		<EditableButton
 			onselect={() => {
-				mainData.boardData.selectedBoard = board.name;
-				saveData("Select Board");
+				if (selectedBoardID == board) return;
+				mainData.boardData.selectedBoardID = board.id;
+				saveData('Select Board');
 			}}
 			editable={true}
 			bind:value={board.name}
 			hasRemoveButton={boards.length > 1}
-			selected={selectedBoard == board}
-			onremove={() => {
-				removeBoard(board);
-			}}
+			selected={selectedBoardID == board}
+			onremove={() => { removeBoard(board); }}
+			color={'var(--board-color)'}
 		></EditableButton>
 	{/each}
 </div>
@@ -51,6 +55,6 @@
 <style>
 	.board-list {
 		display: flex;
-		gap:.5rem;
+		gap: 0.5rem;
 	}
 </style>

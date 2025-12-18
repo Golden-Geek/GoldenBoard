@@ -12,6 +12,7 @@ export class OSCQueryClient {
 
 	//Connection
 	ws: WebSocket | null = null;
+	id: string = crypto.randomUUID();
 	ip: string = $state('127.0.0.1');
 	port: number = $state(45000);
 	name: string = $state("New Server");
@@ -37,9 +38,6 @@ export class OSCQueryClient {
 	nameEffectDestroy = $effect.root(() => {
 		$effect(() => {
 			// setup
-			console.log(`Server name changed to: ${this.name}`);
-			debugger;
-			
 			if ((this.name == "" || this.name == "New Server" || this.name == "Default") && this.hostInfo.NAME) {
 				this.name = this.hostInfo.NAME;
 			}
@@ -54,6 +52,7 @@ export class OSCQueryClient {
 
 	constructor(config: any = { name: "New Server", ip: null, port: null }) {
 
+		this.id = config.id || this.id;
 		this.name = config.name || this.name;
 		this.ip = config.ip || this.ip;
 		this.port = config.port || this.port;

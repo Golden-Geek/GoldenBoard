@@ -26,7 +26,7 @@ export type WidgetContainerData = WidgetData & {
 };
 
 export const rootWidgetContainerData: WidgetContainerData = {
-    id: 'root',
+    id: 'widget-' + crypto.randomUUID(),
     type: "container",
     props: {
         label: { children: { text: { value: 'Root' } } }

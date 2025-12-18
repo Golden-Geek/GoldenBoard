@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { EditMode } from '$lib/editor/editor.svelte';
-	import { clearData, mainData, saveData } from '$lib/engine.svelte';
+	import { EditMode, clearData, mainData, saveData } from '$lib/engine.svelte';
 	import WidgetBar from '$lib/widget/WidgetBar.svelte';
 
 </script>
