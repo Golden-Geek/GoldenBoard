@@ -49,5 +49,6 @@
 <style>
 	.board-list {
 		display: flex;
+		gap:.5rem;
 	}
 </style>
