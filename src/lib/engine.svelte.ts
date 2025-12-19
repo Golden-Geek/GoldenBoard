@@ -9,8 +9,7 @@ import { getWidgetContextMenuItems, widgetsMap } from "./widget/widgets.svelte.t
 
 export type EditorData = {
     editMode: EditMode,
-    layout: {} | null,
-    selectedWidgetIDs: string[];
+    layout: {} | null
 };
 
 export enum EditMode {
@@ -20,8 +19,7 @@ export enum EditMode {
 
 export const defaultEditorData: EditorData = {
     editMode: EditMode.Edit,
-    layout: null,
-    selectedWidgetIDs: []
+    layout: null
 };
 
 // -----------------------------

@@ -1,4 +1,5 @@
-import type Property from "./inspector/Property.svelte";
+import type Property from "../inspector/PropertyInspector.svelte"
+
 
 export class InspectableWithProps {
     id: string = $state('');

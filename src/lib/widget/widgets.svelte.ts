@@ -1,6 +1,6 @@
 import { saveData, type ContextMenuItem } from '../engine.svelte.ts';
-import type { PropertyContainerDefinition, PropertySingleDefinition, PropertyContainerData, PropertyData } from '../property.svelte.ts';
-import { getPropsFromDefinitions, InspectableWithProps, PropertyType } from '../property.svelte.ts';
+import type { PropertyContainerDefinition, PropertySingleDefinition, PropertyContainerData, PropertyData } from '../property/property.svelte.ts';
+import { getPropsFromDefinitions, InspectableWithProps, PropertyType } from '../property/property.svelte.ts';
 
 //WIDGET
 type WidgetDefinition = {
@@ -23,7 +23,7 @@ export class Widget extends InspectableWithProps {
 
     icon?: string = $state('');
     isRoot: boolean = $derived(this.parent === null);
-    isContainer: boolean = false;
+    isContainer: boolean = $state(false);
     isSelected: boolean = $state(false);
 
     //derived properties
@@ -35,7 +35,7 @@ export class Widget extends InspectableWithProps {
         this.isContainer = isContainer ?? false;
         if (this.isContainer) this.children = [];
         this.type = type;
-        const def = getDefinitionForType(type);
+        const def = getWidgetDefinitionForType(type);
         this.icon = def?.icon;
 
         registerWidget(this);
@@ -100,7 +100,7 @@ export class Widget extends InspectableWithProps {
                 let child = this.children!.find(c => c.id === dataChild.id);
 
                 if (!child) {
-                    child = this.addWidget(dataChild.type, false,dataChild.id);
+                    child = this.addWidget(dataChild.type, false, dataChild.id);
                 }
 
                 child.applySnapshot(dataChild);
@@ -381,7 +381,7 @@ export const widgetContainerDefinitions: WidgetDefinition[] = [
     }
 ];
 
-const getDefinitionForType = function (type: string): WidgetDefinition | undefined {
+export const getWidgetDefinitionForType = function (type: string): WidgetDefinition | undefined {
     for (let def of [...widgetDefinitions, ...widgetContainerDefinitions]) {
         if (def.type === type) {
             return def;
