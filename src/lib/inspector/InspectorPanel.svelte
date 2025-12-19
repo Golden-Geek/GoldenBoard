@@ -37,7 +37,7 @@
 
 	.menu-bar {
 		position: relative;
-		margin-top: 1em;
+		margin: 1em 0 .5rem;
 		display: flex;
 		justify-content: space-around;
 		background-color: var(--panel-background-color);
@@ -69,7 +69,6 @@
 	}
 
 	.inspector-content {
-		padding: 0.1rem;
 		height: 100%;
 		flex-grow: 1;
 		overflow: auto;

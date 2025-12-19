@@ -12,10 +12,10 @@
 </script>
 
 <div class="property-inspector">
-	PINSPECTOR
 	{#if isContainer}
 		<PropertyContainer {targets} {property} {definition} {level} />
 	{:else if target != null && property != null}
+		<p class="property-label">{definition.name}</p>
 		<Property {targets} {property} />
 	{:else}
 		{definition.type} - {target != null} - {property}
@@ -23,4 +23,11 @@
 </div>
 
 <style>
+	.property-inspector {
+		width: 100%;
+		display: flex;
+        justify-content: space-between;
+        padding: 0 .25rem;
+        box-sizing: border-box;
+	}
 </style>
