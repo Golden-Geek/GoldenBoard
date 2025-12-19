@@ -1,4 +1,4 @@
-import type { ContextMenuItem } from '$lib/engine.svelte.ts';
+import { getWidgetByID, getWidgetContainerByID, mainData, registerWidget, saveData, unregisterWidget, type ContextMenuItem } from '$lib/engine.svelte.ts';
 import type { PropertyContainerDefinition, PropertySingleDefinition, PropertyContainerData, PropertyData } from '../property.svelte.ts';
 import { PropertyType } from '../property.svelte.ts';
 
@@ -15,6 +15,7 @@ type WidgetDefinition = {
 
 export type WidgetData = {
     id: string;
+    parentID?: string;
     type: string;
     props: {
         [key: string]: (PropertyData | PropertyContainerData)
@@ -147,25 +148,102 @@ export const widgetContainerDefinitions: WidgetDefinition[] = [
 ];
 
 
-// Context Menu Items
+//Helpers
 
-export const widgetAddMenuItems: ContextMenuItem[] = widgetDefinitions.map(def => ({
-    label: def.name,
-    icon: def.icon,
-    action: () => {
-        // Action to add the widget
-        console.log(`Adding widget of type: ${def.type}`);
-        // Here you would implement the logic to add the widget to the board
+export function isWidgetContainer(widget: WidgetData | WidgetContainerData): widget is WidgetContainerData {
+    return (widget as WidgetContainerData).children !== undefined;
+}
+export function getParentWidgetContainer(widget: WidgetData | WidgetContainerData): WidgetContainerData | undefined {
+    return getWidgetByID(widget.parentID) as WidgetContainerData | undefined;
+}
+
+export const getIconForWidgetType = (type: string): string => {
+    const widgetDef = [...widgetDefinitions, ...widgetContainerDefinitions].find(def => def.type === type);
+    return widgetDef ? widgetDef.icon : '';
+}
+
+// Add Remove Widget Functions
+
+export function addWidgetFromDefinition(def: WidgetDefinition, parent: WidgetContainerData | null = null): WidgetData | WidgetContainerData | undefined {
+
+    if (parent === null) {
+        if (mainData.editor.selectedWidgetIDs.length > 0) {
+            let selectedWidget = getWidgetContainerByID(mainData.editor.selectedWidgetIDs[0]);
+            if (selectedWidget) {
+                parent = selectedWidget;
+            }
+        }
     }
-} as ContextMenuItem));
+
+    if (!parent) return undefined;
+
+    console.log("Adding widget", def, "to parent", parent);
+
+    let newWidget:WidgetData = {
+        id: 'widget-' + crypto.randomUUID(),
+        parentID: parent.id,
+        type: def.type,
+        props: {
+            label: { children: { text: { value: def.name } } }
+        }
+    }
+
+    if(widgetContainerDefinitions.includes(def)){
+        (newWidget as WidgetContainerData).children = [];
+    }
+
+    if (parent.children === undefined) {
+        parent.children = [];
+    }
+    parent.children.push(newWidget as WidgetData);
+    registerWidget(newWidget);
+    saveData("Add Widget " + def.name);
+    return newWidget;
+}
+
+export function removeWidget(widget: WidgetData | WidgetContainerData) {
+    const parent = getParentWidgetContainer(widget);
+    console.log("Removing widget", widget, "from parent", parent);
+    if (parent) {
+        const index = parent.children.findIndex(w => w.id === widget.id);
+        if (index !== -1) {
+            parent.children.splice(index, 1);
+        }
+    }
+    unregisterWidget(widget.id);
+    saveData("Remove Widget " + ((widget.props?.label as PropertyContainerData)?.children.text as PropertyData)?.value || widget.id);
+}
+
+export function duplicateWidget(widget: WidgetData | WidgetContainerData): WidgetData | WidgetContainerData | undefined {
+    const parent = getParentWidgetContainer(widget);
+    if (!parent) return undefined;
+    const widgetCopy = JSON.parse(JSON.stringify(widget)) as WidgetData | WidgetContainerData;
+    widgetCopy.id = 'widget-' + crypto.randomUUID();
+    parent.children.push(widgetCopy);
+    registerWidget(widgetCopy);
+    saveData("Duplicate Widget " + widget.id);
+    return widgetCopy;
+}
+
+export const widgetAddMenuItems: ContextMenuItem[] =
+
+    [...widgetContainerDefinitions, ...widgetDefinitions].map(def => ({
+        label: def.name,
+        icon: def.icon,
+        action: (source: any = null) => {
+            addWidgetFromDefinition(def, source as WidgetContainerData | null);
+        }
+    }));
+;
 
 export const widgetContextMenuItems: ContextMenuItem[] = [
-    { label: 'Add Widget', icon: '➕', submenu: widgetAddMenuItems },
-    { label: 'Delete Widget', icon: '❌' },
-    { label: 'Duplicate Widget', icon: '📄' },
+    { label: 'Add Widget', icon: '➕', submenu: widgetAddMenuItems, visible: (item: any) => isWidgetContainer(item) },
+    { label: 'Delete Widget', icon: '❌', visible: (item: any) => item.parentID, action: (source: any) => { removeWidget(source as WidgetData | WidgetContainerData); } },
+    { label: 'Duplicate Widget', icon: '📄', visible: (item: any) => item.parentID, action: (source: any) => { duplicateWidget(source as WidgetData | WidgetContainerData) } },
     { separator: true },
     {
-        label: 'Convert to ...', submenu: [
+        label: 'Convert to ...', visible: (item: any) => item.parentID,
+        submenu: [
             { label: 'Slider', icon: '🎚️' },
             { label: 'Button', icon: '🔘' }
         ]

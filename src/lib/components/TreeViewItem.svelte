@@ -28,16 +28,17 @@
 </script>
 
 <div
-	class="treeview-item {isExpanded ? 'expanded' : 'collapsed'} {isSelected && isSelected(node)
-		? 'selected'
-		: ''}"
+	class="treeview-item {isExpanded ? 'expanded' : 'collapsed'} "
 	style={highlightColor != '' ? `--highlight-color: ${highlightColor}` : ''}
 >
 	{#if level > 0 || showRoot}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<p
-			class="title level-{level} {hasChildren ? 'container' : 'controllable'}"
+			class="title level-{level} {hasChildren ? 'container' : 'controllable'} {isSelected &&
+			isSelected(node)
+				? 'selected'
+				: ''}"
 			oncontextmenu={(e) => {
 				if (contextMenu) {
 					contextMenu(node, e);
@@ -72,7 +73,7 @@
 	{/if}
 	{#if isExpanded && node != null && hasChildren}
 		<div
-			class="children {level == 0 ? 'first-level' : ''}"
+			class="children {level == 0 && !showRoot ? 'first-level' : ''}"
 			transition:slide|local={{ duration: 300 }}
 		>
 			{#each children as child}
@@ -106,9 +107,11 @@
 		cursor: pointer;
 		user-select: none;
 		display: inline;
-		padding: 0.4rem;
-		border-radius: 0.5rem;
+		padding: .1rem 0.5rem;
+		border-radius: 0.3rem;
+		border: 1px solid transparent;
 		transition: background-color 0.1s ease;
+
 	}
 
 	.treeview-item .title.container {
@@ -120,12 +123,13 @@
 		font-size: 0.9rem;
 	}
 
-	.treeview-item.selected .title {
-		background-color: rgba(from var(--highlight-color) r g b / 60%) !important;
+	.treeview-item .title.selected {
+		background-color: rgba(from var(--highlight-color) r g b / 30%) !important;
+		border: 1px solid rgba(from var(--highlight-color) r g b / 80%);
 	}
 
 	.treeview-item .title:hover {
-		background-color: rgba(from var(--highlight-color) r g b / 40%);
+		background-color: rgba(from var(--highlight-color) r g b / 30%);
 	}
 
 	.treeview-item .title .icon {

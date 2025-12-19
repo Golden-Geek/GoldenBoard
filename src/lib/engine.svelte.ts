@@ -39,14 +39,15 @@ export type ContextMenuItem = {
     separator?: boolean;
     label?: string;
     icon?: string;
-    action?: () => void;
-    disabled?: boolean;
-    checked?: boolean;
+    action?: (source: any) => void;
+    visible?: (source: any) => boolean;
+    disabled?: (source: any) => boolean;
+    checked?: (source: any) => boolean;
     submenu?: ContextMenuItem[];
 };
 
 //using null as separators
-export const contextMenus : Record<MenuContextType, ContextMenuItem[]> = $state({
+export const contextMenus: Record<MenuContextType, ContextMenuItem[]> = $state({
     [MenuContextType.Widget]: widgetContextMenuItems,
     [MenuContextType.Board]: [],
     [MenuContextType.Server]: []
@@ -136,18 +137,23 @@ export function isWidgetSelected(widgetID: string): boolean {
 // -----------------------------
 
 
-export const widgetsMap: Map<string, any> = $state(new Map());
+export const widgetsMap: Map<string, WidgetData | WidgetContainerData> = $state(new Map());
 
-export function registerWidget(id: string, obj: any) {
-    widgetsMap.set(id, obj);
+export function registerWidget(obj: WidgetData | WidgetContainerData) {
+    widgetsMap.set(obj.id, obj);
 }
 
 export function unregisterWidget(id: string) {
     widgetsMap.delete(id);
 }
 
-export function getWidgetByID<T>(id: string): T | null {
-    return widgetsMap.get(id) as T || null;
+export function getWidgetByID<T extends WidgetData | undefined>(id: string | undefined): WidgetData | undefined {
+    if (!id) return undefined;
+    return widgetsMap.get(id) as T;
+}
+
+export function getWidgetContainerByID<T extends WidgetContainerData | undefined>(id: string): WidgetContainerData | undefined {
+    return widgetsMap.get(id) as T;
 }
 
 export function getBoardByID(id: string): BoardData | null {
