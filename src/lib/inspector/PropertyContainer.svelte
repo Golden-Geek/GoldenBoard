@@ -6,32 +6,55 @@
 </script>
 
 <div class="property-container">
-	<pre>{JSON.stringify(property)}</pre>
-	{#if property && definition.children}
-		{#each Object.entries(definition.children) as [key, childDefinition]}
-			<div class="property-child">
+	<div class="property-container-header">
+		<span class="title-text">
+			{definition.name || 'Container'}
+		</span>
+	</div>
+	<div class="property-container-children">
+		{#if property && definition.children}
+			{#each Object.entries(definition.children) as [key, childDefinition]}
 				<PropertyInspector
 					{targets}
 					property={property.children[key]}
 					definition={childDefinition}
 					{level}
 				></PropertyInspector>
-			</div>
-		{/each}
-	{:else}
-		<p>No child properties to display.</p>
-	{/if}
+			{/each}
+		{:else}
+			<p>No child properties to display.</p>
+		{/if}
+	</div>
 </div>
 
 <style>
 	.property-container {
-		padding-left: calc(1rem * var(--level, 0));
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		border-radius: 0.5rem;
+		margin: 0.5rem 0;
 	}
-	.property-child {
-		color: var(--text-color);
-		padding: 0.25rem;
-		margin-bottom: 0.5rem;
-		border: solid 1px var(--border-color);
-		min-height: 1rem;
+
+	.title-text {
+		margin: 0;
+		padding:.5rem;
+		
+		background-color: rgba(from var(--bg-color) r g b / 80%);
+		color: var(--panel-accent-text-color);
+		font-weight: bold;
+		border-top-left-radius: 0.5rem;
+		border-top-right-radius: 0.5rem;
+        border-left: solid 3px var(--border-color);
+	}
+
+	.property-container-children {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		padding: 0.3rem 0 0.3rem 0.3rem;
+		border-left: solid 3px var(--border-color);
+		border-radius: 0 0.25rem 0.25rem 0.25rem;
+		background-color: rgba(from var(--bg-color) r g b / 80%);
 	}
 </style>

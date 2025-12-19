@@ -20,13 +20,14 @@
 
 <style>
 	.property-drawer {
-		padding-left: calc(1rem * var(--level, 0));
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		box-sizing: border-box;
 	}
+
 	.property-item {
 		color: var(--text-color);
-		padding: 0.25rem;
-		margin-bottom: 0.5rem;
-		border: solid 1px var(--border-color);
-		min-height: 1rem;
+		width: 100%;
 	}
 </style>
