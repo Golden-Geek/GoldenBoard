@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { history, redo, undo } from '$lib/engine.svelte';
-	import { widgetsMap } from '$lib/widget/widgets.svelte';
+	import { selectedWidgets, widgetsMap } from '$lib/widget/widgets.svelte';
 </script>
 
 <div class="footer">
@@ -33,7 +33,7 @@
 	<div class="spacer"></div>
 
 	<div class="widget-info">
-		{Object.keys(widgetsMap).length} widgets loaded
+		{Object.keys(widgetsMap).length} widgets loaded - {selectedWidgets.length} selected
 	</div>
 </div>
 

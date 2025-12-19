@@ -490,6 +490,7 @@ export function getServerByID(id: string): OSCQueryClient | null {
 export const addServer = function (): OSCQueryClient {
 	const client = new OSCQueryClient();
 	servers.push(client);
+	mainState.selectedServer = client;
 	saveData("Add Server");
 	return client;
 }
@@ -524,8 +525,12 @@ export function toServersSnapshot() {
 
 export function applyServersSnapshot(data: any[]) {
 
-	if (data == null) {
-		servers = [];
+	if (data == null || data.length === 0) {
+		while(servers.length > 0) {
+			removeServer(servers[0]);
+		}
+
+		addServer();
 		return;
 	}
 

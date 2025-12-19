@@ -20,7 +20,7 @@
 		<EditableButton
 			onselect={() => {
 				mainState.selectedBoard = board;
-				saveData('Select Board');
+				saveData('Select Board', {coalesceID: 'select-board'});
 			}}
 			editable={true}
 			bind:value={board.name}

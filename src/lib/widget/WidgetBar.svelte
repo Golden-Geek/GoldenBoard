@@ -16,18 +16,10 @@
 </script>
 
 <div class="widget-bar">
-	{#each widgetDefinitions as def}
-		<button
-			class="widget-button"
-			title={def.name + '\n' + def.description}
-			onclick={() => addWidgetFromDef(def)}
-		>
-			<span class="widget-icon">{def.icon}</span>
-		</button>
-	{/each}
-
-	<div class="separation"></div>
-	{#each widgetContainerDefinitions as widget}
+	{#each [...widgetContainerDefinitions, null, ...widgetDefinitions] as widget}
+	{#if widget === null}
+		<div class="separation"></div>
+	{:else}
 		<button
 			class="widget-button"
 			title={widget.name + '\n' + widget.description}
@@ -35,6 +27,7 @@
 		>
 			<span class="widget-icon">{widget.icon}</span>
 		</button>
+	{/if}
 	{/each}
 </div>
 

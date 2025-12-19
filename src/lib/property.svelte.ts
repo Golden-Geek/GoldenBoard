@@ -5,9 +5,9 @@ export class InspectableWithProps {
     iType: string = $state('');
     props: { [key: string]: (PropertyData | PropertyContainerData) } = $state({});
 
-    constructor(iType: string) {
+    constructor(iType: string, id?: string) {
         this.iType = iType;
-        this.id = iType + '-' + crypto.randomUUID();
+        this.id = id ?? (iType + '-' + crypto.randomUUID());
     }
 
 
@@ -51,7 +51,7 @@ export class InspectableWithProps {
         let prop = this.getProp(propKey) as PropertyData;
         if (prop !== null) {
             prop.value = value;
-        }else{
+        } else {
             console.warn(`Property ${propKey} not found on InspectableWithProps ${this.id}`, this);
         }
     }
@@ -64,8 +64,15 @@ export class InspectableWithProps {
     }
 
     applySnapshot(snapshot: any) {
-        this.id = snapshot.id ?? this.id;
+        const newID = snapshot.id ?? this.id;
+        if (newID !== this.id) {
+            this.setID(newID);
+        }
         this.props = snapshot.props;
+    }
+
+    setID(newID: string) {
+        this.id = newID;
     }
 }
 
