@@ -64,7 +64,7 @@ export function loadBoards() {
 }
 
 function registerWidgetContainer(widget: WidgetData | WidgetContainerData) {
-    registerWidget(widget.id, widget);
+    registerWidget(widget);
     if ('children' in widget) {
         for (const child of widget.children) {
             registerWidgetContainer(child);

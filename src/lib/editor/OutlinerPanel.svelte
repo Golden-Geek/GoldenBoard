@@ -9,6 +9,7 @@
 		selectOnlyWidget,
 		toggleWidgetSelection
 	} from '$lib/engine.svelte';
+	import { getIconForWidgetType } from '$lib/widget/widgets.svelte';
 
 	let selectedBoardID = $derived(
 		mainData.boardData.boards.find((b) => b.id === mainData.boardData.selectedBoardID)!
@@ -23,6 +24,7 @@
 		getType={(node: any) => node.type}
 		getTitle={(node: any) =>
 			node.props.label?.children?.text?.value || node.id || node.type || 'Widget'}
+		getIcon={(type: string) => getIconForWidgetType(type)}
 		highlightColor={'var(--widget-color)'}
 		onSelect={(node: any, e: MouseEvent) => {
 			if (e.ctrlKey || e.metaKey) {

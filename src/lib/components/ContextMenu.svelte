@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { contextMenus, menuContext, type ContextMenuItem } from '$lib/engine.svelte';
 	import { onMount, tick } from 'svelte';
-    import Self from './ContextMenu.svelte';
-    
+	import Self from './ContextMenu.svelte';
+	import { fly } from 'svelte/transition';
+
 	let { submenu = null, offsetX = 0, offsetY = 0 } = $props();
 
 	let type = $derived(menuContext.type);
@@ -14,7 +15,7 @@
 	let menuItems: ContextMenuItem[] = $derived(submenu ? submenu : contextMenus[type] || []);
 
 	let menuDiv: HTMLDivElement | null = $state(null);
-    let submenuDiv: HTMLDivElement | null = $state(null);
+	let submenuDiv: HTMLDivElement | null = $state(null);
 
 	let activeSubMenu = $state({
 		items: null as ContextMenuItem[] | null,
@@ -25,6 +26,7 @@
 	function closeMenu() {
 		menuContext.target = null;
 		menuContext.position = { x: 0, y: 0 };
+		activeSubMenu.items = null;
 	}
 
 	$effect(() => {
@@ -57,59 +59,62 @@
 		bind:this={menuDiv}
 		class="context-menu"
 		style="--x: {pos.y + offsetY}px; --y:{pos.x + offsetX}px"
+		transition:fly={{ x: -5, duration: 100 }}
 	>
 		{#each menuItems as item}
-			{#if item.separator}
-				<hr />
-			{:else}
-				<!-- svelte-ignore a11y_mouse_events_have_key_events -->
-				<button
-					class="context-menu-item {item.disabled ? 'disabled' : ''} {item.checked
-						? 'checked'
-						: ''}"
-					onclick={() => {
-						if (!item.disabled && item.action) {
-							item.action();
-						}
-						closeMenu();
-					}}
-					onmouseover={(e) => {
-						if (item.submenu) {
-							activeSubMenu.items = item.submenu;
-							activeSubMenu.offsetX = offsetX + (menuDiv ? menuDiv.offsetWidth : 0);
-							activeSubMenu.offsetY =
-								offsetY +
-								(menuDiv
-									? menuDiv.children[
-											Array.from(menuDiv.children).indexOf(e.currentTarget as Element)
-										].getBoundingClientRect().top - menuDiv.getBoundingClientRect().top
-									: 0);
-						} else {
-							activeSubMenu.items = null;
-							activeSubMenu.offsetX = 0;
-							activeSubMenu.offsetY = 0;
-						}
-					}}
-				>
-					<span>{item.icon}</span>{item.label}
+			{#if !item.visible || item.visible(target)}
+				{#if item.separator}
+					<hr />
+				{:else}
+					<!-- svelte-ignore a11y_mouse_events_have_key_events -->
+					<button
+						class="context-menu-item {item.disabled ? 'disabled' : ''} {item.checked
+							? 'checked'
+							: ''}"
+						onclick={() => {
+							if ((!item.disabled || !item.disabled(target)) && item.action) {
+								item.action(target);
+							}
+							closeMenu();
+						}}
+						onmouseover={(e) => {
+							if (item.submenu) {
+								activeSubMenu.items = item.submenu;
+								activeSubMenu.offsetX = offsetX + (menuDiv ? menuDiv.offsetWidth : 0);
+								activeSubMenu.offsetY =
+									offsetY +
+									(menuDiv
+										? menuDiv.children[
+												Array.from(menuDiv.children).indexOf(e.currentTarget as Element)
+											].getBoundingClientRect().top - menuDiv.getBoundingClientRect().top
+										: 0);
+							} else {
+								activeSubMenu.items = null;
+								activeSubMenu.offsetX = 0;
+								activeSubMenu.offsetY = 0;
+							}
+						}}
+					>
+						<span>{item.icon}</span>{item.label}
 
-					{#if item.submenu}
-						<span style="float: right;">⭬</span>
-					{/if}
-				</button>
+						{#if item.submenu}
+							<span style="float: right;">⭬</span>
+						{/if}
+					</button>
+				{/if}
 			{/if}
 		{/each}
 	</div>
+{/if}
 
-	{#if activeSubMenu.items && activeSubMenu.items.length > 0}
-		<div bind:this={submenuDiv} class="submenu-container">
-			<Self
-				submenu={activeSubMenu.items}
-				offsetX={activeSubMenu.offsetX}
-				offsetY={activeSubMenu.offsetY}
-			></Self>
-		</div>
-	{/if}
+{#if showMenu && activeSubMenu.items && activeSubMenu.items.length > 0}
+	<div bind:this={submenuDiv} class="submenu-container">
+		<Self
+			submenu={activeSubMenu.items}
+			offsetX={activeSubMenu.offsetX}
+			offsetY={activeSubMenu.offsetY}
+		></Self>
+	</div>
 {/if}
 
 <style>
