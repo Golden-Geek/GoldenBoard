@@ -1,4 +1,5 @@
-import { saveData } from '$lib/engine.svelte.js';
+import { mainState, saveData } from '$lib/engine.svelte.js';
+import { getPropsFromDefinitions, InspectableWithProps, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from '$lib/property.svelte.js';
 import type { OscPacket } from './osc.js';
 import { decodeOscPacket, encodeOscPacket } from './osc.js';
 
@@ -8,14 +9,19 @@ export enum ConnectionStatus {
 	Connected = "connected"
 }
 
-export class OSCQueryClient {
+export class OSCQueryClient extends InspectableWithProps {
+
+	name = $derived(this.getPropRawValue("name") as string);
+	ip = $derived(this.getPropRawValue("ip") as string);
+	port = $derived(this.getPropRawValue("port") as number);
+	useFixedRateSending = $derived(this.getPropRawValue("advanced.useFixedRateSending") as boolean);
+	fixedSendRateHz = $derived(this.getPropRawValue("advanced.fixedSendRateHz") as number);
+
+	isSelected: boolean = $derived(mainState.selectedServer == this);
 
 	//Connection
 	ws: WebSocket | null = null;
 	id: string = crypto.randomUUID();
-	ip: string = $state('127.0.0.1');
-	port: number = $state(45000);
-	name: string = $state("New Server");
 	status: ConnectionStatus = $state(ConnectionStatus.Disconnected);
 	reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -25,21 +31,16 @@ export class OSCQueryClient {
 	data: any = $state({});
 	addressMap: any = {};
 
-	//Fixed rate sending
-	useFixedRateSending: boolean = $state(false);
-	fixedSendRateHz: number = $state(60);
 	private outboundConflater: Map<string, { address: string; args: any[] }> = new Map();
 	private outboundTimer: number | null = null;
 
 	pendingMessages: string[] = [];
 
-
-
 	nameEffectDestroy = $effect.root(() => {
 		$effect(() => {
 			// setup
 			if ((this.name == "" || this.name == "New Server" || this.name == "Default") && this.hostInfo.NAME) {
-				this.name = this.hostInfo.NAME;
+				this.setPropRawValue("name", this.hostInfo.NAME);
 			}
 
 		});
@@ -50,15 +51,10 @@ export class OSCQueryClient {
 	});
 
 
-	constructor(config: any = { name: "New Server", ip: null, port: null }) {
-
-		this.id = config.id || this.id;
-		this.name = config.name || this.name;
-		this.ip = config.ip || this.ip;
-		this.port = config.port || this.port;
-		this.useFixedRateSending = Boolean(config.useFixedRateSending ?? this.useFixedRateSending);
-		this.fixedSendRateHz = Number(config.fixedSendRateHz ?? this.fixedSendRateHz);
+	constructor() {
+		super("server");
 		this.ws = null;
+		this.props = getPropsFromDefinitions(serverPropertyDefinitions);
 		this.connect();
 	}
 
@@ -168,15 +164,30 @@ export class OSCQueryClient {
 		}
 	}
 
-	setIPAndPort(ip: string, port: number): void {
-		debugger;
-		if( this.ip === ip && this.port === port) return;
-		this.ip = ip;
-		this.port = port;
-		saveData("Update Server " + this.name);
+	setIPAndPort(ip: string, port: number, save: boolean = true): void {
+		if (this.ip === ip && this.port === port) return;
+		this.setPropRawValue("ip", ip);
+		this.setPropRawValue("port", port);
+		if (save) {
+			saveData("Update Server " + this.name);
+		}
 		this.connect();
 	}
 
+	toSnapshot() {
+		return {
+			id: this.id,
+			ip: this.ip,
+			port: this.port,
+			name: this.name
+		}
+	}
+
+	applySnapshot(data: any) {
+		this.id = data.id;
+		this.name = data.name;
+		this.setIPAndPort(data.ip, data.port, false);
+	}
 
 	//OSCQuery structure
 
@@ -418,8 +429,8 @@ export class OSCQueryClient {
 	}
 
 	setFixedRateSending(enabled: boolean, rateHz?: number) {
-		this.useFixedRateSending = Boolean(enabled);
-		if (rateHz != null) this.fixedSendRateHz = Number(rateHz);
+		this.setPropRawValue("advanced.useFixedRateSending", enabled);
+		if (rateHz != null) this.setPropRawValue("advanced.fixedSendRateHz", rateHz);
 		if (this.useFixedRateSending) {
 			this.startOutboundPump();
 		} else {
@@ -464,3 +475,110 @@ export class OSCQueryClient {
 		return Object.entries(this.data).length > 0;
 	}
 }
+
+
+
+// OSCQuery Clients management
+
+let servers = $derived(mainState.servers);
+export const clients: OSCQueryClient[] = $state([]);
+
+export function getServerByID(id: string): OSCQueryClient | null {
+	return servers.find((b: OSCQueryClient) => b.id === id) || null;
+}
+
+export const addServer = function (): OSCQueryClient {
+	const client = new OSCQueryClient();
+	servers.push(client);
+	saveData("Add Server");
+	return client;
+}
+
+export const removeServer = function (server: OSCQueryClient) {
+	let index = servers.indexOf(server);
+	if (index > -1) {
+		server.disconnect();
+		server.cleanup();
+		servers.splice(index, 1);
+	}
+
+	saveData("Remove Server");
+}
+
+export const clearServers = function () {
+	while (servers.length > 0) {
+		let server = servers.pop();
+		server?.disconnect();
+		server?.cleanup();
+	}
+}
+
+export function toServersSnapshot() {
+	let data: any[] = [];
+	for (let client of servers) {
+		data.push(client.toSnapshot());
+	}
+
+	return data;
+}
+
+export function applyServersSnapshot(data: any[]) {
+
+	if (data == null) {
+		servers = [];
+		return;
+	}
+
+	mainState.servers = data.map((sData: any) => {
+		let server = servers.find(s => s.id === sData.id);
+		if (!server) {
+			server = new OSCQueryClient();
+		}
+
+
+		server.applySnapshot(sData);
+		return server;
+	});
+}
+//Node type icons
+
+const nodeTypes = [
+	{ type: "Container", icon: "📁" },
+	{ type: "Boolean", icon: "☑️" },
+	{ type: "Integer", icon: "🔢" },
+	{ type: "Float", icon: "🔣" },
+	{ type: "String", icon: "🔤" },
+	{ type: "Color", icon: "🎨" },
+	{ type: "Trigger", icon: "⚡" },
+	{ type: "Enum", icon: "🎛️" },
+	{ type: "Point2D", icon: "📐" },
+	{ type: "Point3D", icon: "🧊" },
+]
+
+function getNodeType(node: any): string {
+	if (node.CONTENTS) return 'Container';
+	if (node.EXTENDED_TYPE) return node.EXTENDED_TYPE[0];
+	if (!node.CONTENTS && node.TYPE == 'N') return 'Trigger';
+	return node.TYPE;
+}
+
+export function getNodeIcon(node: any): string {
+	const type = getNodeType(node);
+	const nodeType = nodeTypes.find(t => t.type === type);
+	return nodeType ? nodeType.icon : "❓";
+}
+
+const serverPropertyDefinitions: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {
+	name: { name: "name", type: PropertyType.STRING, label: "Name", default: "New Server" } as PropertySingleDefinition,
+	ip: { name: "ip", type: PropertyType.STRING, label: "IP Address", default: "127.0.0.1" } as PropertySingleDefinition,
+	port: { name: "port", type: PropertyType.INTEGER, label: "Port", default: 42000 } as PropertySingleDefinition,
+	advanced: {
+		name: "advanced", children: {
+			min: { name: 'Min', type: PropertyType.FLOAT, default: 0 } as PropertySingleDefinition,
+			max: { name: 'Max', type: PropertyType.FLOAT, default: 100 } as PropertySingleDefinition,
+			step: { name: 'Step', type: PropertyType.FLOAT, default: 1 } as PropertySingleDefinition,
+		}
+	}
+};
+
+

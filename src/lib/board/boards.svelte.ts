@@ -1,24 +1,48 @@
-import { rootWidgetContainerData, type WidgetContainerData, type WidgetData } from "../widget/widgets.svelte.ts";
-import { mainData, registerWidget, saveData, unregisterWidget } from "../engine.svelte.ts";
+import { Widget } from "../widget/widgets.svelte.ts";
+import { mainState, saveData } from "../engine.svelte.ts";
+import { getPropsFromDefinitions, InspectableWithProps, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from "../property.svelte.ts";
 
 
-const boards: BoardData[] = $derived(mainData.boardData.boards);
+let boards = $derived(mainState.boards);
 
-export type BoardData = {
-    id: string;
-    name: string;
-    description?: string;
-    icon?: string;
-    rootWidget: WidgetData;
-};
+export class Board extends InspectableWithProps {
 
+    name: string = $state('');
+    icon: string = $state('');
+    rootWidget: Widget = Widget.createRootWidgetContainer();
+    isSelected: boolean = $derived(mainState.selectedBoard === this);
 
-export const defaultBoard: BoardData = {
-    id: "board-" + crypto.randomUUID(),
-    name: "Board",
-    description: "A default board with sample widgets",
-    rootWidget: rootWidgetContainerData,
-};
+    constructor() {
+        super("board");
+        this.props = getPropsFromDefinitions(boardPropertyDefinitions);
+    }
+
+    cleanup() {
+        this.rootWidget.cleanup();
+    }
+
+    toSnapshot(includeID: boolean = true): any {
+        let data = {
+            ...super.toSnapshot(includeID),
+            name: this.name,
+            icon: this.icon,
+            rootWidget: this.rootWidget.toSnapshot(includeID)
+        };
+
+        if (includeID) {
+            data.id = this.id;
+        }
+
+        return data;
+    }
+
+    applySnapshot(data: any) {
+        super.applySnapshot(data);
+        this.name = data.name;
+        this.icon = data.icon;
+        this.rootWidget.applySnapshot(data.rootWidget);
+    }
+}
 
 function getUniqueBoardName(baseName: string): string {
     let counter = 1;
@@ -33,64 +57,59 @@ function getUniqueBoardName(baseName: string): string {
 }
 
 
-export function addBoard(): BoardData {
+export function addBoard(): Board {
     let name = getUniqueBoardName("Board");
-    const newBoard: BoardData = {
-        name: name,
-        id: "board-" + crypto.randomUUID(),
-        description: defaultBoard.description,
-        icon: defaultBoard.icon,
-        rootWidget: defaultBoard.rootWidget
-    };
+
+    const newBoard = new Board();
+    newBoard.name = name;
 
     boards.push(newBoard);
-    registerAllWidgets(newBoard);
     saveData("Add Board " + newBoard.name);//+ " (" + boards.length + ")");
-    return newBoard;
-}
 
-export function removeBoard(board: BoardData) {
+    return newBoard;
+};
+
+
+export function removeBoard(board: Board) {
     const index = boards.indexOf(board);
-    if (index !== -1) {
-        boards.splice(index, 1);
+    if (index == -1) {
+        throw (new Error("Board not found"));
     }
+
+    board.cleanup();
+    boards.splice(index, 1);
     saveData("Remove Board " + board.name);// + " (" + boards.length + ")");
 }
 
-export function loadBoards() {
-    if (boards.length === 0) {
-        addBoard();
-    }
+export function getBoardByID(id: string): Board | null {
+    return boards.find((b: Board) => b.id === id) || null;
 }
 
-function registerWidgetContainer(widget: WidgetData | WidgetContainerData) {
-    registerWidget(widget);
-    if ('children' in widget) {
-        for (const child of widget.children) {
-            registerWidgetContainer(child);
+export function toBoardsSnaphot(): any[] {
+    return boards.map(b => b.toSnapshot());
+}
+
+export function applyBoardsSnapshot(data: any) {
+
+    if (data == null) {
+        boards = [];
+        return;
+    }
+
+    //match id and update existing boards
+    mainState.boards = data.map((bData: any) => {
+        let board = boards.find(b => b.id === bData.id);
+        if (!board) {
+            board = new Board();
         }
-    }
+
+        board.applySnapshot(bData);
+        return board;
+    });
 }
 
-export function registerAllWidgets(board: BoardData | null = null) {
-    if (!board) {
-        for (const b of boards) {
-            registerWidgetContainer(b.rootWidget);
-        }
-    } else {
-        registerWidgetContainer(board.rootWidget);
-    }
-}
-
-function unRegisterWidgetRecursive(widget: WidgetData | WidgetContainerData) {
-    unregisterWidget(widget.id);
-    if ('children' in widget) {
-        for (const child of widget.children) {
-            unRegisterWidgetRecursive(child);
-        }
-    }
-}
-
-export function unRegisterAllWidgetForBoard(board: BoardData) {
-    unRegisterWidgetRecursive(board.rootWidget);
-}
+const boardPropertyDefinitions: { [key: string]: PropertySingleDefinition | PropertyContainerDefinition } = {
+    name: { name: "Name", type: PropertyType.STRING, label: "Name", default: "Board" } as PropertySingleDefinition,
+    icon: { name: "Icon", type: PropertyType.ICON, label: "Icon", default: "📋" } as PropertySingleDefinition,
+    description: { name: "Description", type: PropertyType.TEXT, label: "Description", default: "" } as PropertySingleDefinition
+};

@@ -1,15 +1,11 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import Self from './TreeViewItem.svelte';
-	import { getNodeIcon } from '$lib/oscquery/servers.svelte';
 	import { slide } from 'svelte/transition';
-	import { isWidgetSelected } from '$lib/engine.svelte';
 	let {
 		node,
 		level,
 		showRoot = false,
 		getChildren,
-		getType,
 		getIcon = null,
 		getTitle,
 		isContainer = null,
@@ -20,8 +16,6 @@
 	} = $props();
 
 	let isExpanded: any = $derived(() => level < 3);
-
-	let type: any = $derived(getType(node));
 
 	let children: any = $derived(getChildren(node));
 	let hasChildren: any = $derived(isContainer ? isContainer(node) : children.length > 0);
@@ -61,12 +55,12 @@
 				>
 					{isExpanded ? '▾' : '▸'}
 				</button>
-			{:else if type}
-				{#if getIcon}
-					<span class="icon">
-						{getIcon(type)}
-					</span>
-				{/if}
+			{/if}
+
+			{#if getIcon}
+				<span class="icon">
+					{getIcon(node)}
+				</span>
 			{/if}
 			{getTitle(node)}
 		</p>
@@ -81,7 +75,6 @@
 					node={child}
 					level={level + 1}
 					{getChildren}
-					{getType}
 					{getIcon}
 					{getTitle}
 					{isContainer}
@@ -107,11 +100,10 @@
 		cursor: pointer;
 		user-select: none;
 		display: inline;
-		padding: .1rem 0.5rem;
+		padding: 0.1rem 0.5rem;
 		border-radius: 0.3rem;
 		border: 1px solid transparent;
 		transition: background-color 0.1s ease;
-
 	}
 
 	.treeview-item .title.container {

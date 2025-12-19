@@ -12,10 +12,12 @@
 
 	let showMenu = $derived(type != null && target != null && pos.x != 0 && pos.y != 0);
 
-	let menuItems: ContextMenuItem[] = $derived(submenu ? submenu : contextMenus[type] || []);
+	let menuFunc = $derived(contextMenus[type]);
+	let menuItems: ContextMenuItem[] = $derived(submenu ? submenu : (menuFunc && target) ? menuFunc(target) : []);
 
 	let menuDiv: HTMLDivElement | null = $state(null);
 	let submenuDiv: HTMLDivElement | null = $state(null);
+
 
 	let activeSubMenu = $state({
 		items: null as ContextMenuItem[] | null,
@@ -62,7 +64,7 @@
 		transition:fly={{ x: -5, duration: 100 }}
 	>
 		{#each menuItems as item}
-			{#if !item.visible || item.visible(target)}
+			{#if item.visible || true}
 				{#if item.separator}
 					<hr />
 				{:else}
@@ -72,14 +74,14 @@
 							? 'checked'
 							: ''}"
 						onclick={() => {
-							if ((!item.disabled || !item.disabled(target)) && item.action) {
+							if (!item.disabled && item.action) {
 								item.action(target);
 							}
 							closeMenu();
 						}}
 						onmouseover={(e) => {
 							if (item.submenu) {
-								activeSubMenu.items = item.submenu;
+								activeSubMenu.items = item.submenu(target);
 								activeSubMenu.offsetX = offsetX + (menuDiv ? menuDiv.offsetWidth : 0);
 								activeSubMenu.offsetY =
 									offsetY +

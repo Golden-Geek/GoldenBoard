@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { getWidgetByID } from '$lib/engine.svelte';
 	let { targets } = $props();
 
-	let target = $derived(targets.length > 0 ? getWidgetByID(targets[0]) : null);
+	let target = $derived(targets.length > 0 ? targets[0] : null);
 </script>
 
 <div class="inspector">
@@ -10,7 +9,7 @@
 		<h2>Inspector</h2>
 		<pre>{JSON.stringify(target, null, 2)}</pre>
 	{:else}
-		{getWidgetByID(targets[0])}
+		{target}
 		<p>Select something to edit here</p>
 	{/if}
 </div>

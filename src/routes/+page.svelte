@@ -6,14 +6,16 @@
 	import TopBar from '$lib/editor/TopBar.svelte';
 	import Split from 'split-grid';
 	import { onMount, tick } from 'svelte';
-	import { EditMode, mainData, loadData, redo, saveData, undo } from '$lib/engine.svelte';
+	import { EditMode, mainState, redo, saveData, undo } from '$lib/engine.svelte';
 	import { fly } from 'svelte/transition';
 	import Panel from '$lib/editor/Panel.svelte';
 	import Footer from '$lib/editor/Footer.svelte';
 	import ContextMenu from '$lib/components/ContextMenu.svelte';
+	import { selectedWidgets } from '$lib/widget/widgets.svelte';
 
-	let editorState: any = $derived(mainData.editor);
-	let editMode = $derived(editorState.editMode == EditMode.Edit);
+	let editorState: any = $derived(mainState.editor);
+	let editorLayout: any = $derived(editorState?.layout);
+	let editMode = $derived(editorState?.editMode);
 
 	let contentDiv = $state<HTMLDivElement | null>(null);
 	let leftSplitter = $state<HTMLDivElement | null>(null);
@@ -72,8 +74,8 @@
 
 	function loadLayout() {
 		if (contentDiv == null) return;
-		if (editorState.layout) {
-			const { inspectorWidth, leftPaneWidth, outlinerHeight } = editorState.layout as {
+		if (editorLayout) {
+			const { inspectorWidth, leftPaneWidth, outlinerHeight } = editorLayout as {
 				inspectorWidth: string;
 				leftPaneWidth: string;
 				outlinerHeight: string;
@@ -107,7 +109,7 @@
 		// Outliner height: first row
 		const outlinerHeight = rows[0];
 
-		editorState.layout = {
+		editorLayout = {
 			inspectorWidth,
 			leftPaneWidth,
 			outlinerHeight
@@ -131,21 +133,28 @@
 		}
 		if (event.ctrlKey && (event.key === 'e' || event.key === 'E')) {
 			event.preventDefault();
-			editorState.editMode = editorState.editMode === EditMode.Live ? EditMode.Edit : EditMode.Live;
+			editMode = editMode === EditMode.Edit ? EditMode.Live : EditMode.Edit;
 			saveData('Toggle Edit Mode', { skipHistory: true });
+		}
+		if (event.key === 'Delete' || event.key === 'Backspace') {
+			if (selectedWidgets.length > 0) {
+				event.preventDefault();
+				selectedWidgets.forEach((w) => w.remove(false));
+				saveData('Delete Selected Widgets');
+			}
 		}
 	}
 </script>
 
-<div class="root mode-{editorState.editMode}">
-	{#if editMode}
+<div class="root mode-{editMode}">
+	{#if editMode == EditMode.Edit}
 		<div class="topbar-area" transition:fly={{ y: -50 }}>
 			<TopBar />
 		</div>
 	{/if}
 
 	<div class="content {layoutLoaded ? '' : 'loading'}" bind:this={contentDiv}>
-		{#if editMode}
+		{#if editMode == EditMode.Edit}
 			<div class="outliner-area">
 				<Panel name="Outliner">
 					<OutlinerPanel />
@@ -165,7 +174,7 @@
 			</Panel>
 		</div>
 
-		{#if editMode}
+		{#if editMode == EditMode.Edit}
 			<div class="inspector-area">
 				<Panel name="Inspector">
 					<InspectorPanel />

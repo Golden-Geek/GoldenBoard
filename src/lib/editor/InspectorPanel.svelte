@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Menu, menuComponents, menuState } from '../inspector/inspector.svelte.ts';
-	import { mainData } from '$lib/engine.svelte';
+	import { mainState } from '$lib/engine.svelte';
 
 	const menus = Object.values(Menu).filter((v) => typeof v === 'string') as string[];
 
@@ -19,7 +19,7 @@
 
 	<div class="inspector-content">
 		{#if Inspector != null}
-			<Inspector targets={mainData.editor.selectedWidgetIDs} />
+			<Inspector targets={mainState.editor.selectedWidgetIDs} />
 		{:else}
 			<p style="padding: 1rem;">No Inspector for this</p>
 		{/if}

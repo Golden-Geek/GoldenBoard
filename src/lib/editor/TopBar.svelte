@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { EditMode, clearData, mainData, saveData } from '$lib/engine.svelte';
+	import { EditMode, clearData, mainState, saveData } from '$lib/engine.svelte';
 	import WidgetBar from '$lib/widget/WidgetBar.svelte';
 
 </script>
@@ -14,7 +14,7 @@
 	<div class="mode-switch">
 		<button
 			onclick={() => {
-				mainData.editor.editMode = EditMode.Live;
+				mainState.editor.editMode = EditMode.Live;
 			}}
 		>
 			Switch to Live
