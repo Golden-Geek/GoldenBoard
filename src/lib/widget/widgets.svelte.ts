@@ -1,6 +1,6 @@
-import { getWidgetByID, getWidgetContainerByID, mainData, registerWidget, saveData, unregisterWidget, type ContextMenuItem } from '$lib/engine.svelte.ts';
+import { saveData, type ContextMenuItem } from '../engine.svelte.ts';
 import type { PropertyContainerDefinition, PropertySingleDefinition, PropertyContainerData, PropertyData } from '../property.svelte.ts';
-import { PropertyType } from '../property.svelte.ts';
+import { getPropsFromDefinitions, InspectableWithProps, PropertyType } from '../property.svelte.ts';
 
 //WIDGET
 type WidgetDefinition = {
@@ -8,32 +8,245 @@ type WidgetDefinition = {
     description?: string;
     icon: string;
     type: string;
+    isContainer?: boolean;
     props?: {
         [key: string]: PropertySingleDefinition | PropertyContainerDefinition
     }
 };
 
-export type WidgetData = {
-    id: string;
-    parentID?: string;
-    type: string;
-    props: {
-        [key: string]: (PropertyData | PropertyContainerData)
-    };
+export class Widget extends InspectableWithProps {
+
+
+    type: string = $state('');
+    parent: Widget | null = $state(null);
+    children: Widget[] | null = $state(null);
+
+    icon?: string = $state('');
+    isRoot: boolean = $derived(this.parent === null);
+    isContainer: boolean = false;
+    isSelected: boolean = $state(false);
+
+    //derived properties
+    label = $derived(this.getPropRawValue("label.text") as string);
+
+    constructor(type: string, isContainer?: boolean) {
+        super('widget');
+
+        this.isContainer = isContainer ?? false;
+        if (this.isContainer) this.children = [];
+        this.type = type;
+        const def = getDefinitionForType(type);
+        this.icon = def?.icon;
+
+        registerWidget(this);
+    }
+
+    cleanup() {
+
+        unregisterWidget(this.id);
+
+        if (this.isContainer && this.children) {
+            for (let child of this.children) {
+                child.cleanup();
+            }
+        }
+    }
+
+    static createFromDefinition(def: WidgetDefinition): Widget {
+
+        let w = new Widget(def.type, def.isContainer || false);
+        w.props = getPropsFromDefinitions(def.props || {});
+        w.setPropRawValue('label.text', def.name);
+        return w;
+    }
+
+    static createRootWidgetContainer(): Widget {
+        return Widget.createFromDefinition(widgetContainerDefinitions[0]);
+    }
+
+
+
+    toSnapshot(includeID: boolean = true): any {
+        let data = super.toSnapshot(includeID);
+        data.type = this.type;
+        if (this.isContainer && this.children) {
+            data.children = this.children.map(c => c.toSnapshot());
+        }
+        return data;
+    }
+
+    applySnapshot(data: any) {
+        super.applySnapshot(data);
+
+        this.type = data.type;
+        this.isContainer = data.children !== undefined;
+        if (this.isContainer && data.children) {
+            if (!this.children) this.children = [];
+            this.children = data.children.map((dataChild: any) => {
+                let child = this.children!.find(c => c.id === dataChild.id);
+
+                if (!child) {
+                    child = this.addWidget(dataChild.type, false);
+                }
+
+                child.applySnapshot(dataChild);
+                return child;
+            });
+        } else {
+            this.children = null;
+        }
+    }
+
+    duplicate(): Widget | undefined {
+        if (this.parent === null) return undefined;
+
+        let widget = new Widget(this.type, this.isContainer);
+        widget.applySnapshot(this.toSnapshot(false));
+        this.parent.addWidget(widget);
+
+        saveData("Duplicate Widget " + this.getName());
+        return widget;
+    }
+
+
+    addWidget(typeOrChild: string | Widget, save: boolean = true): Widget {
+
+        let child: Widget;
+        if (typeof typeOrChild === 'string') {
+            child = new Widget(typeOrChild);
+        } else {
+            child = typeOrChild;
+        }
+
+        if (!this.isContainer) {
+            throw new Error("Cannot add widget to non-container widget");
+        }
+
+        if (!this.children) {
+            this.children = [];
+        }
+
+        this.children.push(child);
+        child.parent = this;
+
+        if (save) {
+            saveData("Add Widget " + child.getName());
+        }
+
+        return child;
+    }
+
+    removeWidget(child: Widget) {
+        if (!this.isContainer || !this.children) {
+            throw new Error("Cannot remove widget from non-container widget");
+        }
+
+        const index = this.children.indexOf(child);
+        if (index === -1) {
+            throw new Error("Widget not found in container");
+        }
+
+        this.children.splice(index, 1);
+    }
+
+    remove(save: boolean = true) {
+        if (!this.parent) return;
+        this.parent.removeWidget(this);
+        this.parent = null;
+        this.cleanup();
+        if (save) {
+            saveData("Remove Widget " + this.getName());
+        }
+    }
+
+    toggleSelect() {
+        this.select(!this.isSelected, false);
+    }
+
+    select(doSelect: boolean = true, clearSelection: boolean = true) {
+
+        if (this.isSelected === doSelect && !clearSelection) return;
+
+        if (doSelect && clearSelection) {
+            deselectAllWidgets();
+        }
+
+        this.isSelected = doSelect;
+        if (doSelect) {
+            if (!selectedWidgets.includes(this))
+                selectedWidgets.push(this);
+        } else {
+            const index = selectedWidgets.indexOf(this);
+            if (index !== -1) {
+                selectedWidgets.splice(index, 1);
+            }
+        }
+    }
+
+    selectToThis() {
+
+        if (selectedWidgets.length === 0) {
+            this.select(true, false);
+            return;
+        }
+
+        let lastSelected = selectedWidgets[selectedWidgets.length - 1];
+        if (lastSelected.parent !== this.parent) {
+            this.select(true, false);
+            return;
+        }
+        if (!this.parent || !this.parent.children) {
+            this.select(true, false);
+            return;
+        }
+
+        let siblings = this.parent.children;
+        let startIndex = siblings.indexOf(lastSelected);
+        let endIndex = siblings.indexOf(this);
+        if (startIndex === -1 || endIndex === -1) {
+            this.select(true, false);
+            return;
+        }
+
+        let start = Math.min(startIndex, endIndex);
+        let end = Math.max(startIndex, endIndex);
+        for (let i = start; i <= end; i++) {
+            siblings[i].select(true, false);
+        }
+    }
+
+    getName(): string {
+        return ((this.props['label'] as PropertyContainerData)?.children?.text as PropertyData)?.value as string || this.type;
+    }
+
+    toString(): string {
+        return `Widget(${this.getName()}, type=${this.type}, id=${this.id})`;
+    }
 };
 
-export type WidgetContainerData = WidgetData & {
-    children: WidgetData[];
-};
+export const widgetsMap: { [key: string]: Widget } = $state({});
+export const selectedWidgets: Widget[] = $state([]);
 
-export const rootWidgetContainerData: WidgetContainerData = {
-    id: 'widget-' + crypto.randomUUID(),
-    type: "container",
-    props: {
-        label: { children: { text: { value: 'Root' } } }
-    },
-    children: []
-};
+export const deselectAllWidgets = function () {
+    for (let w of selectedWidgets) {
+        w.isSelected = false;
+    }
+    selectedWidgets.length = 0;
+}
+
+
+export function registerWidget(obj: Widget) {
+    widgetsMap[obj.id] = obj;
+}
+
+export function unregisterWidget(id: string) {
+    delete widgetsMap[id];
+}
+
+export function getWidgetByID(id: string | null): Widget | undefined {
+    if (!id) return undefined;
+    return widgetsMap[id];
+}
 
 const globalWidgetProperties: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {
 
@@ -41,7 +254,7 @@ const globalWidgetProperties: { [key: string]: (PropertySingleDefinition | Prope
     label: {
         name: 'Label', children: {
             showLabel: { name: 'Show Label', type: PropertyType.BOOLEAN, default: true } as PropertySingleDefinition,
-            text: { name: 'Text', type: PropertyType.STRING, default: 'Click Me' } as PropertySingleDefinition,
+            text: { name: 'Text', type: PropertyType.STRING, default: '' } as PropertySingleDefinition,
             fontSize: { name: 'Font Size', type: PropertyType.INTEGER, default: 14 } as PropertySingleDefinition,
             labelPlacement: { name: 'Label Placement', type: PropertyType.ENUM, default: 'inside', options: ['top', 'bottom', 'left', 'right', 'inside'] } as PropertySingleDefinition,
         }
@@ -77,7 +290,7 @@ export const widgetDefinitions: WidgetDefinition[] = [
     {
         name: 'Slider', icon: '🎚️', type: 'slider', description: 'A slider widget for selecting a value within a range', props: {
             ...globalWidgetProperties,
-            value: { name: 'Value', type: PropertyType.RANGE, default: 0 } as PropertySingleDefinition,
+            value: { name: 'Value', type: PropertyType.FLOAT, default: 0 } as PropertySingleDefinition,
             range: rangeContainerDefinition
         }
     },
@@ -131,121 +344,81 @@ export const widgetDefinitions: WidgetDefinition[] = [
 
 export const widgetContainerDefinitions: WidgetDefinition[] = [
     {
-        name: 'Container', icon: '📦', type: 'container', description: 'A basic container widget that can hold other widgets in different layouts', props: {
+        name: 'Container', icon: '📦', isContainer: true, type: 'container', description: 'A basic container widget that can hold other widgets in different layouts', props: {
             layout: { name: 'Layout', type: PropertyType.ENUM, default: 'vertical', options: ['vertical', 'horizontal', 'grid', 'free', 'custom'] } as PropertySingleDefinition
         }
     },
     {
-        name: 'Tab Container', icon: '📑', type: 'tab-container', description: 'A container widget that organizes its children into tabs', props: {
+        name: 'Tab Container', icon: '📑', isContainer: true, type: 'tab-container', description: 'A container widget that organizes its children into tabs', props: {
             tabPosition: { name: 'Tab Position', type: PropertyType.ENUM, default: 'top', options: ['top', 'bottom', 'left', 'right'] } as PropertySingleDefinition
         }
     },
     {
-        name: 'Accordion', icon: '📂', type: 'accordion', description: 'A container widget that organizes its children into collapsible sections', props: {
+        name: 'Accordion', icon: '📂', isContainer: true, type: 'accordion', description: 'A container widget that organizes its children into collapsible sections', props: {
             allowMultipleOpen: { name: 'Allow Multiple Open', type: PropertyType.BOOLEAN, default: false } as PropertySingleDefinition
         }
     }
 ];
 
-
-//Helpers
-
-export function isWidgetContainer(widget: WidgetData | WidgetContainerData): widget is WidgetContainerData {
-    return (widget as WidgetContainerData).children !== undefined;
-}
-export function getParentWidgetContainer(widget: WidgetData | WidgetContainerData): WidgetContainerData | undefined {
-    return getWidgetByID(widget.parentID) as WidgetContainerData | undefined;
-}
-
-export const getIconForWidgetType = (type: string): string => {
-    const widgetDef = [...widgetDefinitions, ...widgetContainerDefinitions].find(def => def.type === type);
-    return widgetDef ? widgetDef.icon : '';
-}
-
-// Add Remove Widget Functions
-
-export function addWidgetFromDefinition(def: WidgetDefinition, parent: WidgetContainerData | null = null): WidgetData | WidgetContainerData | undefined {
-
-    if (parent === null) {
-        if (mainData.editor.selectedWidgetIDs.length > 0) {
-            let selectedWidget = getWidgetContainerByID(mainData.editor.selectedWidgetIDs[0]);
-            if (selectedWidget) {
-                parent = selectedWidget;
-            }
+const getDefinitionForType = function (type: string): WidgetDefinition | undefined {
+    for (let def of [...widgetDefinitions, ...widgetContainerDefinitions]) {
+        if (def.type === type) {
+            return def;
         }
     }
-
-    if (!parent) return undefined;
-
-    console.log("Adding widget", def, "to parent", parent);
-
-    let newWidget:WidgetData = {
-        id: 'widget-' + crypto.randomUUID(),
-        parentID: parent.id,
-        type: def.type,
-        props: {
-            label: { children: { text: { value: def.name } } }
-        }
-    }
-
-    if(widgetContainerDefinitions.includes(def)){
-        (newWidget as WidgetContainerData).children = [];
-    }
-
-    if (parent.children === undefined) {
-        parent.children = [];
-    }
-    parent.children.push(newWidget as WidgetData);
-    registerWidget(newWidget);
-    saveData("Add Widget " + def.name);
-    return newWidget;
+    return undefined;
 }
 
-export function removeWidget(widget: WidgetData | WidgetContainerData) {
-    const parent = getParentWidgetContainer(widget);
-    console.log("Removing widget", widget, "from parent", parent);
-    if (parent) {
-        const index = parent.children.findIndex(w => w.id === widget.id);
-        if (index !== -1) {
-            parent.children.splice(index, 1);
-        }
-    }
-    unregisterWidget(widget.id);
-    saveData("Remove Widget " + ((widget.props?.label as PropertyContainerData)?.children.text as PropertyData)?.value || widget.id);
-}
+export const getWidgetAddMenuItems = function (source: any = null): ContextMenuItem[] {
 
-export function duplicateWidget(widget: WidgetData | WidgetContainerData): WidgetData | WidgetContainerData | undefined {
-    const parent = getParentWidgetContainer(widget);
-    if (!parent) return undefined;
-    const widgetCopy = JSON.parse(JSON.stringify(widget)) as WidgetData | WidgetContainerData;
-    widgetCopy.id = 'widget-' + crypto.randomUUID();
-    parent.children.push(widgetCopy);
-    registerWidget(widgetCopy);
-    saveData("Duplicate Widget " + widget.id);
-    return widgetCopy;
-}
-
-export const widgetAddMenuItems: ContextMenuItem[] =
-
-    [...widgetContainerDefinitions, ...widgetDefinitions].map(def => ({
+    return [...widgetContainerDefinitions, ...widgetDefinitions].map(def => ({
         label: def.name,
         icon: def.icon,
         action: (source: any = null) => {
-            addWidgetFromDefinition(def, source as WidgetContainerData | null);
+            let w = source as Widget;
+            w.addWidget(Widget.createFromDefinition(def));
         }
     }));
-;
+};
 
-export const widgetContextMenuItems: ContextMenuItem[] = [
-    { label: 'Add Widget', icon: '➕', submenu: widgetAddMenuItems, visible: (item: any) => isWidgetContainer(item) },
-    { label: 'Delete Widget', icon: '❌', visible: (item: any) => item.parentID, action: (source: any) => { removeWidget(source as WidgetData | WidgetContainerData); } },
-    { label: 'Duplicate Widget', icon: '📄', visible: (item: any) => item.parentID, action: (source: any) => { duplicateWidget(source as WidgetData | WidgetContainerData) } },
-    { separator: true },
-    {
-        label: 'Convert to ...', visible: (item: any) => item.parentID,
-        submenu: [
-            { label: 'Slider', icon: '🎚️' },
-            { label: 'Button', icon: '🔘' }
-        ]
+export const getWidgetConversionMenuItems = function (source: Widget): ContextMenuItem[] {
+
+    let defArray = source.isContainer ? widgetContainerDefinitions : widgetDefinitions;
+    let result = defArray.map(def => ({
+        label: def.name,
+        icon: def.icon,
+        action: (source: any = null) => {
+            let w = source as Widget;
+            let parent = w.parent;
+            if (!parent) return;
+        }
+    }));
+
+    return result;
+};
+
+export const getWidgetContextMenuItems = function (source: any): ContextMenuItem[] {
+    let w = source as Widget;
+    let isContainer = w.isContainer;
+    let isRoot = w.isRoot;
+    let result = [] as ContextMenuItem[];
+    if (isContainer) {
+        result.push({ label: 'Add Widget', icon: '➕', submenu: () => getWidgetAddMenuItems(source) });
     }
-]
+
+    if (!isRoot) {
+        result.push(
+            { separator: true },
+            { label: 'Delete Widget', icon: '❌', action: (source: any) => { (source as Widget).remove(); } },
+            { label: 'Duplicate Widget', icon: '📄', action: (source: any) => { (source as Widget).duplicate() } },
+            { separator: true },
+            {
+                label: 'Convert to ...', icon: '🔄',
+                submenu:
+                    () => getWidgetConversionMenuItems(source as Widget)
+            }
+        );
+    }
+
+    return result;
+};

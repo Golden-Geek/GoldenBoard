@@ -6,7 +6,6 @@
 		showRoot,
 		data,
 		getChildren,
-		getType,
 		getIcon = null,
 		getTitle,
 		isContainer = null,
@@ -24,7 +23,6 @@
 			{showRoot}
 			level={0}
 			{getChildren}
-			{getType}
 			{getIcon}
 			{getTitle}
 			{isContainer}

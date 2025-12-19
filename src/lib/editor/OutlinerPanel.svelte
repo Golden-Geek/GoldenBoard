@@ -1,41 +1,30 @@
 <script lang="ts">
 	import TreeView from '$lib/components/TreeView.svelte';
-	import {
-		addWidgetToSelection,
-		isWidgetSelected,
-		mainData,
-		menuContext,
-		MenuContextType,
-		selectOnlyWidget,
-		toggleWidgetSelection
-	} from '$lib/engine.svelte';
-	import { getIconForWidgetType } from '$lib/widget/widgets.svelte';
+	import { mainState, menuContext, MenuContextType } from '$lib/engine.svelte';
+	import { Widget } from '$lib/widget/widgets.svelte';
 
-	let selectedBoardID = $derived(
-		mainData.boardData.boards.find((b) => b.id === mainData.boardData.selectedBoardID)!
-	);
+	let selectedBoard = $derived(mainState.selectedBoard);
 </script>
 
-{#if selectedBoardID != null}
+{#if selectedBoard != null}
 	<TreeView
-		data={selectedBoardID!.rootWidget}
+		data={selectedBoard!.rootWidget}
 		showRoot={true}
 		getChildren={(node: any) => node.children || []}
-		getType={(node: any) => node.type}
 		getTitle={(node: any) =>
-			node.props.label?.children?.text?.value || node.id || node.type || 'Widget'}
-		getIcon={(type: string) => getIconForWidgetType(type)}
+			node.label || 'Widget'}
+		getIcon={(node: any) => (node as Widget).icon}
 		highlightColor={'var(--widget-color)'}
 		onSelect={(node: any, e: MouseEvent) => {
 			if (e.ctrlKey || e.metaKey) {
-				toggleWidgetSelection(node.id);
+				(node as Widget).toggleSelect();
 			} else if (e.shiftKey) {
-				addWidgetToSelection(node.id);
+				(node as Widget).selectToThis()
 			} else {
-				selectOnlyWidget(node.id);
+				(node as Widget).select(true);
 			}
 		}}
-		isSelected={(node: any) => isWidgetSelected(node.id)}
+		isSelected={(node: any) => (node as Widget).isSelected}
 		contextMenu={(node: any, e: MouseEvent) => {
 			menuContext.type = MenuContextType.Widget;
 			menuContext.target = node;

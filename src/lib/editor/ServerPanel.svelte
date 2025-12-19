@@ -1,29 +1,26 @@
 <script lang="ts">
-	import { servers, addServer, removeServer, getNodeIcon } from '$lib/oscquery/servers.svelte';
-	import { mainData } from '$lib/engine.svelte';
-	import { ConnectionStatus, OSCQueryClient } from '$lib/oscquery/oscquery.svelte';
+	import {
+		ConnectionStatus,
+		addServer,
+		removeServer,
+		getNodeIcon
+	} from '$lib/oscquery/oscquery.svelte';
+	import { mainState } from '$lib/engine.svelte';
 	import TreeView from '$lib/components/TreeView.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
-	import RemoveButton from '$lib/components/RemoveButton.svelte';
 	import EditableButton from '$lib/components/EditableButton.svelte';
+	import { onMount } from 'svelte';
 
-	let selectedServerID: string | null = $derived(mainData.serverData.selectedServer);
-
-	let currentServer: OSCQueryClient | undefined = $derived(
-		selectedServerID ? servers.find((server) => server.id === selectedServerID) : undefined
-	);
+	let servers = $derived(mainState.servers);
+	let selectedServer = $derived(mainState.selectedServer);
 
 	let ip = $state('');
 	let port = $state(0);
 
 	$effect(() => {
-		if (currentServer == undefined && servers.length > 0) {
-			selectedServerID = servers[0].id;
-		}
-
-		if (currentServer) {
-			ip = currentServer!.ip;
-			port = currentServer!.port;
+		if (selectedServer != null) {
+			ip = selectedServer!.ip;
+			port = selectedServer!.port;
 		}
 	});
 </script>
@@ -36,15 +33,15 @@
 			{#each servers as server}
 				<EditableButton
 					onselect={() => {
-						selectedServerID = server.id;
+						mainState.selectedServer = server;
 					}}
 					hasRemoveButton={servers.length > 1}
-					selected={selectedServerID === server.id}
+					selected={server.isSelected}
 					bind:value={server.name}
 					separator={' - '}
 					onremove={() => {
+						if (selectedServer == server) selectedServer = null;
 						removeServer(server);
-						if (currentServer == server) currentServer = undefined;
 					}}
 					warning={server.status != ConnectionStatus.Connected ? 'Server Disconnected' : ''}
 					color={'var(--server-color)'}
@@ -53,17 +50,17 @@
 		</div>
 	</div>
 
-	{#if currentServer != undefined}
+	{#if selectedServer != undefined}
 		<div class="server-info">
 			<input
 				class="server-ip"
 				type="text"
 				bind:value={ip}
 				placeholder="IP"
-				onblur={() => currentServer?.setIPAndPort(ip, port)}
+				onblur={() => selectedServer?.setIPAndPort(ip, port)}
 				onkeydown={(e) => {
 					if (e.key === 'Enter') {
-						currentServer?.setIPAndPort(ip, port);
+						selectedServer?.setIPAndPort(ip, port);
 					}
 				}}
 			/>
@@ -72,40 +69,26 @@
 				type="text"
 				bind:value={port}
 				placeholder="Port"
-				onblur={() => currentServer?.setIPAndPort(ip, port)}
+				onblur={() => selectedServer?.setIPAndPort(ip, port)}
 				onkeydown={(e) => {
 					if (e.key === 'Enter') {
-						currentServer?.setIPAndPort(ip, port);
+						selectedServer?.setIPAndPort(ip, port);
 					}
 				}}
 			/>
-			<!-- <button
-				onclick={() => {
-					if (currentServer?.status == ConnectionStatus.Connected) {
-						currentServer?.disconnect();
-					} else {
-						currentServer?.connect();
-					}
-				}}>{currentServer!.status == ConnectionStatus.Connected ? 'Disconnect' : 'Connect'}</button
-			> -->
+
 			<div
-				class="icon {currentServer!.status == ConnectionStatus.Connected
+				class="icon {selectedServer!.status == ConnectionStatus.Connected
 					? 'connected'
 					: 'disconnected'}-icon"
 			></div>
 		</div>
 
 		<TreeView
-			data={currentServer!.data}
+			data={selectedServer!.data}
 			showRoot={false}
 			getChildren={(node: any) => (node.CONTENTS ? Object.values(node.CONTENTS) || [] : [])}
 			isContainer={(node: any) => node.CONTENTS}
-			getType={(node: any) => {
-				if (node.CONTENTS) return 'Container';
-				if (node.EXTENDED_TYPE) return node.EXTENDED_TYPE[0];
-				if (!node.CONTENTS && node.TYPE == 'N') return 'Trigger';
-				return undefined;
-			}}
 			getIcon={getNodeIcon}
 			getTitle={(node: any) => node.DESCRIPTION || node.NAME || '/'}
 			highlightColor={'var(--server-color)'}

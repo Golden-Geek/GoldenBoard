@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { history, redo, undo, widgetsMap } from '$lib/engine.svelte';
+	import { history, redo, undo } from '$lib/engine.svelte';
+	import { widgetsMap } from '$lib/widget/widgets.svelte';
 </script>
 
 <div class="footer">
@@ -32,7 +33,7 @@
 	<div class="spacer"></div>
 
 	<div class="widget-info">
-		{widgetsMap.size} widgets loaded
+		{Object.keys(widgetsMap).length} widgets loaded
 	</div>
 </div>
 
@@ -50,8 +51,7 @@
 		justify-content: center;
 	}
 
-	.spacer
-	{
+	.spacer {
 		flex-grow: 1;
 	}
 

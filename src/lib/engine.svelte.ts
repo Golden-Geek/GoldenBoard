@@ -1,7 +1,6 @@
-import { registerAllWidgets, type BoardData } from "./board/boards.svelte.ts";
-import type { OSCQueryClient } from "./oscquery/oscquery.svelte.ts";
-import { getServerConfigs, servers, syncServerFromConfigs, type ServerConfig } from "./oscquery/servers.svelte.ts";
-import { widgetContextMenuItems, type WidgetContainerData, type WidgetData } from "./widget/widgets.svelte.ts";
+import { Board, applyBoardsSnapshot, toBoardsSnaphot, getBoardByID } from "./board/boards.svelte.ts";
+import { applyServersSnapshot, getServerByID, toServersSnapshot, type OSCQueryClient } from "./oscquery/oscquery.svelte.ts";
+import { getWidgetContextMenuItems, widgetsMap } from "./widget/widgets.svelte.ts";
 
 //-----------------------------
 // Editor
@@ -40,17 +39,17 @@ export type ContextMenuItem = {
     label?: string;
     icon?: string;
     action?: (source: any) => void;
-    visible?: (source: any) => boolean;
-    disabled?: (source: any) => boolean;
-    checked?: (source: any) => boolean;
-    submenu?: ContextMenuItem[];
+    visible?: boolean;
+    disabled?: boolean;
+    checked?: boolean;
+    submenu?: (source: any) => ContextMenuItem[];
 };
 
 //using null as separators
-export const contextMenus: Record<MenuContextType, ContextMenuItem[]> = $state({
-    [MenuContextType.Widget]: widgetContextMenuItems,
-    [MenuContextType.Board]: [],
-    [MenuContextType.Server]: []
+export const contextMenus: Record<MenuContextType, ((source: any) => ContextMenuItem[]) | undefined> = $state({
+    [MenuContextType.Widget]: getWidgetContextMenuItems,
+    [MenuContextType.Board]: undefined,
+    [MenuContextType.Server]: undefined
 });
 
 export const menuContext = $state({
@@ -64,116 +63,26 @@ export const menuContext = $state({
 // Main Data
 // -----------------------------
 
-type MainDataSnapshot = {
-    editor: EditorData;
-    serverData: {
-        selectedServer: string | null;
-        serverConfigs: ServerConfig[];
-    };
-    boardData: {
-        selectedBoardID: string | null;
-        boards: BoardData[];
-    };
-};
-
-export const mainData: MainDataSnapshot = $state(
+export const mainState = $state(
     {
         editor: defaultEditorData as EditorData,
-        serverData:
-        {
-            selectedServer: null as string | null,
-            serverConfigs: [] as ServerConfig[]
-        },
-        boardData:
-        {
-            selectedBoardID: null as string | null,
-            boards: [] as BoardData[]
-        }
+        servers: [] as OSCQueryClient[],
+        boards: [] as Board[],
+        selectedBoard: null as Board | null,
+        selectedServer: null as OSCQueryClient | null
     }
 );
 
-const defaultMainData = $state.snapshot(mainData);
-
-// -----------------------------
-// Selection
-// -----------------------------
-
-export function clearSelection() {
-    mainData.editor.selectedWidgetIDs = [];
-}
-
-export function selectOnlyWidget(widgetID: string) {
-    mainData.editor.selectedWidgetIDs = [widgetID];
-}
-
-export function addWidgetToSelection(widgetID: string) {
-    if (!mainData.editor.selectedWidgetIDs.includes(widgetID)) {
-        mainData.editor.selectedWidgetIDs.push(widgetID);
-    }
-}
-
-export function removeWidgetFromSelection(widgetID: string) {
-    const index = mainData.editor.selectedWidgetIDs.indexOf(widgetID);
-    if (index !== -1) {
-        mainData.editor.selectedWidgetIDs.splice(index, 1);
-    }
-}
-
-export function toggleWidgetSelection(widgetID: string) {
-    const index = mainData.editor.selectedWidgetIDs.indexOf(widgetID);
-    if (index === -1) {
-        mainData.editor.selectedWidgetIDs.push(widgetID);
-    } else {
-        mainData.editor.selectedWidgetIDs.splice(index, 1);
-    }
-}
-
-export function isWidgetSelected(widgetID: string): boolean {
-    return mainData.editor.selectedWidgetIDs.includes(widgetID);
-}
-
-// -----------------------------
-// Inspectable Map  
-// -----------------------------
-
-
-export const widgetsMap: Map<string, WidgetData | WidgetContainerData> = $state(new Map());
-
-export function registerWidget(obj: WidgetData | WidgetContainerData) {
-    widgetsMap.set(obj.id, obj);
-}
-
-export function unregisterWidget(id: string) {
-    widgetsMap.delete(id);
-}
-
-export function getWidgetByID<T extends WidgetData | undefined>(id: string | undefined): WidgetData | undefined {
-    if (!id) return undefined;
-    return widgetsMap.get(id) as T;
-}
-
-export function getWidgetContainerByID<T extends WidgetContainerData | undefined>(id: string): WidgetContainerData | undefined {
-    return widgetsMap.get(id) as T;
-}
-
-export function getBoardByID(id: string): BoardData | null {
-    const board = mainData.boardData.boards.find(b => b.id === id);
-    return board || null;
-}
-
-export function getServerByID(id: string): OSCQueryClient | null {
-    const server = servers.find(s => s.id === id);
-    return server || null;
-}
+const defaultMainData = $state.snapshot(mainState);
 
 // -----------------------------
 // Undo/Redo (snapshot-based)
 // -----------------------------
 
 export const history = $state({
-    past: [] as { label: string | null, data: MainDataSnapshot }[],
-    present: null as { label: string | null, data: MainDataSnapshot } | null,
-    future: [] as { label: string | null, data: MainDataSnapshot }[]
+    past: [] as { label: string | null, data: {} }[],
+    present: null as { label: string | null, data: {} } | null,
+    future: [] as { label: string | null, data: {} }[]
 });
 
 const canUndo = $derived(history.past.length > 0);
@@ -183,21 +92,28 @@ let isApplyingHistory = false;
 
 const historyMax = $state(100);
 
-function snapshotMain(): MainDataSnapshot {
-    return $state.snapshot(mainData) as MainDataSnapshot;
+function snapshotMain() {
+
+    return {
+        editor: $state.snapshot(mainState.editor),
+        servers: toServersSnapshot(),
+        boards: toBoardsSnaphot(),
+        selectedServerID: mainState.selectedServer ? mainState.selectedServer.id : null,
+        selectedBoardID: mainState.selectedBoard ? mainState.selectedBoard.id : null
+    }
 }
 
 function persistSnapshotOnly() {
-    localStorage.setItem('data', JSON.stringify(mainData));
+    localStorage.setItem('data', JSON.stringify(snapshotMain()));
 }
 
-function applySnapshot(snap: MainDataSnapshot) {
+function applySnapshot(snap: any) {
     // Assign per-field to keep the top-level reactive object stable.
-    mainData.editor = snap.editor;
-    mainData.serverData.selectedServer = snap.serverData.selectedServer;
-    mainData.serverData.serverConfigs = snap.serverData.serverConfigs;
-    mainData.boardData.selectedBoardID = snap.boardData.selectedBoardID;
-    mainData.boardData.boards = snap.boardData.boards;
+    mainState.editor = snap.editor ?? $state.snapshot(defaultMainData.editor);
+    applyServersSnapshot(snap.servers);
+    applyBoardsSnapshot(snap.boards);
+    mainState.selectedServer = getServerByID(snap.selectedServerID);
+    mainState.selectedBoard = getBoardByID(snap.selectedBoardID);
 }
 
 function commitUndoPoint(label: string | null = null) {
@@ -223,7 +139,6 @@ export function undo(count: number = 1): boolean {
         history.future.unshift(current!);
         const prev = history.past.pop()!;
         history.present = $state.snapshot(prev);
-        console.log("Undo to:", prev.label, prev.data.boardData.boards.length, "boards");
         applySnapshot(prev.data);
         persistSnapshotOnly();
     } finally {
@@ -258,12 +173,7 @@ export function redo(count: number = 1): boolean {
     return true;
 }
 
-
-
 export function saveData(label: string | null = null, options?: { skipHistory?: boolean }) {
-    if (!isApplyingHistory) {
-        mainData.serverData.serverConfigs = getServerConfigs();
-    }
     persistSnapshotOnly();
     if (!options?.skipHistory) {
         commitUndoPoint(label);
@@ -272,34 +182,25 @@ export function saveData(label: string | null = null, options?: { skipHistory?: 
 
 export function clearData() {
     localStorage.removeItem('data');
-    applySnapshot($state.snapshot(defaultMainData));
+    applySnapshot(snapshotMain());
     commitUndoPoint("Clear Data");
-
-    syncServerFromConfigs();
 }
 
 export function loadData() {
-    widgetsMap.clear();
+    while (widgetsMap && Object.keys(widgetsMap).length > 0) {
+
+        const widget = Object.values(widgetsMap)[0];
+        widget.remove();
+    }
 
     const stateStr = localStorage.getItem('data');
-    if (stateStr) {
-        const stateObj = JSON.parse(stateStr);
-
-        mainData.editor = stateObj.editor;
-        mainData.boardData = stateObj.boardData;
-        mainData.serverData = stateObj.serverData;
-    }
+    applySnapshot(JSON.parse(stateStr ?? "{}"));
 
     //Reset history
     history.past = [];
     history.future = [];
     history.present = { label: "Initial Load", data: snapshotMain() };
-
-    syncServerFromConfigs();
-
-    registerAllWidgets();
 }
-
 
 
 
