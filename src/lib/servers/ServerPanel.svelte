@@ -1,10 +1,5 @@
 <script lang="ts">
-	import {
-		ConnectionStatus,
-		addServer,
-		removeServer,
-		getNodeIcon
-	} from '$lib/oscquery/oscquery.svelte';
+	import { ConnectionStatus, addServer, removeServer, getNodeIcon } from './oscquery.svelte';
 	import { mainState, saveData } from '$lib/engine.svelte';
 	import TreeView from '$lib/components/TreeView.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
