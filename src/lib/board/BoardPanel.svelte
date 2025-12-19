@@ -1,10 +1,9 @@
 <script lang="ts">
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EditableButton from '$lib/components/EditableButton.svelte';
-	import Board from '../board/Board.svelte';
-	import { addBoard, removeBoard } from '$lib/board/boards.svelte';
+	import Board from './Board.svelte';
+	import { addBoard, removeBoard } from './boards.svelte';
 	import { mainState, saveData, EditMode } from '$lib/engine.svelte';
-	import { color } from 'storybook/theming';
 
 	let selectedBoard = $derived(mainState.selectedBoard);
 	let boards = $derived(mainState.boards);

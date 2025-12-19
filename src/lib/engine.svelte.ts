@@ -1,5 +1,5 @@
 import { Board, applyBoardsSnapshot, toBoardsSnaphot, getBoardByID } from "./board/boards.svelte.ts";
-import { applyServersSnapshot, getServerByID, toServersSnapshot, type OSCQueryClient } from "./oscquery/oscquery.svelte.ts";
+import { applyServersSnapshot, getServerByID, toServersSnapshot, type OSCQueryClient } from "./servers/oscquery.svelte.ts";
 import { getWidgetContextMenuItems, widgetsMap } from "./widget/widgets.svelte.ts";
 
 //-----------------------------

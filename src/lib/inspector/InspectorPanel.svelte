@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Menu, menuComponents, menuState } from '../inspector/inspector.svelte.ts';
+	import { Menu, menuComponents, menuState } from './inspector.svelte.ts';
 	import { mainState } from '$lib/engine.svelte';
 
 	const menus = Object.values(Menu).filter((v) => typeof v === 'string') as string[];

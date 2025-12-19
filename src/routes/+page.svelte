@@ -2,7 +2,7 @@
 	import BoardPanel from '$lib/editor/BoardPanel.svelte';
 	import InspectorPanel from '$lib/editor/InspectorPanel.svelte';
 	import OutlinerPanel from '$lib/editor/OutlinerPanel.svelte';
-	import ServerPanel from '$lib/editor/ServerPanel.svelte';
+	import ServerPanel from '$lib/servers/ServerPanel.svelte';
 	import TopBar from '$lib/editor/TopBar.svelte';
 	import Split from 'split-grid';
 	import { onMount, tick } from 'svelte';
