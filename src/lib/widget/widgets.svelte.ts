@@ -29,8 +29,8 @@ export class Widget extends InspectableWithProps {
     //derived properties
     label = $derived(this.getPropRawValue("label.text") as string);
 
-    constructor(type: string, isContainer?: boolean) {
-        super('widget');
+    constructor(type: string, isContainer?: boolean, id?: string) {
+        super('widget', id);
 
         this.isContainer = isContainer ?? false;
         if (this.isContainer) this.children = [];
@@ -43,6 +43,7 @@ export class Widget extends InspectableWithProps {
 
     cleanup() {
 
+        selectedWidgets.splice(selectedWidgets.indexOf(this), 1);
         unregisterWidget(this.id);
 
         if (this.isContainer && this.children) {
@@ -50,6 +51,12 @@ export class Widget extends InspectableWithProps {
                 child.cleanup();
             }
         }
+    }
+
+    setID(newID: string) {
+        unregisterWidget(this.id);
+        this.id = newID;
+        registerWidget(this);
     }
 
     static createFromDefinition(def: WidgetDefinition): Widget {
@@ -82,11 +89,18 @@ export class Widget extends InspectableWithProps {
         this.isContainer = data.children !== undefined;
         if (this.isContainer && data.children) {
             if (!this.children) this.children = [];
+
+            //need to list all removed children to unregister them
+            const removedChildren = this.children.filter(c => !data.children.find((dataChild: any) => dataChild.id === c.id));
+            for (let removedChild of removedChildren) {
+                removedChild.cleanup();
+            }
+
             this.children = data.children.map((dataChild: any) => {
                 let child = this.children!.find(c => c.id === dataChild.id);
 
                 if (!child) {
-                    child = this.addWidget(dataChild.type, false);
+                    child = this.addWidget(dataChild.type, false,dataChild.id);
                 }
 
                 child.applySnapshot(dataChild);
@@ -109,11 +123,11 @@ export class Widget extends InspectableWithProps {
     }
 
 
-    addWidget(typeOrChild: string | Widget, save: boolean = true): Widget {
+    addWidget(typeOrChild: string | Widget, save: boolean = true, id?: string): Widget {
 
         let child: Widget;
         if (typeof typeOrChild === 'string') {
-            child = new Widget(typeOrChild);
+            child = new Widget(typeOrChild, false, id);
         } else {
             child = typeOrChild;
         }
@@ -181,6 +195,8 @@ export class Widget extends InspectableWithProps {
                 selectedWidgets.splice(index, 1);
             }
         }
+
+        saveData("Select Widget", { coalesceID: 'select-widget' });
     }
 
     selectToThis() {
@@ -213,6 +229,8 @@ export class Widget extends InspectableWithProps {
         for (let i = start; i <= end; i++) {
             siblings[i].select(true, false);
         }
+
+        saveData("Select Widget", { coalesceID: 'select-widget' });
     }
 
     getName(): string {
@@ -345,16 +363,19 @@ export const widgetDefinitions: WidgetDefinition[] = [
 export const widgetContainerDefinitions: WidgetDefinition[] = [
     {
         name: 'Container', icon: '📦', isContainer: true, type: 'container', description: 'A basic container widget that can hold other widgets in different layouts', props: {
+            ...globalWidgetProperties,
             layout: { name: 'Layout', type: PropertyType.ENUM, default: 'vertical', options: ['vertical', 'horizontal', 'grid', 'free', 'custom'] } as PropertySingleDefinition
         }
     },
     {
         name: 'Tab Container', icon: '📑', isContainer: true, type: 'tab-container', description: 'A container widget that organizes its children into tabs', props: {
+            ...globalWidgetProperties,
             tabPosition: { name: 'Tab Position', type: PropertyType.ENUM, default: 'top', options: ['top', 'bottom', 'left', 'right'] } as PropertySingleDefinition
         }
     },
     {
         name: 'Accordion', icon: '📂', isContainer: true, type: 'accordion', description: 'A container widget that organizes its children into collapsible sections', props: {
+            ...globalWidgetProperties,
             allowMultipleOpen: { name: 'Allow Multiple Open', type: PropertyType.BOOLEAN, default: false } as PropertySingleDefinition
         }
     }

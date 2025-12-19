@@ -80,9 +80,9 @@ const defaultMainData = $state.snapshot(mainState);
 // -----------------------------
 
 export const history = $state({
-    past: [] as { label: string | null, data: {} }[],
-    present: null as { label: string | null, data: {} } | null,
-    future: [] as { label: string | null, data: {} }[]
+    past: [] as { label: string | null, id?: string | undefined, data: {} }[],
+    present: null as { label: string | null, id?: string | undefined, data: {} } | null,
+    future: [] as { label: string | null, id?: string | undefined, data: {} }[]
 });
 
 const canUndo = $derived(history.past.length > 0);
@@ -116,18 +116,23 @@ function applySnapshot(snap: any) {
     mainState.selectedBoard = getBoardByID(snap.selectedBoardID);
 }
 
-function commitUndoPoint(label: string | null = null) {
+function commitUndoPoint(label: string | null = null, coalesceID?: string) {
     if (isApplyingHistory) return;
     if (!history.present) return;
 
     //clone present to past
     const presentClone = $state.snapshot(history.present);
-    history.past.push(presentClone);
-    if (history.past.length > historyMax) {
-        history.past.shift();
+    if (!coalesceID || (coalesceID && history.present.id !== coalesceID)) {
+        history.past.push(presentClone);
+
+        if (history.past.length > historyMax) {
+            history.past.shift();
+        }
     }
-    history.present = { label, data: snapshotMain() };
+
+    history.present = { label, id: coalesceID, data: snapshotMain() };
     history.future = [];
+
 }
 
 export function undo(count: number = 1): boolean {
@@ -173,16 +178,18 @@ export function redo(count: number = 1): boolean {
     return true;
 }
 
-export function saveData(label: string | null = null, options?: { skipHistory?: boolean }) {
+export function saveData(label: string | null = null, options?: { skipHistory?: boolean, coalesceID?: string }) {
     persistSnapshotOnly();
     if (!options?.skipHistory) {
-        commitUndoPoint(label);
+        commitUndoPoint(label, options?.coalesceID);
     }
 }
 
 export function clearData() {
     localStorage.removeItem('data');
-    applySnapshot(snapshotMain());
+    applySnapshot($state.snapshot(defaultMainData));
+    mainState.selectedBoard = mainState.boards.length > 0 ? mainState.boards[0] : null;
+    mainState.selectedServer = mainState.servers.length > 0 ? mainState.servers[0] : null;
     commitUndoPoint("Clear Data");
 }
 

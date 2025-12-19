@@ -5,7 +5,7 @@
 		removeServer,
 		getNodeIcon
 	} from '$lib/oscquery/oscquery.svelte';
-	import { mainState } from '$lib/engine.svelte';
+	import { mainState, saveData } from '$lib/engine.svelte';
 	import TreeView from '$lib/components/TreeView.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EditableButton from '$lib/components/EditableButton.svelte';
@@ -34,6 +34,7 @@
 				<EditableButton
 					onselect={() => {
 						mainState.selectedServer = server;
+						saveData('Select Server');
 					}}
 					hasRemoveButton={servers.length > 1}
 					selected={server.isSelected}

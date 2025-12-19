@@ -65,7 +65,7 @@ export function addBoard(): Board {
 
     boards.push(newBoard);
     saveData("Add Board " + newBoard.name);//+ " (" + boards.length + ")");
-
+    mainState.selectedBoard = newBoard;
     return newBoard;
 };
 
@@ -91,9 +91,19 @@ export function toBoardsSnaphot(): any[] {
 
 export function applyBoardsSnapshot(data: any) {
 
-    if (data == null) {
-        boards = [];
+    if (data == null || data.length === 0) {
+        while (boards.length > 0) {
+            removeBoard(boards[0]);
+        }
+
+        addBoard();
         return;
+    }
+
+    //list removed boards and cleanup
+    const removedBoards = boards.filter(b => !data.find((bData: any) => bData.id === b.id));
+    for (let rb of removedBoards) {
+        removeBoard(rb);
     }
 
     //match id and update existing boards

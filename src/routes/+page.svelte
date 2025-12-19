@@ -115,7 +115,7 @@
 			outlinerHeight
 		};
 
-		saveData('Save Layout');
+		saveData('Change Layout');
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
