@@ -1,6 +1,6 @@
 import { Widget } from "../widget/widgets.svelte.ts";
 import { mainState, saveData } from "../engine.svelte.ts";
-import { getPropsFromDefinitions, InspectableWithProps, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from "../property.svelte.ts";
+import { getPropsFromDefinitions, InspectableWithProps, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from "../property/property.svelte.ts";
 
 
 let boards = $derived(mainState.boards);

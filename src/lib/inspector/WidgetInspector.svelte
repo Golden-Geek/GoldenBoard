@@ -1,13 +1,17 @@
 <script lang="ts">
+	import { getWidgetDefinitionForType } from '$lib/widget/widgets.svelte';
+	import PropertyDrawer from './PropertyDrawer.svelte';
+
 	let { targets } = $props();
 
 	let target = $derived(targets.length > 0 ? targets[0] : null);
+	let propertiesDefinitions = $derived(getWidgetDefinitionForType(target?.type)?.props || null);
 </script>
 
 <div class="inspector">
 	{#if target != null}
-		<h2>Inspector</h2>
-		<pre>{JSON.stringify(target, null, 2)}</pre>
+		<PropertyDrawer {targets} props={target.props} definitions={propertiesDefinitions} level={0} />
+		<!-- <pre>{JSON.stringify(target.toSnapshot(), null, 2)}</pre> -->
 	{:else}
 		{target}
 		<p>Select something to edit here</p>
