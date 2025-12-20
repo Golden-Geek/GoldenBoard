@@ -4,6 +4,7 @@
 	import DataInspector from './DataInspector.svelte';
 	import GenericInspector from './GenericInspector.svelte';
 	import { mainState } from '$lib/engine/engine.svelte.ts';
+	import { slide } from 'svelte/transition';
 
 	// const menus = Object.entries(Menu).filter((s, m) => typeof m === 'string');
 
@@ -28,6 +29,8 @@
 				break;
 		}
 	});
+
+	let dataInspectorCollapsed = $state(true);
 </script>
 
 <div class="inspector">
@@ -47,8 +50,20 @@
 
 	<div class="spacer" style="flex-grow: 1;"></div>
 
-	<div class="data-inspector">
-		<DataInspector targets={selectedWidgets} />
+	<div class="data-inspector {dataInspectorCollapsed ? 'collapsed' : ''}">
+		<div class="data-inspector-header">
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<div class="button" onclick={() => (dataInspectorCollapsed = !dataInspectorCollapsed)}>
+				Raw Data
+				<div class="arrow {dataInspectorCollapsed ? 'up' : 'expanded'}"></div>
+			</div>
+		</div>
+		{#if !dataInspectorCollapsed}
+			<div class="data-inspector-content" transition:slide|local={{ duration: 200 }}>
+				<DataInspector targets={selectedWidgets} />
+			</div>
+		{/if}
 	</div>
 </div>
 
@@ -99,8 +114,26 @@
 	}
 
 	.data-inspector {
-		max-height: 30%;
+		max-height: 50%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.data-inspector .button {
+		background-color: var(--panel-background-color);
+		border-top: solid 1px var(--border-color);
+		border-bottom: none;
+		font-size: 0.7rem;
+	}
+
+	.arrow {
+		margin-left: 0.5rem;
+	}
+
+	.data-inspector-content {
 		overflow-x: hidden;
+		background-color: var(--bg-color);
 		border-top: solid 1px var(--border-color);
 		padding: 0.5rem;
 		font-size: 0.7rem;

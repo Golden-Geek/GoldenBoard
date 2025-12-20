@@ -3,7 +3,6 @@
 	import { flip } from 'svelte/animate';
 	import { propertiesInspectorClass } from './inspector.svelte.ts';
 	import PropertyContainer from './PropertyContainer.svelte';
-	import { slide } from 'svelte/transition';
 	import { saveData } from '$lib/engine/engine.svelte';
 
 	let { targets, property = $bindable(), definition, level } = $props();
@@ -20,10 +19,7 @@
 	}
 </script>
 
-<div
-	class="property-inspector {isContainer ? 'container' : 'single'} {'level-' + level}"
-	transition:slide|local={{ duration: 200 }}
->
+<div class="property-inspector {isContainer ? 'container' : 'single'} {'level-' + level}">
 	{#if isContainer}
 		<PropertyContainer {targets} bind:property {definition} {level} />
 	{:else if target != null && property != null}
