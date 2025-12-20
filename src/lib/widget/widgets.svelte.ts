@@ -27,7 +27,7 @@ export class Widget extends InspectableWithProps {
     isSelected: boolean = $state(false);
 
     //derived properties
-    label = $derived(this.getPropRawValue("label.text") as string);
+    label = $derived(this.getPropValue("label.text", "Widget").current);
 
     constructor(type: string, isContainer?: boolean, id?: string) {
         super('widget', id);
@@ -306,118 +306,120 @@ export function getWidgetByID(id: string | null): Widget | undefined {
     return widgetsMap[id];
 }
 
-const globalWidgetProperties: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {
+function getGlobalWidgetProperties(name: string): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } {
 
-    readOnly: { name: 'Read Only', type: PropertyType.BOOLEAN, default: false } as PropertySingleDefinition,
-    label: {
-        name: 'Label', color: '#d98d13ff', children: {
-            showLabel: { name: 'Show Label', type: PropertyType.BOOLEAN, default: true, description: 'Whether to show the label', canDisable: true } as PropertySingleDefinition,
-            text: { name: 'Text', type: PropertyType.STRING, default: '', canDisable: true } as PropertySingleDefinition,
-            fontSize: { name: 'Font Size', type: PropertyType.CSSSIZE, default: '10px', canDisable: true } as PropertySingleDefinition,
-            color: { name: 'Color', type: PropertyType.COLOR, default: '', canDisable: true } as PropertySingleDefinition,
-            labelPlacement: { name: 'Label Placement', type: PropertyType.ENUM, default: 'inside', options: { 'top': 'Top', 'bottom': 'Bottom', 'left': 'Left', 'right': 'Right', 'inside': 'Inside' }, canDisable: true } as PropertySingleDefinition,
-        }
-    },
-    position: {
-        name: 'Position', color: '#1a73e8ff', collapsedByDefault: true, children: {
-            left: { name: 'Left', type: PropertyType.CSSSIZE, default: 0, canDisable: true } as PropertySingleDefinition,
-            top: { name: 'Top', type: PropertyType.CSSSIZE, default: 0, canDisable: true } as PropertySingleDefinition,
-            right: { name: 'Right', type: PropertyType.CSSSIZE, default: 0, canDisable: true } as PropertySingleDefinition,
-            bottom: { name: 'Bottom', type: PropertyType.CSSSIZE, default: 0, canDisable: true } as PropertySingleDefinition,
-            width: { name: 'Width', type: PropertyType.CSSSIZE, default: 100, canDisable: true } as PropertySingleDefinition,
-            height: { name: 'Height', type: PropertyType.CSSSIZE, default: 100, canDisable: true } as PropertySingleDefinition,
+    return {
+        readOnly: { name: 'Read Only', type: PropertyType.BOOLEAN, default: false },
+        label: {
+            name: 'Label', color: '#d98d13ff', children: {
+                showLabel: { name: 'Show Label', type: PropertyType.BOOLEAN, default: true, description: 'Whether to show the label', canDisable: true },
+                text: { name: 'Text', type: PropertyType.STRING, default: name, canDisable: true },
+                fontSize: { name: 'Font Size', type: PropertyType.CSSSIZE, default: '10px', canDisable: true },
+                color: { name: 'Color', type: PropertyType.COLOR, default: '', canDisable: true },
+                labelPlacement: { name: 'Label Placement', type: PropertyType.ENUM, default: 'inside', options: { 'top': 'Top', 'bottom': 'Bottom', 'left': 'Left', 'right': 'Right', 'inside': 'Inside' }, canDisable: true },
+            }
+        },
+        position: {
+            name: 'Position', color: '#1a73e8ff', collapsedByDefault: true, children: {
+                left: { name: 'Left', type: PropertyType.CSSSIZE, default: 0, canDisable: true },
+                top: { name: 'Top', type: PropertyType.CSSSIZE, default: 0, canDisable: true },
+                right: { name: 'Right', type: PropertyType.CSSSIZE, default: 0, canDisable: true },
+                bottom: { name: 'Bottom', type: PropertyType.CSSSIZE, default: 0, canDisable: true },
+                width: { name: 'Width', type: PropertyType.CSSSIZE, default: 100, canDisable: true },
+                height: { name: 'Height', type: PropertyType.CSSSIZE, default: 100, canDisable: true },
+            }
         }
     }
 };
 
 const rangeContainerDefinition: PropertyContainerDefinition = {
     name: 'Range', collapsedByDefault: true, children: {
-        min: { name: 'Min', type: PropertyType.FLOAT, default: 0, canDisable: true } as PropertySingleDefinition,
-        max: { name: 'Max', type: PropertyType.FLOAT, default: 1, canDisable: true } as PropertySingleDefinition,
-        step: { name: 'Step', type: PropertyType.FLOAT, default: 0, canDisable: true } as PropertySingleDefinition,
+        min: { name: 'Min', type: PropertyType.FLOAT, default: 0, canDisable: true },
+        max: { name: 'Max', type: PropertyType.FLOAT, default: 1, canDisable: true },
+        step: { name: 'Step', type: PropertyType.FLOAT, default: 0, canDisable: true },
     }
 };
 
 export const widgetDefinitions: WidgetDefinition[] = [
     {
         name: 'Button', icon: '🔘', type: 'button', description: 'A clickable button widget', props: {
-            ...globalWidgetProperties,
-            value: { name: 'Value', type: PropertyType.BOOLEAN, default: false } as PropertySingleDefinition
+            ...getGlobalWidgetProperties('Button'),
+            value: { name: 'Value', type: PropertyType.BOOLEAN, default: false }
         }
 
     },
     {
         name: 'Slider', icon: '🎚️', type: 'slider', description: 'A slider widget for selecting a value within a range', props: {
-            ...globalWidgetProperties,
-            value: { name: 'Value', type: PropertyType.FLOAT, default: 0, min: 0, max: 1, step: 0 } as PropertySingleDefinition,
+            ...getGlobalWidgetProperties('Slider'),
+            value: { name: 'Value', type: PropertyType.FLOAT, default: 0, min: 0, max: 1, step: 0 },
             range: rangeContainerDefinition
         }
     },
     {
         name: 'ColorPicker', icon: '🎨', type: 'color-picker', description: 'A widget for selecting colors', props: {
-            ...globalWidgetProperties,
-            value: { name: 'Value', type: PropertyType.COLOR, default: '#ffffffff' } as PropertySingleDefinition
+            ...getGlobalWidgetProperties('ColorPicker'),
+            value: { name: 'Value', type: PropertyType.COLOR, default: '#ffffffff' }
         }
     },
     {
         name: 'Text Input', icon: '⌨️', type: 'text-input', description: 'A widget for entering text', props: {
-            ...globalWidgetProperties,
-            value: { name: 'Value', type: PropertyType.STRING, default: '' } as PropertySingleDefinition,
-            placeholder: { name: 'Placeholder', type: PropertyType.STRING, default: 'Enter text...' } as PropertySingleDefinition,
+            ...getGlobalWidgetProperties('Text Input'),
+            value: { name: 'Value', type: PropertyType.STRING, default: '' },
+            placeholder: { name: 'Placeholder', type: PropertyType.STRING, default: 'Enter text...' },
         }
     },
     {
         name: 'Checkbox', icon: '☑️', type: 'checkbox', description: 'A widget for toggling a boolean value', props: {
-            ...globalWidgetProperties,
-            value: { name: 'Value', type: PropertyType.BOOLEAN, default: false } as PropertySingleDefinition
+            ...getGlobalWidgetProperties('Checkbox'),
+            value: { name: 'Value', type: PropertyType.BOOLEAN, default: false }
         }
     },
     {
         name: 'Dropdown', icon: '⬇️', type: 'dropdown', description: 'A widget for selecting an option from a dropdown list', props: {
-            ...globalWidgetProperties,
-            value: { name: 'Value', type: PropertyType.ENUM, default: 'option1', options: { 'option1': 'Option 1', 'option2': 'Option 2', 'option3': 'Option 3' } } as PropertySingleDefinition
+            ...getGlobalWidgetProperties('Dropdown'),
+            value: { name: 'Value', type: PropertyType.ENUM, default: 'option1', options: { 'option1': 'Option 1', 'option2': 'Option 2', 'option3': 'Option 3' } }
         }
     },
     {
         name: 'Numeric Stepper', icon: '🔢', type: 'numeric-stepper', description: 'A widget for incrementing or decrementing a numeric value', props: {
-            ...globalWidgetProperties,
-            value: { name: 'Value', type: PropertyType.INTEGER, default: 0 } as PropertySingleDefinition,
+            ...getGlobalWidgetProperties('Numeric Stepper'),
+            value: { name: 'Value', type: PropertyType.INTEGER, default: 0 },
             range: rangeContainerDefinition
         }
     },
     {
         name: 'Button Bar', icon: '🔳', type: 'button-bar', description: 'A widget that displays a bar of buttons', props: {
-            ...globalWidgetProperties,
-            value: { name: 'Value', type: PropertyType.ENUM, default: 'option1', options: { 'option1': 'Option 1', 'option2': 'Option 2', 'option3': 'Option 3' } } as PropertySingleDefinition,
-            orientation: { name: 'Orientation', type: PropertyType.ENUM, default: 'horizontal', options: { 'horizontal': 'Horizontal', 'vertical': 'Vertical' } } as PropertySingleDefinition,
-            showLabels: { name: 'Show Labels', type: PropertyType.BOOLEAN, default: true } as PropertySingleDefinition
+            ...getGlobalWidgetProperties('Button Bar'),
+            value: { name: 'Value', type: PropertyType.ENUM, default: 'option1', options: { 'option1': 'Option 1', 'option2': 'Option 2', 'option3': 'Option 3' } },
+            orientation: { name: 'Orientation', type: PropertyType.ENUM, default: 'horizontal', options: { 'horizontal': 'Horizontal', 'vertical': 'Vertical' } },
+            showLabels: { name: 'Show Labels', type: PropertyType.BOOLEAN, default: true }
         }
     },
     {
         name: 'Comment', icon: '🏷️', type: 'comment', description: 'A comment text', props: {
-            ...globalWidgetProperties,
-            text: { name: 'Text', type: PropertyType.STRING, default: 'Comment' } as PropertySingleDefinition,
-            fontSize: { name: 'Font Size', type: PropertyType.INTEGER, default: 14, canDisable: true } as PropertySingleDefinition,
+            ...getGlobalWidgetProperties('Comment'),
+            text: { name: 'Text', type: PropertyType.STRING, default: 'Comment' },
+            fontSize: { name: 'Font Size', type: PropertyType.INTEGER, default: 14, canDisable: true },
         }
     }];
 
 export const widgetContainerDefinitions: WidgetDefinition[] = [
     {
         name: 'Container', icon: '📦', isContainer: true, type: 'container', description: 'A basic container widget that can hold other widgets in different layouts', props: {
-            ...globalWidgetProperties,
-            layout: { name: 'Layout', type: PropertyType.ENUM, default: 'vertical', options: { 'vertical': 'Vertical', 'horizontal': 'Horizontal', 'grid': 'Grid', 'free': 'Free', 'custom': 'Custom' } } as PropertySingleDefinition
+            ...getGlobalWidgetProperties('Container'),
+            layout: { name: 'Layout', type: PropertyType.ENUM, default: 'vertical', options: { 'vertical': 'Vertical', 'horizontal': 'Horizontal', 'grid': 'Grid', 'free': 'Free', 'custom': 'Custom' } }
         }
     },
     {
         name: 'Tab Container', icon: '📑', isContainer: true, type: 'tab-container', description: 'A container widget that organizes its children into tabs', props: {
-            ...globalWidgetProperties,
-            tabPosition: { name: 'Tab Position', type: PropertyType.ENUM, default: 'top', options: { 'top': 'Top', 'bottom': 'Bottom', 'left': 'Left', 'right': 'Right' } } as PropertySingleDefinition
+            ...getGlobalWidgetProperties('Tab Container'),
+            tabPosition: { name: 'Tab Position', type: PropertyType.ENUM, default: 'top', options: { 'top': 'Top', 'bottom': 'Bottom', 'left': 'Left', 'right': 'Right' } }
         }
     },
     {
         name: 'Accordion', icon: '📂', isContainer: true, type: 'accordion', description: 'A container widget that organizes its children into collapsible sections', props: {
-            ...globalWidgetProperties,
-            allowMultipleOpen: { name: 'Allow Multiple Open', type: PropertyType.BOOLEAN, default: false } as PropertySingleDefinition
+            ...getGlobalWidgetProperties('Accordion'),
+            allowMultipleOpen: { name: 'Allow Multiple Open', type: PropertyType.BOOLEAN, default: false }
         }
     }
 ];

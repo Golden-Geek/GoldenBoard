@@ -513,7 +513,7 @@ export function toServersSnapshot() {
 export function applyServersSnapshot(data: any[]) {
 
 	if (data == null || data.length === 0) {
-		while(servers.length > 0) {
+		while (servers.length > 0) {
 			removeServer(servers[0]);
 		}
 
@@ -561,12 +561,12 @@ export function getNodeIcon(node: any): string {
 }
 
 const serverPropertyDefinitions: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {
-	name: { name: "name", type: PropertyType.STRING, label: "Name", default: "New Server", readOnly: true } as PropertySingleDefinition,
-	ip: { name: "ip", type: PropertyType.STRING, label: "IP Address", default: "127.0.0.1" } as PropertySingleDefinition,
-	port: { name: "port", type: PropertyType.INTEGER, label: "Port", default: 42000 } as PropertySingleDefinition,
+	name: { name: "name", type: PropertyType.STRING, default: "New Server", readOnly: true },
+	ip: { name: "ip", type: PropertyType.STRING, default: "127.0.0.1" },
+	port: { name: "port", type: PropertyType.INTEGER, default: 42000 },
 	advanced: {
 		name: "Advanced", children: {
-			
+
 		}
 	}
 };

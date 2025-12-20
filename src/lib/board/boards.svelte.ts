@@ -8,15 +8,15 @@ let boards = $derived(mainState.boards);
 export class Board extends InspectableWithProps {
 
 
-    icon: string = $state('');
     rootWidget: Widget = Widget.createRootWidgetContainer();
     isSelected: boolean = $derived(mainState.selectedBoard === this);
 
     name = $derived(this.getPropValue("name").current!);
-    description = $derived(this.getPropValue("description").current!);
-    showDescription = $derived(this.getPropValue("showDescription").current!);
-    descriptionPlacement = $derived(this.getPropValue("descriptionPlacement").current!);
-    color = $derived(this.getPropValue("color").current!)
+    description = $derived(this.getPropValue("description.text").current!);
+    showDescription = $derived(this.getPropValue("description.showDescription").current!);
+    descriptionPlacement = $derived(this.getPropValue("description.descriptionPlacement").current!);
+    icon = $derived(this.getPropValue("button.icon").current!);
+    color = $derived(this.getPropValue("button.color").current!)
 
 
     constructor() {
@@ -128,10 +128,18 @@ export function applyBoardsSnapshot(data: any) {
 }
 
 const boardPropertyDefinitions: { [key: string]: PropertySingleDefinition | PropertyContainerDefinition } = {
-    name: { name: "Name", type: PropertyType.STRING, label: "Name", default: "Board" } as PropertySingleDefinition,
-    icon: { name: "Icon", type: PropertyType.ICON, label: "Icon", default: "📋" } as PropertySingleDefinition,
-    color: { name: "Color", type: PropertyType.COLOR, label: "Color", default: "#1481a1" } as PropertySingleDefinition,
-    description: { name: "Description", type: PropertyType.TEXT, label: "Description", default: "" } as PropertySingleDefinition,
-    showDescription: { name: "Show Description", type: PropertyType.BOOLEAN, label: "Show Description", default: false } as PropertySingleDefinition,
-    descriptionPlacement: { name: "Description Placement", type: PropertyType.ENUM, label: "Description Placement", default: "button", options: { "button": "Button", "bar": "Bar", "tooltip": "Tooltip" } } as PropertySingleDefinition,
+    name: { name: "Name", type: PropertyType.STRING, default: "Board" },
+    button: {
+        name: "Button", children: {
+            icon: { name: "Icon", type: PropertyType.ICON, default: "" },
+            color: { name: "Color", type: PropertyType.COLOR, default: "#1481a1", canDisable: true },
+        }
+    },
+    description: {
+        name: "Description", color: "#888888", children: {
+            text: { name: "Text", type: PropertyType.STRING, default: "" },
+            showDescription: { name: "Show Description", type: PropertyType.BOOLEAN, default: false, canDisable: true },
+            descriptionPlacement: { name: "Description Placement", type: PropertyType.ENUM, canDisable: true, default: "button", options: { "button": "Button", "bar": "Bar", "tooltip": "Tooltip" } },
+        }
+    }
 };

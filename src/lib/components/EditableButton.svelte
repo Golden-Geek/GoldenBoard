@@ -69,6 +69,7 @@
 			onkeydown={(e) => {
 				if (e.key === 'Enter') {
 					setAndSave();
+					(e.target as HTMLInputElement).blur();
 					isEditing = false;
 				} else if (e.key === 'Escape') {
 					internalValue = value;

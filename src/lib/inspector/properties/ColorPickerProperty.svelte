@@ -1,8 +1,6 @@
 <script lang="ts">
 	let { targets, property = $bindable(), definition, onStartEdit = null, onUpdate = null } = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
-
-	$inspect(property.value);
 </script>
 
 {#if target}

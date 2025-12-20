@@ -2,6 +2,7 @@ export class InspectableWithProps {
     id: string = $state('');
     iType: string = $state('');
     props: { [key: string]: (PropertyData | PropertyContainerData) } = $state({});
+    definitions = $derived(this.getPropertyDefinitions());;
 
     constructor(iType: string, id?: string) {
         this.iType = iType;
@@ -10,10 +11,35 @@ export class InspectableWithProps {
     }
 
     setupProps() {
-        this.props = getPropsFromDefinitions(this.getPropertyDefinitions() || {});
+
+        this.props = getPropsFromDefinitions(this.definitions || {});
     }
 
     getPropertyDefinitions(): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } | null {
+        return null;
+    }
+
+    getDefinitionForProp(propKey: string): PropertySingleDefinition | null {
+        let keySplit = propKey.split('.');
+        let currentLevel: any = this.definitions;
+        for (let i = 0; i < keySplit.length; i++) {
+            let part = keySplit[i];
+            let propDef = currentLevel ? currentLevel[part] : null;
+            if (propDef === undefined || propDef === null) {
+                return null;
+            }
+            if (i === keySplit.length - 1) {
+                if (!propDef.type || propDef.children) {
+                    return null;
+                }
+                return propDef;
+            }
+            if ('children' in propDef) {
+                currentLevel = propDef.children;
+            } else {
+                return null;
+            }
+        }
         return null;
     }
 
@@ -46,9 +72,18 @@ export class InspectableWithProps {
             return { current: defaultValue, raw: defaultValue };
         }
 
-        if ((prop.enabled ?? true) === false) {
-            return { current: defaultValue, raw: defaultValue };
+        let enabled = prop.enabled;
+        if (enabled == undefined || enabled == false) {
+            let def = this.getDefinitionForProp(propKey);
+
+            let canDisable = (def && 'canDisable' in def) ? def.canDisable : false;
+            if (enabled == undefined) enabled = !canDisable; //default to enabled if canDisable is false
+            if (!enabled) {
+                return { current: def!.default as T, raw: def!.default as T };
+            }
         }
+
+
 
         return { current: prop.value as T, raw: prop.value as T }; // TODO: compute resolved value (bindings, etc.)
     }
@@ -80,17 +115,42 @@ export class InspectableWithProps {
     applySnapshot(snapshot: any) {
         if (snapshot === null || snapshot === undefined) return;
 
+
         const newID = snapshot.id ?? this.id;
         if (newID !== this.id) {
             this.setID(newID);
         }
         let initProps = getPropsFromDefinitions(this.getPropertyDefinitions() || {});
-        // Merge existing props with snapshot props to ensure all properties are present
-        this.props = { ...initProps, ...snapshot.props };
+
+        // Recursively copy values from snapshot.props into initProps, only for keys that exist in initProps
+
+
+        if (snapshot.props && typeof snapshot.props === 'object') {
+            this.applySnapshotToProps(initProps, snapshot.props);
+        }
+
+        this.props = initProps;
     }
 
     setID(newID: string) {
         this.id = newID;
+    }
+
+    applySnapshotToProps(
+        target: { [key: string]: PropertyData | PropertyContainerData },
+        source: { [key: string]: PropertyData | PropertyContainerData }
+    ) {
+        for (const key in target) {
+            if (Object.prototype.hasOwnProperty.call(source, key)) {
+                const targetProp = target[key];
+                const sourceProp = source[key];
+                if ('children' in targetProp && sourceProp && typeof sourceProp === 'object' && 'children' in sourceProp) {
+                    this.applySnapshotToProps(targetProp.children, sourceProp.children);
+                } else if ('value' in targetProp && sourceProp && typeof sourceProp === 'object' && 'value' in sourceProp) {
+                    Object.assign(targetProp, sourceProp);
+                }
+            }
+        }
     }
 }
 
@@ -116,7 +176,7 @@ export enum PropertyMode {
 export type PropertyContainerDefinition = {
     name: string;
     color?: string;
-    children?: { [key: string]: (PropertyDefinition | PropertyContainerDefinition) };
+    children?: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) };
     collapsedByDefault?: boolean;
 }
 
@@ -124,6 +184,7 @@ export type PropertySingleDefinition = {
     name: string;
     type: PropertyType;
     canDisable?: boolean;
+    readOnly?: boolean;
     default: number | string | boolean | number[];
     description?: string;
     options?: { [key: string]: string }; // For ENUM type

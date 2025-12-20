@@ -23,7 +23,7 @@
 				menuState.currentMenu = Menu.Board;
 				saveData('Select Board', { coalesceID: 'select-board' });
 			}}
-			editable={!board.showDescription}
+			editable={true}
 			value={board.showDescription && board.descriptionPlacement == 'button'
 				? board.name + '\n' + board.description
 				: board.name}
@@ -34,11 +34,11 @@
 			}}
 			hasRemoveButton={editMode && boards.length > 1}
 			selected={board.isSelected}
-			icon={board.getPropValue('icon').current as string}
+			icon={board.icon as string}
 			onRemove={() => {
 				removeBoard(board);
 			}}
-			color={board.getPropValue('color', 'var(--board-color)').current!}
+			color={board.color as string}
 		></EditableButton>
 	{/each}
 
