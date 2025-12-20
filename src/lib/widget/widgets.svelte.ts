@@ -309,7 +309,7 @@ export function getWidgetByID(id: string | null): Widget | undefined {
 function getGlobalWidgetProperties(name: string): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } {
 
     return {
-        readOnly: { name: 'Read Only', type: PropertyType.BOOLEAN, default: false },
+        readOnly: { name: 'Read Only', type: PropertyType.BOOLEAN, default: false, canDisable: true },
         label: {
             name: 'Label', color: '#d98d13ff', children: {
                 showLabel: { name: 'Show Label', type: PropertyType.BOOLEAN, default: true, description: 'Whether to show the label', canDisable: true },

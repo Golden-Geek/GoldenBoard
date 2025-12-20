@@ -106,9 +106,41 @@ export class InspectableWithProps {
     }
 
     toSnapshot(includeID: boolean = true): any {
+
+        let snapshot = $state.snapshot(this.props)
+
+        // Remove props that are disabled and have the same value as the definition
+        const definitions = this.getPropertyDefinitions() || {};
+        function filterProps(props: any, defs: any): any {
+            const result: any = Array.isArray(props) ? [] : {};
+            for (const key in props) {
+                if (!Object.prototype.hasOwnProperty.call(props, key)) continue;
+                const prop = props[key];
+                const def = defs[key];
+                if (prop && def) {
+                    if ('children' in prop && def.children) {
+                        // Recurse into children
+                        const filtered = filterProps(prop.children, def.children);
+                        if (Object.keys(filtered).length > 0) {
+                            result[key] = { ...prop, children: filtered };
+                        }
+                    } else if ('value' in prop && 'default' in def) {
+                        const canDisable = !!def.canDisable;
+                        const isDisabled = prop.enabled === false || prop.enabled === undefined && canDisable;
+                        const isDefault = prop.value === def.default;
+                        if (!(canDisable && isDisabled && isDefault)) {
+                            result[key] = { ...prop };
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+        snapshot = filterProps(snapshot, definitions);
+
         return {
             id: includeID ? this.id : undefined,
-            props: $state.snapshot(this.props)
+            props: snapshot
         };
     }
 

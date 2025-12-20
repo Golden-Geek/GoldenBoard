@@ -563,12 +563,7 @@ export function getNodeIcon(node: any): string {
 const serverPropertyDefinitions: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {
 	name: { name: "name", type: PropertyType.STRING, default: "New Server", readOnly: true },
 	ip: { name: "ip", type: PropertyType.STRING, default: "127.0.0.1" },
-	port: { name: "port", type: PropertyType.INTEGER, default: 42000 },
-	advanced: {
-		name: "Advanced", children: {
-
-		}
-	}
+	port: { name: "port", type: PropertyType.INTEGER, default: 42000 }
 };
 
 
