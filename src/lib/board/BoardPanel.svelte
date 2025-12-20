@@ -32,7 +32,7 @@
 				board.setPropRawValue('name', newValue);
 				saveData('Rename Board', { coalesceID: 'rename-board-' + board.id });
 			}}
-			hasRemoveButton={editMode &&boards.length > 1}
+			hasRemoveButton={editMode && boards.length > 1}
 			selected={board.isSelected}
 			icon={board.getPropValue('icon').current as string}
 			onRemove={() => {

@@ -1,11 +1,12 @@
 <script lang="ts">
-	let { targets, property = $bindable(), onUpdate = null } = $props();
+	let { targets, property = $bindable(), definition, onUpdate = null } = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 </script>
 
 <input
 	type="range"
 	class="range-property"
+	disabled={definition.readOnly}
 	bind:value={property.value}
 	min={property.min}
 	max={property.max}

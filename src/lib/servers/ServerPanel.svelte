@@ -35,7 +35,7 @@
 					}}
 					hasRemoveButton={servers.length > 1}
 					selected={server.isSelected}
-					bind:value={server.name}
+					value={server.name}
 					separator={' - '}
 					onRemove={() => {
 						if (selectedServer == server) selectedServer = null;

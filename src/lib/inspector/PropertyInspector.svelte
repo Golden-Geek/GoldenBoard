@@ -14,7 +14,14 @@
 		propertiesInspectorClass[propertyType as keyof typeof propertiesInspectorClass]
 	);
 
-	function savePropertyUpdate() {
+	let valueOnFocus = $state.snapshot(property.value);
+
+	function checkAndSaveProperty() {
+		if (property.value === valueOnFocus) {
+			// console.log('No changes detected, skipping save.');
+			return;
+		}
+
 		saveData('Update ' + definition.name, {
 			coalesceID: `${target.id}-property-${level}-${definition.name}`
 		});
@@ -26,7 +33,13 @@
 		<PropertyContainer {targets} bind:property {definition} {level} />
 	{:else if target != null && property != null}
 		<p class="property-label">{definition.name}</p>
-		<Property {targets} bind:property onUpdate={() => savePropertyUpdate()} {definition} />
+		<Property
+			{targets}
+			bind:property
+			onStartEdit={(value: any) => (valueOnFocus = value)}
+			onUpdate={() => checkAndSaveProperty()}
+			{definition}
+		/>
 	{:else}
 		{definition.type} - {target != null} - {property}
 	{/if}
@@ -48,6 +61,6 @@
 	.property-inspector.single {
 		padding: 0.1rem 0.3rem 0.2rem 0;
 		border-bottom: solid 1px rgb(from var(--border-color) r g b / 5%);
-		height: 1.5rem;
+		min-height: 1.5rem;
 	}
 </style>
