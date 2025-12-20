@@ -1,3 +1,4 @@
+import { Menu } from "$lib/inspector/inspector.svelte.ts";
 import { Board, applyBoardsSnapshot, toBoardsSnaphot, getBoardByID } from "../board/boards.svelte.ts";
 import { applyServersSnapshot, getServerByID, toServersSnapshot, type OSCQueryClient } from "../servers/oscquery.svelte.ts";
 import { getWidgetContextMenuItems, widgetsMap } from "../widget/widgets.svelte.ts";
@@ -10,6 +11,7 @@ import { GlobalSettings, toGlobalSettingsSnapshot, applyGlobalSettingsSnapshot }
 export type EditorData = {
     editMode: EditMode,
     fullScreen: boolean,
+    inspectorMenu: Menu,
     layout: {} | null
 };
 
@@ -20,6 +22,7 @@ export enum EditMode {
 
 export const defaultEditorData: EditorData = {
     editMode: EditMode.Edit,
+    inspectorMenu: Menu.Widget,
     fullScreen: false,
     layout: null
 };
@@ -230,8 +233,7 @@ export function loadData() {
         applySnapshot($state.snapshot(defaultMainData));
     }
 
-    let modeOnLoad = mainState.globalSettings.getPropValue('modeOnLoad').current as string;
-    if (modeOnLoad != 'last') mainState.editor.editMode = modeOnLoad as EditMode;
+    if (mainState.globalSettings.modeOnLoad != 'last') mainState.editor.editMode = mainState.globalSettings.modeOnLoad as EditMode;
 
     let persistedHistoryStr = localStorage.getItem('history');
     if (persistedHistoryStr) {

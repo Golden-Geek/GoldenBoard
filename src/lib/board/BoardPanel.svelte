@@ -4,52 +4,62 @@
 	import BoardView from './BoardView.svelte';
 	import { addBoard, Board, removeBoard } from './boards.svelte';
 	import { mainState, saveData, EditMode, MenuContextType } from '$lib/engine/engine.svelte';
-	import { Menu, menuState } from '../inspector/inspector.svelte.ts';
+	import { Menu } from '../inspector/inspector.svelte.ts';
 
 	let selectedBoard = $derived(mainState.selectedBoard);
 	let boards = $derived(mainState.boards);
 	let editMode = $derived(mainState.editor?.editMode == EditMode.Edit);
+
+	let showList = $derived(
+		(mainState.globalSettings.showBoardsListInLiveMode &&
+			!(mainState.globalSettings.hideListIfOnlyOneBoard && boards.length === 1)) ||
+			editMode
+	);
 </script>
 
-<div class="board-list">
-	{#if editMode}
-		<AddButton onclick={() => addBoard()} />
-	{/if}
-
-	{#each boards as board}
-		<EditableButton
-			onSelect={() => {
-				mainState.selectedBoard = board;
-				menuState.currentMenu = Menu.Board;
-				saveData('Select Board', { coalesceID: 'select-board' });
-			}}
-			editable={true}
-			value={board.showDescription && board.descriptionPlacement == 'button'
-				? board.name + '\n' + board.description
-				: board.name}
-			separator={'\n'}
-			onChange={(newValue: string) => {
-				board.setPropRawValue('name', newValue);
-				saveData('Rename Board', { coalesceID: 'rename-board-' + board.id });
-			}}
-			hasRemoveButton={editMode && boards.length > 1}
-			selected={board.isSelected}
-			icon={board.icon as string}
-			onRemove={() => {
-				removeBoard(board);
-			}}
-			color={board.color as string}
-		></EditableButton>
-	{/each}
-
-	<div class="spacer"></div>
-	<div class="board-description">
-		{#if selectedBoard != null && selectedBoard!.showDescription && selectedBoard!.descriptionPlacement == 'bar'}
-			{selectedBoard!.description}
+{#if showList}
+	<div class="board-list">
+		{#if editMode}
+			<AddButton onclick={() => addBoard()} />
 		{/if}
+
+		{#each boards as board}
+			<EditableButton
+				onSelect={() => {
+					if (selectedBoard != board || mainState.editor.inspectorMenu != Menu.Board) {
+						mainState.selectedBoard = board;
+						mainState.editor.inspectorMenu = Menu.Board;
+						saveData('Select Board', { coalesceID: 'select-board' });
+					}
+				}}
+				editable={true}
+				value={board.showDescription && board.descriptionPlacement == 'button'
+					? board.name + '\n' + board.description
+					: board.name}
+				separator={'\n'}
+				onChange={(newValue: string) => {
+					board.setPropRawValue('name', newValue);
+					saveData('Rename Board', { coalesceID: 'rename-board-' + board.id });
+				}}
+				hasRemoveButton={editMode && boards.length > 1}
+				selected={board.isSelected}
+				icon={board.icon as string}
+				onRemove={() => {
+					removeBoard(board);
+				}}
+				color={board.color as string}
+			></EditableButton>
+		{/each}
+
+		<div class="spacer"></div>
+		<div class="board-description">
+			{#if selectedBoard != null && selectedBoard!.showDescription && selectedBoard!.descriptionPlacement == 'bar'}
+				{selectedBoard!.description}
+			{/if}
+		</div>
+		<div class="spacer"></div>
 	</div>
-	<div class="spacer"></div>
-</div>
+{/if}
 
 {#if selectedBoard != null}
 	<BoardView board={selectedBoard} />

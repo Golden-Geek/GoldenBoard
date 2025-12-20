@@ -2,6 +2,13 @@ import { InspectableWithProps, PropertyType, type PropertyContainerDefinition, t
 import { mainState } from "./engine.svelte";
 
 export class GlobalSettings extends InspectableWithProps {
+
+    fullScreenOnLoad = $derived(this.getPropValue('fullScreenOnLoad').current! as string);
+    modeOnLoad = $derived(this.getPropValue('modeOnLoad').current! as string);
+    showBoardsListInLiveMode = $derived(this.getPropValue('showBoardsListInLiveMode').current! as boolean);
+    hideListIfOnlyOneBoard = $derived(this.getPropValue('hideListIfOnlyOneBoard').current! as boolean);
+
+
     constructor() {
         super('global-settings', 'Global Settings');
         this.setupProps();
@@ -19,7 +26,9 @@ export class GlobalSettings extends InspectableWithProps {
 const globalWidgetPropertyDefinitions: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {
 
     fullScreenOnLoad: { name: 'Full Screen On Load', type: PropertyType.ENUM, default: 'last', options: { 'last': 'Last State', 'off': 'Off', 'on': 'On' } } as PropertySingleDefinition,
-    modeOnLoad: { name: 'Mode On Load', type: PropertyType.ENUM, default: 'last', options: { 'last': 'Last State', 'edit': 'Edit', 'live': 'Live' } } as PropertySingleDefinition
+    modeOnLoad: { name: 'Mode On Load', type: PropertyType.ENUM, default: 'last', options: { 'last': 'Last State', 'edit': 'Edit', 'live': 'Live' } } as PropertySingleDefinition,
+    showBoardsListInLiveMode: { name: 'Show Boards List In Live Mode', type: PropertyType.BOOLEAN, default: true } as PropertySingleDefinition,
+    hideListIfOnlyOneBoard: { name: 'Hide Boards List If Only One Board', type: PropertyType.BOOLEAN, default: true } as PropertySingleDefinition,
 };
 
 

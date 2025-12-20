@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 	import PropertyInspector from './PropertyInspector.svelte';
+	import { saveData } from '$lib/engine/engine.svelte';
 
 	let { targets, property = $bindable(), definition, level } = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 
-	let collapsed = $derived(false);
+	let collapsed = $derived(property.collapsed ?? definition.collapsedByDefault ?? false);
 	let color = $derived(definition.color || 'var(--border-color)');
 </script>
 
@@ -13,7 +14,12 @@
 	<div class="property-container-header" tabindex="0">
 		<span
 			class="title-text"
-			onclick={() => (collapsed = !collapsed)}
+			onclick={() => {
+				property.collapsed = (!collapsed != (definition.collapsedByDefault ?? false)) ? !collapsed : undefined;
+				saveData('Collapse Container', {
+					coalesceID: `${target.id}-property-${level}-${definition.name}-collapse`
+				});
+			}}
 			role="switch"
 			aria-checked={!collapsed}
 		>

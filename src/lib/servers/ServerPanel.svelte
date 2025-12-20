@@ -5,7 +5,7 @@
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EditableButton from '$lib/components/EditableButton.svelte';
 	import { onMount } from 'svelte';
-	import { Menu, menuState } from '../inspector/inspector.svelte.ts';
+	import { Menu } from '../inspector/inspector.svelte.ts';
 
 	let servers = $derived(mainState.servers);
 	let selectedServer = $derived(mainState.selectedServer);
@@ -30,7 +30,7 @@
 				<EditableButton
 					onSelect={() => {
 						mainState.selectedServer = server;
-						menuState.currentMenu = Menu.Server;
+						mainState.editor.inspectorMenu = Menu.Server;
 						saveData('Select Server', {coalesceID: 'select-server'});
 					}}
 					hasRemoveButton={servers.length > 1}

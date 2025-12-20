@@ -119,11 +119,19 @@ export class InspectableWithProps {
                 const def = defs[key];
                 if (prop && def) {
                     if ('children' in prop && def.children) {
-                        // Recurse into children
+                        
                         const filtered = filterProps(prop.children, def.children);
-                        if (Object.keys(filtered).length > 0) {
-                            result[key] = { ...prop, children: filtered };
+
+                        let collapsed = undefined
+                        if(prop.collapsed !== undefined && prop.collapsed != def.collapsedByDefault) {
+                            collapsed = prop.collapsed;
                         }
+
+                        if (Object.keys(filtered).length > 0) {
+                            result[key] = { ...prop, collapsed, children: filtered };
+                        }
+                        
+
                     } else if ('value' in prop && 'default' in def) {
                         const canDisable = !!def.canDisable;
                         const isDisabled = prop.enabled === false || prop.enabled === undefined && canDisable;
@@ -177,6 +185,7 @@ export class InspectableWithProps {
                 const targetProp = target[key];
                 const sourceProp = source[key];
                 if ('children' in targetProp && sourceProp && typeof sourceProp === 'object' && 'children' in sourceProp) {
+                    targetProp.collapsed = sourceProp.collapsed ?? targetProp.collapsed;
                     this.applySnapshotToProps(targetProp.children, sourceProp.children);
                 } else if ('value' in targetProp && sourceProp && typeof sourceProp === 'object' && 'value' in sourceProp) {
                     Object.assign(targetProp, sourceProp);

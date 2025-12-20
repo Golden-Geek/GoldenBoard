@@ -9,19 +9,19 @@
 		{#if history.present != null}
 			{#each history.past as h, index (index)}
 				{#if index >= history.past.length - 3}
-					<button class="history-item undo" onclick={() => undo(history.past.length - index)}>
+					<button class="button history-item undo" onclick={() => undo(history.past.length - index)}>
 						{h.label || 'Unnamed Action'}</button
 					>
 				{/if}
 			{/each}
 			<div class="separator"></div>
-			<button class="history-item current">
+			<button class="button history-item current">
 				{history.present.label || 'Unnamed action'}
 			</button>
 			<div class="separator"></div>
 			{#each history.future as h, index (index)}
 				{#if index < 3}
-					<button class="history-item redo" onclick={() => redo(index + 1)}>
+					<button class="button history-item redo" onclick={() => redo(index + 1)}>
 						{h.label || 'Unnamed Action'}
 					</button>
 				{/if}

@@ -14,10 +14,6 @@ export enum Menu {
     Global = "Global"
 };
 
-export const menuState = $state({
-    currentMenu: Menu.Widget
-});
-
 export const propertiesInspectorClass = {
     [PropertyType.INTEGER]: NumberProperty,
     [PropertyType.STRING]: TextInputProperty,

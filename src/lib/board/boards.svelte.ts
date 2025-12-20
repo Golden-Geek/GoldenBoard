@@ -136,9 +136,9 @@ const boardPropertyDefinitions: { [key: string]: PropertySingleDefinition | Prop
         }
     },
     description: {
-        name: "Description", color: "#888888", children: {
-            text: { name: "Text", type: PropertyType.STRING, default: "" },
-            showDescription: { name: "Show Description", type: PropertyType.BOOLEAN, default: false, canDisable: true },
+        name: "Description", color:"#459234ff", children: {
+            text: { name: "Text", type: PropertyType.STRING, default: "", canDisable: true },
+            showDescription: { name: "Show Description", type: PropertyType.BOOLEAN, default: true, canDisable: true },
             descriptionPlacement: { name: "Description Placement", type: PropertyType.ENUM, canDisable: true, default: "button", options: { "button": "Button", "bar": "Bar", "tooltip": "Tooltip" } },
         }
     }

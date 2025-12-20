@@ -44,7 +44,7 @@
 			});
 		});
 
-		let fullScreenOnLoad = mainState.globalSettings.getPropValue('fullScreenOnLoad').current;
+		let fullScreenOnLoad = mainState.globalSettings.fullScreenOnLoad;
 
 		let doFullScreen =
 			fullScreenOnLoad == 'on' || (mainState.editor.fullScreen && fullScreenOnLoad == 'last');

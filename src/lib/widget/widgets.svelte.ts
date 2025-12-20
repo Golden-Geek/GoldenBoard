@@ -1,5 +1,5 @@
-import { Menu, menuState } from '../inspector/inspector.svelte.ts';
-import { menuContext, MenuContextType, saveData, type ContextMenuItem } from '../engine/engine.svelte.ts';
+import { Menu } from '../inspector/inspector.svelte.ts';
+import { mainState, menuContext, MenuContextType, saveData, type ContextMenuItem } from '../engine/engine.svelte.ts';
 import type { PropertyContainerDefinition, PropertySingleDefinition, PropertyContainerData, PropertyData } from '../property/property.svelte.ts';
 import { InspectableWithProps, PropertyType } from '../property/property.svelte.ts';
 
@@ -221,7 +221,7 @@ export class Widget extends InspectableWithProps {
                 selectedWidgets.splice(index, 1);
             }
         }
-        menuState.currentMenu = Menu.Widget;
+        mainState.editor.inspectorMenu = Menu.Widget;
         if (save) {
             saveData("Select Widget", { coalesceID: 'select-widget' });
         }

@@ -1,17 +1,18 @@
 <script lang="ts">
-	import { Menu, menuState } from './inspector.svelte.ts';
+	import { Menu } from './inspector.svelte.ts';
 	import { selectedWidgets } from '../widget/widgets.svelte.ts';
 	import DataInspector from './DataInspector.svelte';
 	import GenericInspector from './GenericInspector.svelte';
-	import { mainState } from '../engine/engine.svelte.ts';
+	import { mainState, saveData } from '../engine/engine.svelte.ts';
 	import { slide } from 'svelte/transition';
 
 	// const menus = Object.entries(Menu).filter((s, m) => typeof m === 'string');
 
 	let targets = $state<any[]>([]);
-	
+	let currentMenu = $derived(mainState.editor?.inspectorMenu);
+
 	$effect(() => {
-		switch (menuState.currentMenu) {
+		switch (currentMenu) {
 			case Menu.Widget:
 				targets = selectedWidgets;
 				break;
@@ -30,6 +31,11 @@
 		}
 	});
 
+	function setCurrentMenu(menu: Menu) {
+		mainState.editor.inspectorMenu = menu;
+		saveData('Change Inspector Menu', { coalesceID: 'change-inspector-menu' });
+	}
+
 	let dataInspectorCollapsed = $state(true);
 </script>
 
@@ -37,9 +43,9 @@
 	<div class="menu-bar">
 		{#each Object.values(Menu) as menu}
 			<button
-				class="menu-button {menu === menuState.currentMenu ? 'active' : ''}"
+				class="menu-button {menu === currentMenu ? 'active' : ''}"
 				style="--accent-color: var(--{menu.toLowerCase()}-color)"
-				onclick={() => (menuState.currentMenu = menu as Menu)}>{menu}</button
+				onclick={() => setCurrentMenu(menu)}>{menu}</button
 			>
 		{/each}
 	</div>
