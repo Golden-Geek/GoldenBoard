@@ -48,8 +48,6 @@
 		<GenericInspector {targets} />
 	</div>
 
-	<div class="spacer" style="flex-grow: 1;"></div>
-
 	<div class="data-inspector {dataInspectorCollapsed ? 'collapsed' : ''}">
 		<div class="data-inspector-header">
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -109,8 +107,8 @@
 
 	.inspector-content {
 		height: 100%;
-		flex-grow: 1;
-		overflow: auto;
+		overflow-x: hidden;
+		overflow-y: visible;
 	}
 
 	.data-inspector {
@@ -133,10 +131,13 @@
 
 	.data-inspector-content {
 		overflow-x: hidden;
+		overflow-y: visible;
 		background-color: var(--bg-color);
 		border-top: solid 1px var(--border-color);
 		padding: 0.5rem;
 		font-size: 0.7rem;
 		color: var(--text-color);
+		width: 100%;
+		height: 100%;
 	}
 </style>
