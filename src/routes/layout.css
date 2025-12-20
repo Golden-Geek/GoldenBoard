@@ -8,7 +8,7 @@
     --panel-bg-color: rgba(255, 255, 255, 0.05);
     --text-color: #f5f5f5;
     --warning-color: #d7491d;
-    --accent-color: #3a86ff;
+    --accent-color: #be0f73;
     --button-text-color: #9f9f9f;
     --border-color: rgba(255, 255, 255, 0.12);
 
@@ -21,6 +21,9 @@
     --server-color: #54ab19;
     --board-color: #0a7a99;
     --globalsettings-color: #9e1687;
+
+    --slider-bg: rgba(255, 255, 255, 0.05);
+    --slider-fg: var(--accent-color);
 }
 
 html,
@@ -35,9 +38,13 @@ body {
     user-select: none;
 }
 
+.slider-hide-cursor *
+{
+    cursor: none !important;
+}
+
 /* UI */
 
-button,
 .button {
     cursor: pointer;
     background-color: rgba(255, 255, 255, 0.05);
@@ -49,13 +56,13 @@ button,
     transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
-button:hover {
+.button:hover {
     background-color: rgba(255, 255, 255, 0.10);
     border-color: rgba(255, 255, 255, 0.10);
     color: var(--text-color);
 }
 
-button.icon-button {
+.icon-button {
     background-color: transparent;
     border: none;
     padding: 0;
@@ -81,7 +88,7 @@ select {
     max-width: 50%;
 }
 
-input[type="checkbox"] {
+input[type="checkbox"].editor-checkbox {
     width: 1rem;
     height: 1rem;
     appearance: none;
@@ -98,21 +105,21 @@ input[type="checkbox"] {
     transition: border-color 120ms ease, box-shadow 120ms ease, filter 120ms ease;
 }
 
-input[type="checkbox"]:hover {
+input[type="checkbox"].editor-checkbox:hover {
     outline: none;
     filter: brightness(1.5);
     box-shadow: 0 0 0 3px rgba(255, 45, 149, 0.12);
 }
 
 /* Keep background dark when checked, show pink check mark */
-input[type="checkbox"]:checked {
+input[type="checkbox"].editor-checkbox:checked {
     background-color: #1f1f1f;
-    border-color: #ff2d95;
+    border-color: var(--accent-color);
     /* pink border when checked */
 }
 
 /* The check mark */
-input[type="checkbox"]::after {
+input[type="checkbox"].editor-checkbox::after {
     content: "";
     position: absolute;
     left: .25rem;
@@ -127,21 +134,23 @@ input[type="checkbox"]::after {
     transition: opacity 120ms ease, border-color 120ms ease;
 }
 
-input[type="checkbox"]:checked::after {
-    border-color: #ff2d95;
-    /* pink check */
+input[type="checkbox"].editor-checkbox:checked::after {
+    border-color: var(--accent-color);
     opacity: 1;
 }
 
-input[type="checkbox"]:disabled {
+input[type="checkbox"].editor-checkbox:disabled {
     opacity: 0.3;
     border-color: #b45c88;
 }
 
+input:focus{
+    outline: none;
+    border-color: rgba(from var(--accent-color) r g b / 30%);
+}
 
 select:focus {
     outline: none;
-    /* border-color: var(--accent-color); */
 }
 
 /* Custom dark mode, rounded scrollbar */
@@ -161,16 +170,7 @@ select:focus {
     background-color: rgba(255, 255, 255, 0.15);
 }
 
-/* ::-webkit-scrollbar-corner {
-    background: var(--bg-color2);
-    border-radius: 8px;
-} */
 
-/* Firefox */
-/* * {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.12) var(--bg-color);
-} */
 
 /* ICONS */
 

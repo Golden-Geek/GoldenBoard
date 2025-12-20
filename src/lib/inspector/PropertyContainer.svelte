@@ -10,15 +10,13 @@
 </script>
 
 <div class="property-container" style="--container-color: {color}">
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<div
-		class="property-container-header"
-		onclick={() => (collapsed = !collapsed)}
-		role="switch"
-		aria-checked={!collapsed}
-		tabindex="0"
-	>
-		<span class="title-text">
+	<div class="property-container-header" tabindex="0">
+		<span
+			class="title-text"
+			onclick={() => (collapsed = !collapsed)}
+			role="switch"
+			aria-checked={!collapsed}
+		>
 			<span class="arrow {collapsed ? '' : 'expanded'}"></span>
 			{definition.name || 'Container'}
 		</span>
@@ -57,13 +55,12 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		cursor: pointer;
 	}
 
 	.title-text {
 		margin: 0;
 		padding: 0.5rem;
-
+		cursor: pointer;
 		background-color: rgba(from var(--bg-color) r g b / 80%);
 		color: var(--panel-accent-text-color);
 		font-weight: bold;

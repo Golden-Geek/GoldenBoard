@@ -1,5 +1,11 @@
 You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
 
+## Project baseline
+
+- This project is on **Svelte 5 (runes)** and **SvelteKit 2**.
+- Prefer Svelte 5 idioms by default (e.g. `$state`, `$derived`, `$effect`).
+- Avoid Svelte 3/4-first recommendations unless the existing code already follows that pattern.
+
 ## Available MCP Tools:
 
 ### 1. list-sections

@@ -5,20 +5,24 @@
 	import PropertyContainer from './PropertyContainer.svelte';
 	import { saveData } from '$lib/engine/engine.svelte';
 	import { fade } from 'svelte/transition';
+	import Button from '../../stories/Button.svelte';
 
 	let { targets, property = $bindable(), definition, level } = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 
 	let propertyType = $derived(property ? (definition.type as PropertyType) : PropertyType.NONE);
 	let isContainer = $derived(definition.children != null);
+	let canDisable = $derived(definition.canDisable ?? false);
+	let enabled = $derived(canDisable ? (property.enabled ?? false) : true);
+
 	let Property: any = $derived(
 		propertiesInspectorClass[propertyType as keyof typeof propertiesInspectorClass]
 	);
 
 	let valueOnFocus = $state.snapshot(property.value);
 
-	function checkAndSaveProperty() {
-		if (property.value === valueOnFocus) {
+	function checkAndSaveProperty(force: boolean = false) {
+		if (property.value === valueOnFocus && !force) {
 			// console.log('No changes detected, skipping save.');
 			return;
 		}
@@ -29,11 +33,22 @@
 	}
 </script>
 
-<div class="property-inspector {isContainer ? 'container' : 'single'} {'level-' + level}">
+<div class="property-inspector {isContainer ? 'container' : 'single'} {'level-' + level} {enabled?'' : 'disabled'}">
 	{#if isContainer}
 		<PropertyContainer {targets} bind:property {definition} {level} />
 	{:else if target != null && property != null}
-		<p class="property-label">
+		<div class="property-label">
+			{#if canDisable}
+				<button
+					class="enable-property"
+					onclick={() => {
+						property.enabled = !enabled? true : undefined;
+						checkAndSaveProperty(true);
+					}}
+				>
+					{enabled ? '🟢' : '⚪'}
+				</button>
+			{/if}
 			{definition.name}
 			{#if !definition.readOnly && property.value != definition.default}
 				<button
@@ -48,7 +63,7 @@
 					⟲
 				</button>
 			{/if}
-		</p>
+		</div>
 
 		<Property
 			{targets}
@@ -73,12 +88,31 @@
 		justify-content: space-between;
 		box-sizing: border-box;
 		align-items: center;
+		transition: opacity 0.2s ease;
+	}
+
+	.property-inspector.disabled {
+		opacity: 0.5;
+		pointer-events: none;
 	}
 
 	.property-inspector.single {
 		padding: 0.1rem 0.3rem 0.2rem 0;
 		border-bottom: solid 1px rgb(from var(--border-color) r g b / 5%);
 		min-height: 1.5rem;
+	}
+
+	.property-label {
+		display: flex;
+		align-items: center;
+	}
+
+	.enable-property {
+		font-size: 0.5rem;
+		padding: 0.2rem 0.2rem 0.1rem;
+		vertical-align: middle;
+		cursor: pointer;
+		pointer-events: all;
 	}
 
 	.reset-property {

@@ -1,6 +1,3 @@
-import type Property from "../inspector/PropertyInspector.svelte"
-
-
 export class InspectableWithProps {
     id: string = $state('');
     iType: string = $state('');
@@ -12,8 +9,7 @@ export class InspectableWithProps {
 
     }
 
-    setupProps()
-    {
+    setupProps() {
         this.props = getPropsFromDefinitions(this.getPropertyDefinitions() || {});
     }
 
@@ -43,18 +39,26 @@ export class InspectableWithProps {
         return null;
     }
 
-    getPropValue<T>(propKey: string, defaultValue = null as T | null): ResolvedProperty<T>  {
+    getPropValue<T>(propKey: string, defaultValue = null as T | null): ResolvedProperty<T> {
         let prop = this.getProp(propKey) as PropertyData;
 
         if (prop === null) {
             return { current: defaultValue, raw: defaultValue };
         }
 
+        if ((prop.enabled ?? true) === false) {
+            return { current: defaultValue, raw: defaultValue };
+        }
+
         return { current: prop.value as T, raw: prop.value as T }; // TODO: compute resolved value (bindings, etc.)
     }
 
-    getPropRawValue(propKey: string, defaultValue:any = null): number | string | boolean | number[] | null {
-        return (this.getProp(propKey) as PropertyData)?.value || defaultValue;
+    getPropRawValue(propKey: string, defaultValue: any = null): number | string | boolean | number[] | null {
+        let prop = this.getProp(propKey) as PropertyData;
+        if ((prop?.enabled ?? true) === false) {
+            return defaultValue;
+        }
+        return prop?.value || defaultValue;
     }
 
     setPropRawValue(propKey: string, value: number | string | boolean | number[]) {
@@ -74,15 +78,15 @@ export class InspectableWithProps {
     }
 
     applySnapshot(snapshot: any) {
-        if(snapshot === null || snapshot === undefined) return;
-        
+        if (snapshot === null || snapshot === undefined) return;
+
         const newID = snapshot.id ?? this.id;
         if (newID !== this.id) {
             this.setID(newID);
         }
         let initProps = getPropsFromDefinitions(this.getPropertyDefinitions() || {});
         // Merge existing props with snapshot props to ensure all properties are present
-        this.props = { ...initProps, ...snapshot.props};
+        this.props = { ...initProps, ...snapshot.props };
     }
 
     setID(newID: string) {
@@ -119,6 +123,7 @@ export type PropertyContainerDefinition = {
 export type PropertySingleDefinition = {
     name: string;
     type: PropertyType;
+    canDisable?: boolean;
     default: number | string | boolean | number[];
     description?: string;
     options?: { [key: string]: string }; // For ENUM type
@@ -134,6 +139,7 @@ export type PropertyContainerData = {
 
 export type PropertyData = {
     value: number | string | boolean | number[];
+    enabled?: boolean;
     mode?: PropertyMode;
     binding?: string;
 };

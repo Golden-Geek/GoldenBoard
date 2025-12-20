@@ -11,7 +11,7 @@
 
 	<div class="spacer"></div>
 	<div class="fullscreen-switch">
-		<button
+		<button class="button"
 			onclick={() => {
 				if (!document.fullscreenElement) {
 					document.documentElement.requestFullscreen();
@@ -33,7 +33,7 @@
 		</button>
 	</div>
 	<div class="mode-switch">
-		<button
+		<button class="button"
 			onclick={() => {
 				mainState.editor.editMode = EditMode.Live;
 			}}
@@ -41,8 +41,8 @@
 			Switch to Live
 		</button>
 
-		<button onclick={() => saveData('Save', { skipHistory: true })}> Save </button>
-		<button onclick={() => clearData()}> Clear </button>
+		<button class="button" onclick={() => saveData('Save', { skipHistory: true })}> Save </button>
+		<button class="button" onclick={() => clearData()}> Clear </button>
 	</div>
 </div>
 

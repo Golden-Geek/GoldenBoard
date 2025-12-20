@@ -6,7 +6,7 @@
 		onStartEdit = null,
 		onUpdate = null
 	} = $props();
-	let target = $derived(targets.length > 0 ? targets[0] : null);
+
 	let initValue = $derived(property.value);
 
 	let numberValue = $derived(
@@ -19,10 +19,19 @@
 	);
 
 	let units = $derived(
-		(definition.units as string[]) || ['css', 'px', 'em', 'rem', '%', 'vh', 'vw']
+		(definition.units as string[]) || ['px', 'em', 'rem', '%', 'vh', 'vw']
 	);
 
 	function compute() {
+		//if user entered unit in the number field, extract it
+		const match = /^(-?\d*\.?\d+)(.*)$/.exec(numberValue.toString());
+		if (match) {
+			numberValue = parseFloat(match[1]);
+			if (match[2]) {
+				unitValue = match[2];
+			}
+		}
+
 		property.value = `${numberValue}${unitValue}`;
 		onUpdate && onUpdate();
 	}
@@ -37,7 +46,10 @@
 		onfocus={() => onStartEdit && onStartEdit(initValue)}
 		onblur={compute}
 		onkeydown={(e) => {
-			if (e.key === 'Enter' && onUpdate) onUpdate();
+			if (e.key === 'Enter') {
+				onUpdate && onUpdate();
+				(e.target as HTMLInputElement).blur();
+			}
 		}}
 	/>
 

@@ -19,7 +19,11 @@
 	onfocus={() => onStartEdit && onStartEdit(initValue)}
 	onblur={() => onUpdate && onUpdate()}
 	onkeydown={(e) => {
-		if (e.key === 'Enter' && onUpdate) onUpdate();
+		if (e.key === 'Enter')
+		{
+			onUpdate && onUpdate();
+			(e.target as HTMLInputElement).blur();
+		}
 	}}
 />
 

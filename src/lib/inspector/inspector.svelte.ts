@@ -4,7 +4,7 @@ import ColorPickerProperty from "./properties/ColorPickerProperty.svelte";
 import CSSSizeProperty from "./properties/CSSSizeProperty.svelte";
 import DropdownProperty from "./properties/DropdownProperty.svelte";
 import IconProperty from "./properties/IconProperty.svelte";
-import SliderProperty from "./properties/SliderProperty.svelte";
+import NumberProperty from "./properties/NumberProperty.svelte";
 import TextInputProperty from "./properties/TextInputProperty.svelte";
 
 export enum Menu {
@@ -19,9 +19,9 @@ export const menuState = $state({
 });
 
 export const propertiesInspectorClass = {
-    [PropertyType.INTEGER]: SliderProperty,
+    [PropertyType.INTEGER]: NumberProperty,
     [PropertyType.STRING]: TextInputProperty,
-    [PropertyType.FLOAT]: SliderProperty,
+    [PropertyType.FLOAT]: NumberProperty,
     [PropertyType.BOOLEAN]: CheckboxProperty,
     [PropertyType.CSSSIZE]: CSSSizeProperty,
     [PropertyType.COLOR]: ColorPickerProperty,

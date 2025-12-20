@@ -5,6 +5,13 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 const config = {
     preprocess: vitePreprocess(),
 
+    compilerOptions: {
+        warningFilter: (warning) => {
+            const code = warning?.code;
+            return typeof code !== 'string' || !code.startsWith('a11y_');
+        }
+    },
+
     kit: {
         paths: {
             base: process.env.BASE_PATH ?? '',

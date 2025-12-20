@@ -311,30 +311,30 @@ const globalWidgetProperties: { [key: string]: (PropertySingleDefinition | Prope
     readOnly: { name: 'Read Only', type: PropertyType.BOOLEAN, default: false } as PropertySingleDefinition,
     label: {
         name: 'Label', color: '#d98d13ff', children: {
-            showLabel: { name: 'Show Label', type: PropertyType.BOOLEAN, default: true, description: 'Whether to show the label' } as PropertySingleDefinition,
-            text: { name: 'Text', type: PropertyType.STRING, default: '' } as PropertySingleDefinition,
-            fontSize: { name: 'Font Size', type: PropertyType.INTEGER, default: 14 } as PropertySingleDefinition,
-            color: { name: 'Color', type: PropertyType.COLOR, default: '' } as PropertySingleDefinition,
-            labelPlacement: { name: 'Label Placement', type: PropertyType.ENUM, default: 'inside', options: { 'top': 'Top', 'bottom': 'Bottom', 'left': 'Left', 'right': 'Right', 'inside': 'Inside' } } as PropertySingleDefinition,
+            showLabel: { name: 'Show Label', type: PropertyType.BOOLEAN, default: true, description: 'Whether to show the label', canDisable: true } as PropertySingleDefinition,
+            text: { name: 'Text', type: PropertyType.STRING, default: '', canDisable: true } as PropertySingleDefinition,
+            fontSize: { name: 'Font Size', type: PropertyType.CSSSIZE, default: '10px', canDisable: true } as PropertySingleDefinition,
+            color: { name: 'Color', type: PropertyType.COLOR, default: '', canDisable: true } as PropertySingleDefinition,
+            labelPlacement: { name: 'Label Placement', type: PropertyType.ENUM, default: 'inside', options: { 'top': 'Top', 'bottom': 'Bottom', 'left': 'Left', 'right': 'Right', 'inside': 'Inside' }, canDisable: true } as PropertySingleDefinition,
         }
     },
     position: {
         name: 'Position', color: '#1a73e8ff', collapsedByDefault: true, children: {
-            left: { name: 'Left', type: PropertyType.CSSSIZE, default: 0 } as PropertySingleDefinition,
-            top: { name: 'Top', type: PropertyType.CSSSIZE, default: 0 } as PropertySingleDefinition,
-            right: { name: 'Right', type: PropertyType.CSSSIZE, default: 0 } as PropertySingleDefinition,
-            bottom: { name: 'Bottom', type: PropertyType.CSSSIZE, default: 0 } as PropertySingleDefinition,
-            width: { name: 'Width', type: PropertyType.CSSSIZE, default: 100 } as PropertySingleDefinition,
-            height: { name: 'Height', type: PropertyType.CSSSIZE, default: 100 } as PropertySingleDefinition,
+            left: { name: 'Left', type: PropertyType.CSSSIZE, default: 0, canDisable: true } as PropertySingleDefinition,
+            top: { name: 'Top', type: PropertyType.CSSSIZE, default: 0, canDisable: true } as PropertySingleDefinition,
+            right: { name: 'Right', type: PropertyType.CSSSIZE, default: 0, canDisable: true } as PropertySingleDefinition,
+            bottom: { name: 'Bottom', type: PropertyType.CSSSIZE, default: 0, canDisable: true } as PropertySingleDefinition,
+            width: { name: 'Width', type: PropertyType.CSSSIZE, default: 100, canDisable: true } as PropertySingleDefinition,
+            height: { name: 'Height', type: PropertyType.CSSSIZE, default: 100, canDisable: true } as PropertySingleDefinition,
         }
     }
 };
 
 const rangeContainerDefinition: PropertyContainerDefinition = {
-    name: 'Range', children: {
-        min: { name: 'Min', type: PropertyType.FLOAT, default: 0 } as PropertySingleDefinition,
-        max: { name: 'Max', type: PropertyType.FLOAT, default: 100 } as PropertySingleDefinition,
-        step: { name: 'Step', type: PropertyType.FLOAT, default: 1 } as PropertySingleDefinition,
+    name: 'Range', collapsedByDefault: true, children: {
+        min: { name: 'Min', type: PropertyType.FLOAT, default: 0, canDisable: true } as PropertySingleDefinition,
+        max: { name: 'Max', type: PropertyType.FLOAT, default: 1, canDisable: true } as PropertySingleDefinition,
+        step: { name: 'Step', type: PropertyType.FLOAT, default: 0, canDisable: true } as PropertySingleDefinition,
     }
 };
 
@@ -349,7 +349,7 @@ export const widgetDefinitions: WidgetDefinition[] = [
     {
         name: 'Slider', icon: '🎚️', type: 'slider', description: 'A slider widget for selecting a value within a range', props: {
             ...globalWidgetProperties,
-            value: { name: 'Value', type: PropertyType.FLOAT, default: 0 } as PropertySingleDefinition,
+            value: { name: 'Value', type: PropertyType.FLOAT, default: 0, min: 0, max: 1, step: 0 } as PropertySingleDefinition,
             range: rangeContainerDefinition
         }
     },
@@ -397,7 +397,7 @@ export const widgetDefinitions: WidgetDefinition[] = [
         name: 'Comment', icon: '🏷️', type: 'comment', description: 'A comment text', props: {
             ...globalWidgetProperties,
             text: { name: 'Text', type: PropertyType.STRING, default: 'Comment' } as PropertySingleDefinition,
-            fontSize: { name: 'Font Size', type: PropertyType.INTEGER, default: 14 } as PropertySingleDefinition,
+            fontSize: { name: 'Font Size', type: PropertyType.INTEGER, default: 14, canDisable: true } as PropertySingleDefinition,
         }
     }];
 

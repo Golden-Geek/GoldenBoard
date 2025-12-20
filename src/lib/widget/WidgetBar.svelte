@@ -23,7 +23,7 @@
 			<div class="separation"></div>
 		{:else}
 			<button
-				class="widget-button"
+				class="button"
 				title={widget.name + '\n' + widget.description}
 				onclick={() => addWidgetFromDef(widget)}
 			>
