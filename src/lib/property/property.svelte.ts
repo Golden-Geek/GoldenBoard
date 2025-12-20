@@ -9,8 +9,17 @@ export class InspectableWithProps {
     constructor(iType: string, id?: string) {
         this.iType = iType;
         this.id = id ?? (iType + '-' + crypto.randomUUID());
+
     }
 
+    setupProps()
+    {
+        this.props = getPropsFromDefinitions(this.getPropertyDefinitions() || {});
+    }
+
+    getPropertyDefinitions(): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } | null {
+        return null;
+    }
 
     getProp(propKey: string): PropertyData | PropertyContainerData | null {
 
@@ -34,18 +43,18 @@ export class InspectableWithProps {
         return null;
     }
 
-    getPropValue<T>(propKey: string): ResolvedProperty<T> | null {
+    getPropValue<T>(propKey: string, defaultValue = null): ResolvedProperty<T>  {
         let prop = this.getProp(propKey) as PropertyData;
 
         if (prop === null) {
-            return null;
+            return { current: defaultValue, raw: defaultValue };
         }
 
         return { current: prop.value as T, raw: prop.value as T }; // TODO: compute resolved value (bindings, etc.)
     }
 
-    getPropRawValue(propKey: string): number | string | boolean | number[] | null {
-        return (this.getProp(propKey) as PropertyData)?.value || null;
+    getPropRawValue(propKey: string, defaultValue:any = null): number | string | boolean | number[] | null {
+        return (this.getProp(propKey) as PropertyData)?.value || defaultValue;
     }
 
     setPropRawValue(propKey: string, value: number | string | boolean | number[]) {
@@ -69,7 +78,9 @@ export class InspectableWithProps {
         if (newID !== this.id) {
             this.setID(newID);
         }
-        this.props = snapshot.props;
+        let initProps = getPropsFromDefinitions(this.getPropertyDefinitions() || {});
+        // Merge existing props with snapshot props to ensure all properties are present
+        this.props = { ...initProps, ...snapshot.props};
     }
 
     setID(newID: string) {
@@ -98,6 +109,7 @@ export enum PropertyMode {
 
 export type PropertyContainerDefinition = {
     name: string;
+    color?: string;
     children?: { [key: string]: (PropertyDefinition | PropertyContainerDefinition) };
     collapsedByDefault?: boolean;
 }
@@ -107,7 +119,7 @@ export type PropertySingleDefinition = {
     type: PropertyType;
     default: number | string | boolean | number[];
     description?: string;
-    options?: Array<string>; // For ENUM type
+    options?: { [key: string]: string }; // For ENUM type
     min?: number; // For RANGE type
     max?: number; // For RANGE type
     step?: number; // For STEPPER type
@@ -126,8 +138,8 @@ export type PropertyData = {
 
 // The resolved structure your  consumes (Runtime)
 export type ResolvedProperty<T> = {
-    current: T; // The actual calculated value (float, hex color, etc.)
-    raw: T; // The raw value (before calculations)
+    current: T | null; // The actual calculated value (float, hex color, etc.)
+    raw: T | null; // The raw value (before calculations)
     error?: string; // If parsing failed
 };
 

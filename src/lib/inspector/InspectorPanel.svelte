@@ -1,17 +1,38 @@
 <script lang="ts">
-	import { Menu, menuComponents, menuState } from './inspector.svelte.ts';
-	import { mainState } from '$lib/engine.svelte';
+	import { Menu, menuState } from './inspector.svelte.ts';
 	import { selectedWidgets } from '$lib/widget/widgets.svelte.ts';
 	import DataInspector from './DataInspector.svelte';
+	import GenericInspector from './GenericInspector.svelte';
+	import { mainState } from '$lib/engine/engine.svelte.ts';
 
 	// const menus = Object.entries(Menu).filter((s, m) => typeof m === 'string');
 
-	let Inspector = $derived(menuComponents[menuState.currentMenu]);
+	let targets = $state<any[]>([]);
+
+	$effect(() => {
+		switch (menuState.currentMenu) {
+			case Menu.Widget:
+				targets = selectedWidgets;
+				break;
+
+			case Menu.Board:
+				targets = mainState.selectedBoard ? [mainState.selectedBoard] : [];
+				break;
+
+			case Menu.Server:
+				targets = mainState.selectedServer ? [mainState.selectedServer] : [];
+				break;
+
+			case Menu.Global:
+				targets = mainState.globalSettings ? [mainState.globalSettings] : [];
+				break;
+		}
+	});
 </script>
 
 <div class="inspector">
 	<div class="menu-bar">
-		{#each Object.entries(menuComponents) as [menu, inspector]}
+		{#each Object.values(Menu) as menu}
 			<button
 				class="menu-button {menu === menuState.currentMenu ? 'active' : ''}"
 				style="--accent-color: var(--{menu.toLowerCase()}-color)"
@@ -21,11 +42,7 @@
 	</div>
 
 	<div class="inspector-content">
-		{#if Inspector != null && selectedWidgets.length > 0}
-			<Inspector targets={selectedWidgets} />
-		{:else}
-			<p style="padding: 1rem;">No Inspector for this</p>
-		{/if}
+		<GenericInspector {targets} />
 	</div>
 
 	<div class="spacer" style="flex-grow: 1;"></div>

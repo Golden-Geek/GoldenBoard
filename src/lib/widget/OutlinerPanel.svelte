@@ -1,6 +1,6 @@
 <script lang="ts">
 	import TreeView from '$lib/components/TreeView.svelte';
-	import { mainState, menuContext, MenuContextType } from '$lib/engine.svelte';
+	import { mainState, menuContext, MenuContextType } from '$lib/engine/engine.svelte';
 	import { Widget } from '$lib/widget/widgets.svelte';
 
 	let selectedBoard = $derived(mainState.selectedBoard);

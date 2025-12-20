@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { ConnectionStatus, addServer, removeServer, getNodeIcon } from './oscquery.svelte';
-	import { mainState, saveData } from '$lib/engine.svelte';
+	import { mainState, saveData } from '$lib/engine/engine.svelte';
 	import TreeView from '$lib/components/TreeView.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EditableButton from '$lib/components/EditableButton.svelte';
 	import { onMount } from 'svelte';
+	import { Menu, menuState } from '$lib/inspector/inspector.svelte.ts';
 
 	let servers = $derived(mainState.servers);
 	let selectedServer = $derived(mainState.selectedServer);
@@ -27,15 +28,16 @@
 		<div class="server-bar">
 			{#each servers as server}
 				<EditableButton
-					onselect={() => {
+					onSelect={() => {
 						mainState.selectedServer = server;
-						saveData('Select Server');
+						menuState.currentMenu = Menu.Server;
+						saveData('Select Server', {coalesceID: 'select-server'});
 					}}
 					hasRemoveButton={servers.length > 1}
 					selected={server.isSelected}
 					bind:value={server.name}
 					separator={' - '}
-					onremove={() => {
+					onRemove={() => {
 						if (selectedServer == server) selectedServer = null;
 						removeServer(server);
 					}}

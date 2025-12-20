@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import RemoveButton from './RemoveButton.svelte';
-	import { saveData } from '$lib/engine.svelte';
+	import { saveData } from '$lib/engine/engine.svelte';
 	let {
 		value = $bindable(),
 		editable = false,
-		onselect,
+		onSelect,
 		hasRemoveButton,
-		onremove = null,
+		onRemove = null,
+		onChange = null,
 		selected,
 		separator = '',
 		warning = '',
@@ -15,7 +16,7 @@
 		color = ''
 	} = $props();
 	let isEditing = $state(false);
-	let internalValue = $state(value);
+	let internalValue = $state(value || '[error]');
 
 	$effect(() => {
 		internalValue = value;
@@ -24,7 +25,12 @@
 	function setAndSave() {
 		value = internalValue;
 		isEditing = false;
-		saveData('Edit Button Value');
+
+		if (onChange) {
+			onChange(internalValue);
+		} else {
+			saveData('Edit Button Value');
+		}
 	}
 </script>
 
@@ -38,7 +44,7 @@
 		{extraClass}"
 	style={color ? `--bt-color:${color}` : ''}
 	title={warning}
-	onclick={onselect}
+	onclick={onSelect}
 	ondblclick={() => {
 		if (!editable) return;
 		isEditing = true;
@@ -71,8 +77,8 @@
 			}}
 		/>
 	{:else if separator !== ''}
-		<span class="first-line">{value.split(separator)[0]}</span><br />
-		<span class="second-line">{value.split(separator)[1]}</span>
+		<span class="first-line">{value?.split(separator)[0]}</span><br />
+		<span class="second-line">{value?.split(separator)[1]}</span>
 	{:else}
 		{value}
 	{/if}
@@ -81,7 +87,7 @@
 			<RemoveButton
 				onclick={(e: any) => {
 					e.stopPropagation();
-					onremove && onremove();
+					onRemove && onRemove();
 				}}
 			></RemoveButton>
 		</div>

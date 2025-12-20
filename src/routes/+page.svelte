@@ -6,12 +6,12 @@
 	import TopBar from '$lib/editor/TopBar.svelte';
 	import Split from 'split-grid';
 	import { onMount, tick } from 'svelte';
-	import { EditMode, mainState, redo, saveData, undo } from '$lib/engine.svelte';
+	import { EditMode, mainState, redo, saveData, undo } from '$lib/engine/engine.svelte';
 	import { fly } from 'svelte/transition';
 	import Panel from '$lib/editor/Panel.svelte';
 	import Footer from '$lib/editor/Footer.svelte';
 	import ContextMenu from '$lib/components/ContextMenu.svelte';
-	import { selectedWidgets } from '$lib/widget/widgets.svelte';
+	import { selectedWidgets, selectWidgets } from '$lib/widget/widgets.svelte';
 
 	let editorState: any = $derived(mainState.editor);
 	let editorLayout: any = $derived(editorState?.layout);
@@ -37,6 +37,31 @@
 
 	onMount(() => {
 		window.addEventListener('keydown', handleKeydown);
+		window.addEventListener('fullscreenchange', () => {
+			mainState.editor.fullScreen = document.fullscreenElement != null;
+			saveData('Toggle Fullscreen', {
+				skipHistory: true
+			});
+		});
+
+		let fullScreenOnLoad = mainState.globalSettings.getPropValue('fullScreenOnLoad').current;
+
+		let doFullScreen =
+			fullScreenOnLoad == 'on' || (mainState.editor.fullScreen && fullScreenOnLoad == 'last');
+
+		if (doFullScreen) {
+			// Only request fullscreen if already in fullscreen due to user gesture
+			if (!document.fullscreenElement) {
+				console.warn('Fullscreen request skipped: must be triggered by user gesture.');
+			}
+			document.documentElement.requestFullscreen();
+			mainState.editor.fullScreen = true;
+		} else {
+			if (document.fullscreenElement) document.exitFullscreen();
+			mainState.editor.fullScreen = false;
+		}
+
+		// mainState.editor.fullScreen = document.fullscreenElement != null;
 
 		return () => {
 			window.removeEventListener('keydown', handleKeydown);
@@ -137,11 +162,47 @@
 			saveData('Toggle Edit Mode', { skipHistory: true });
 		}
 		if (event.key === 'Delete' || event.key === 'Backspace') {
+			//should not be active when focused on input or textarea
+			const activeElement = document.activeElement;
+			if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+				return;
+			}
+			
 			if (selectedWidgets.length > 0) {
 				event.preventDefault();
-				selectedWidgets.forEach((w) => w.remove(false));
+				let widgetsToDelete = [...selectedWidgets];
+				widgetsToDelete.forEach((w) => w.remove(false));
 				saveData('Delete Selected Widgets');
 			}
+		} 
+		if (event.key == 'F11') {
+			event.preventDefault();
+			if (!document.fullscreenElement) {
+				document.documentElement.requestFullscreen();
+			} else {
+				document.exitFullscreen();
+			}
+			console.log('Toggling fullscreen from F11', mainState.editor.fullScreen);
+			saveData('Toggle Fullscreen', {
+				skipHistory: true
+			});
+		}
+		if (event.key == 's' && mod) {
+			event.preventDefault();
+			saveData('Save', { skipHistory: true });
+		}
+		if (event.key == 'd' && mod) {
+			event.preventDefault();
+			let snapSelection = [...selectedWidgets];
+			let newWidgets: any[] = [];
+			snapSelection.forEach((w) => {
+				let newW =w.duplicate({ save: false, select: false });
+				if(newW) newWidgets.push(newW);
+			});
+
+			selectWidgets(newWidgets, true, false);
+			
+			saveData('Duplicate Selected Widgets');
 		}
 	}
 </script>

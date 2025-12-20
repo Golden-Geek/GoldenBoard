@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { contextMenus, menuContext, type ContextMenuItem } from '$lib/engine.svelte';
+	import { contextMenus, menuContext, type ContextMenuItem } from '$lib/engine/engine.svelte';
 	import { onMount, tick } from 'svelte';
 	import Self from './ContextMenu.svelte';
 	import { fly } from 'svelte/transition';
