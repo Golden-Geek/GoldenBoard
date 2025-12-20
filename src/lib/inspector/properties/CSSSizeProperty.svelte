@@ -58,10 +58,10 @@
 		height: 100%;
 		box-sizing: border-box;
 		font-size: 0.75rem;
-        max-width:5em;
+		max-width: 5em;
 	}
 
-	.valu-property:disabled {
+	.value-property:disabled {
 		background-color: var(--inspector-input-disabled-bg);
 		color: rgba(from var(--text-color) r g b / 50%);
 	}

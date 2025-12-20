@@ -81,6 +81,63 @@ select {
     max-width: 50%;
 }
 
+input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: #1f1f1f;
+    /* dark background by default */
+    border: 1px solid #333;
+    border-radius: .25rem;
+    cursor: pointer;
+    position: relative;
+    margin: 0;
+    box-sizing: border-box;
+    transition: border-color 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+
+input[type="checkbox"]:hover {
+    outline: none;
+    filter: brightness(1.5);
+    box-shadow: 0 0 0 3px rgba(255, 45, 149, 0.12);
+}
+
+/* Keep background dark when checked, show pink check mark */
+input[type="checkbox"]:checked {
+    background-color: #1f1f1f;
+    border-color: #ff2d95;
+    /* pink border when checked */
+}
+
+/* The check mark */
+input[type="checkbox"]::after {
+    content: "";
+    position: absolute;
+    left: .25rem;
+    top: .03rem;
+    width: .4rem;
+    height: .6rem;
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
+    border-color: transparent;
+    border-style: solid;
+    opacity: 0;
+    transition: opacity 120ms ease, border-color 120ms ease;
+}
+
+input[type="checkbox"]:checked::after {
+    border-color: #ff2d95;
+    /* pink check */
+    opacity: 1;
+}
+
+input[type="checkbox"]:disabled {
+    opacity: 0.3;
+    border-color: #b45c88;
+}
+
 
 select:focus {
     outline: none;
