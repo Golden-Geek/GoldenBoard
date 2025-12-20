@@ -1,4 +1,4 @@
-import { Menu, menuState } from '$lib/inspector/inspector.svelte.ts';
+import { Menu, menuState } from '../inspector/inspector.svelte.ts';
 import { menuContext, MenuContextType, saveData, type ContextMenuItem } from '../engine/engine.svelte.ts';
 import type { PropertyContainerDefinition, PropertySingleDefinition, PropertyContainerData, PropertyData } from '../property/property.svelte.ts';
 import { InspectableWithProps, PropertyType } from '../property/property.svelte.ts';
@@ -105,7 +105,7 @@ export class Widget extends InspectableWithProps {
                 let child = this.children!.find(c => c.id === dataChild.id);
 
                 if (!child) {
-                    child = this.addWidget(dataChild.type, {save:false, id: dataChild.id});
+                    child = this.addWidget(dataChild.type, { save: false, id: dataChild.id });
                 }
 
                 child.applySnapshot(dataChild);

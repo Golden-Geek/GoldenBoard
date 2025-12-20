@@ -11,6 +11,6 @@
 </textarea>
 
 <style>
-	.text-editor-property {
-	}
+	/* .text-editor-property {
+	} */
 </style>

@@ -10,7 +10,9 @@
 
 	let propertyType = $derived(property ? (definition.type as PropertyType) : PropertyType.NONE);
 	let isContainer = $derived(definition.children != null);
-	let Property = $derived(propertiesInspectorClass[propertyType!]);
+	let Property: any = $derived(
+		propertiesInspectorClass[propertyType as keyof typeof propertiesInspectorClass]
+	);
 
 	function savePropertyUpdate() {
 		saveData('Update ' + definition.name, {

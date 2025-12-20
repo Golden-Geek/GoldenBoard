@@ -1,14 +1,14 @@
 <script lang="ts">
 	import PropertyInspector from './PropertyInspector.svelte';
 
-	let { targets, props, level, definitions } = $props();
+	let { targets, props = $bindable(), level, definitions } = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 
 	let orderedDefs = $derived(
 		Object.entries(definitions).sort(([keyA, valueA], [keyB, valueB]) => {
 			if (valueA == undefined) return 1;
 			if (valueB == undefined) return -1;
-			return (valueA.children ? 1 : 0) - (valueB.children ? 1 : 0);
+			return ((valueA as any)?.children ? 1 : 0) - ((valueB as any)?.children ? 1 : 0);
 		})
 	);
 </script>
@@ -16,7 +16,7 @@
 <div class="property-drawer">
 	{#if props}
 		{#each orderedDefs as [key, property]}
-			<div class="property-item" >
+			<div class="property-item">
 				<PropertyInspector
 					{targets}
 					bind:property={props[key]}
