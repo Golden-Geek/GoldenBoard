@@ -133,7 +133,7 @@
 		}
 		if (event.ctrlKey && (event.key === 'e' || event.key === 'E')) {
 			event.preventDefault();
-			editMode = editMode === EditMode.Edit ? EditMode.Live : EditMode.Edit;
+			mainState.editor.editMode = editMode === EditMode.Edit ? EditMode.Live : EditMode.Edit;
 			saveData('Toggle Edit Mode', { skipHistory: true });
 		}
 		if (event.key === 'Delete' || event.key === 'Backspace') {
