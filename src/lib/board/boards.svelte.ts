@@ -133,5 +133,5 @@ const boardPropertyDefinitions: { [key: string]: PropertySingleDefinition | Prop
     color: { name: "Color", type: PropertyType.COLOR, label: "Color", default: "#1481a1ff" } as PropertySingleDefinition,
     description: { name: "Description", type: PropertyType.TEXT, label: "Description", default: "" } as PropertySingleDefinition,
     showDescription: { name: "Show Description", type: PropertyType.BOOLEAN, label: "Show Description", default: false } as PropertySingleDefinition,
-    descriptionPlacement: { name: "Description Placement", type: PropertyType.ENUM, label: "Description Placement", default: "below", options: { "button": "Button", "bar": "Bar", "tooltip": "Tooltip" } } as PropertySingleDefinition,
+    descriptionPlacement: { name: "Description Placement", type: PropertyType.ENUM, label: "Description Placement", default: "button", options: { "button": "Button", "bar": "Bar", "tooltip": "Tooltip" } } as PropertySingleDefinition,
 };

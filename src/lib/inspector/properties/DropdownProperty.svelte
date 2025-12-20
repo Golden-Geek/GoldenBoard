@@ -6,6 +6,7 @@
 <select
 	class="dropdown-property"
 	bind:value={property.value}
+
 	onchange={() => onUpdate && onUpdate()}
 >
 	{#each Object.entries(definition.options) as [optionKey, optionLabel]}
@@ -16,7 +17,16 @@
 <style>
 	.dropdown-property {
 		background-color: #222222;
-		border: 1px solid rgba(from var(--border-color) / 30%);
+		border: 1px solid rgba(from var(--border-color) r g b / 20%);
 		border-radius: 0.5em;
 	}
+
+    .dropdown-property:hover {
+        /* border-color: rgba(from var(--border-color) r g b / 60%); */
+    }
+
+    .dropdown-property:focus {
+        outline: none;
+        /* border-color: var(--accent-color); */
+    }
 </style>

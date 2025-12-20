@@ -1,12 +1,22 @@
 <script lang="ts">
-	let { targets, property = $bindable(), onUpdate = null } = $props();
+	let {
+		targets,
+		property = $bindable(),
+		definition,
+		onStartEdit = null,
+		onUpdate = null
+	} = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
+
+	let initValue = $derived(property.value);
 </script>
 
 <input
 	type="text"
 	class="text-property"
+	disabled={definition.readOnly}
 	bind:value={property.value}
+	onfocus={() => onStartEdit && onStartEdit(initValue)}
 	onblur={() => onUpdate && onUpdate()}
 	onkeydown={(e) => {
 		if (e.key === 'Enter' && onUpdate) onUpdate();
@@ -18,5 +28,10 @@
 		height: 100%;
 		box-sizing: border-box;
 		font-size: 0.75rem;
+	}
+
+	.text-property:disabled {
+		background-color: var(--inspector-input-disabled-bg);
+		color: rgba(from var(--text-color) r g b / 50%);
 	}
 </style>

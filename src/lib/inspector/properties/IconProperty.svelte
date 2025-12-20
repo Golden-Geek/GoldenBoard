@@ -15,25 +15,31 @@
 				showPicker = false;
 			});
 
-            picker.focus();
+			picker.focus();
 		}
 	});
 </script>
 
 <div class="emoji-picker-container">
-	<button onclick={() => (showPicker = !showPicker)} class="icon-property">
+	<button
+		onclick={() => (showPicker = !showPicker)}
+		class="icon-property"
+		disabled={definition.readOnly}
+	>
 		{property.value != '' ? property.value : 'Choose'}
 	</button>
 
-	<button onclick={() => (property.value = '')} class="clear-property" aria-label="Clear Icon">
-		❌
-	</button>
+	{#if !definition.readOnly}
+		<button onclick={() => (property.value = '')} class="clear-property" aria-label="Clear Icon">
+			❌
+		</button>
+	{/if}
 
 	{#if showPicker}
 		<emoji-picker
 			bind:this={picker}
 			class="emoji-picker"
-            tabindex="-1"
+			tabindex="-1"
 			onblur={() => (showPicker = false)}
 			onfocusout={() => (showPicker = false)}
 		></emoji-picker>

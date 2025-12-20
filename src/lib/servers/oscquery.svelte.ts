@@ -36,21 +36,6 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	pendingMessages: string[] = [];
 
-	nameEffectDestroy = $effect.root(() => {
-		$effect(() => {
-			// setup
-			if ((this.name == "" || this.name == "New Server" || this.name == "Default") && this.hostInfo.NAME) {
-				this.setPropRawValue("name", this.hostInfo.NAME);
-			}
-
-		});
-
-		return () => {
-			// cleanup
-		}
-	});
-
-
 	constructor() {
 		super("server");
 		this.setupProps();
@@ -59,8 +44,6 @@ export class OSCQueryClient extends InspectableWithProps {
 	}
 
 	cleanup() {
-		// console.log(`[${this.name}] Cleaning up OSCQueryClient...`);
-		this.nameEffectDestroy();
 		this.disconnect();
 		this.ws = null;
 	}
@@ -145,6 +128,7 @@ export class OSCQueryClient extends InspectableWithProps {
 
 			case ConnectionStatus.Disconnected:
 				this.stopOutboundPump();
+				this.setPropRawValue("name", this.ip + " - " + this.port);
 				break;
 		}
 	}
@@ -289,6 +273,8 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	parseHostInfo(json: any): void {
 		this.hostInfo = json;
+
+		this.setPropRawValue("name", this.hostInfo.NAME);
 
 	}
 
@@ -575,7 +561,7 @@ export function getNodeIcon(node: any): string {
 }
 
 const serverPropertyDefinitions: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {
-	name: { name: "name", type: PropertyType.STRING, label: "Name", default: "New Server" } as PropertySingleDefinition,
+	name: { name: "name", type: PropertyType.STRING, label: "Name", default: "New Server", readOnly: true } as PropertySingleDefinition,
 	ip: { name: "ip", type: PropertyType.STRING, label: "IP Address", default: "127.0.0.1" } as PropertySingleDefinition,
 	port: { name: "port", type: PropertyType.INTEGER, label: "Port", default: 42000 } as PropertySingleDefinition,
 	advanced: {
