@@ -1,5 +1,5 @@
 <script lang="ts">
-	let { targets, property = $bindable(), onUpdate = null } = $props();
+	let { targets, property = $bindable(), onUpdate } = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 </script>
 

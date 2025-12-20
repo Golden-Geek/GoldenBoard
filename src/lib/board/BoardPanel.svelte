@@ -25,7 +25,7 @@
 			}}
 			editable={true}
 			value={board.name}
-			onChange={(newValue:string) => {
+			onChange={(newValue: string) => {
 				board.setPropRawValue('name', newValue);
 				saveData('Rename Board', { coalesceID: 'rename-board-' + board.id });
 			}}
@@ -34,7 +34,7 @@
 			onRemove={() => {
 				removeBoard(board);
 			}}
-			color={'var(--board-color)'}
+			color={board.getPropValue('color').current as string || 'var(--board-color)'}
 		></EditableButton>
 	{/each}
 </div>
