@@ -43,7 +43,7 @@ export class InspectableWithProps {
         return null;
     }
 
-    getPropValue<T>(propKey: string, defaultValue = null): ResolvedProperty<T>  {
+    getPropValue<T>(propKey: string, defaultValue = null as T | null): ResolvedProperty<T>  {
         let prop = this.getProp(propKey) as PropertyData;
 
         if (prop === null) {

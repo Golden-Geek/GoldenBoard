@@ -12,7 +12,12 @@ export class Board extends InspectableWithProps {
     rootWidget: Widget = Widget.createRootWidgetContainer();
     isSelected: boolean = $derived(mainState.selectedBoard === this);
 
-    name = $derived(this.getPropRawValue("name") as string);
+    name = $derived(this.getPropValue("name").current!);
+    description = $derived(this.getPropValue("description").current!);
+    showDescription = $derived(this.getPropValue("showDescription").current!);
+    descriptionPlacement = $derived(this.getPropValue("descriptionPlacement").current!);
+    color = $derived(this.getPropValue("color").current!)
+
 
     constructor() {
         super("board");
@@ -128,5 +133,5 @@ const boardPropertyDefinitions: { [key: string]: PropertySingleDefinition | Prop
     color: { name: "Color", type: PropertyType.COLOR, label: "Color", default: "#1481a1ff" } as PropertySingleDefinition,
     description: { name: "Description", type: PropertyType.TEXT, label: "Description", default: "" } as PropertySingleDefinition,
     showDescription: { name: "Show Description", type: PropertyType.BOOLEAN, label: "Show Description", default: false } as PropertySingleDefinition,
-    descriptionPlacement: { name: "Description Placement", type: PropertyType.ENUM, label: "Description Placement", default: "below", options: { "above": "Above", "below": "Below", "tooltip": "Tooltip" } } as PropertySingleDefinition,
+    descriptionPlacement: { name: "Description Placement", type: PropertyType.ENUM, label: "Description Placement", default: "below", options: { "button": "Button", "bar": "Bar", "tooltip": "Tooltip" } } as PropertySingleDefinition,
 };
