@@ -90,6 +90,14 @@ let isApplyingHistory = false;
 
 const historyMax = $state(100);
 
+function savePersistentHistory() {
+    localStorage.setItem('history', JSON.stringify({
+        past: history.past,
+        present: history.present,
+        future: history.future
+    }));
+}
+
 function snapshotMain() {
 
     return {
@@ -128,9 +136,11 @@ function commitUndoPoint(label: string | null = null, coalesceID?: string) {
         }
     }
 
+
     history.present = { label, id: coalesceID, data: snapshotMain() };
     history.future = [];
 
+    savePersistentHistory();
 }
 
 export function undo(count: number = 1): boolean {
@@ -142,6 +152,7 @@ export function undo(count: number = 1): boolean {
         history.future.unshift(current!);
         const prev = history.past.pop()!;
         history.present = $state.snapshot(prev);
+        savePersistentHistory();
         applySnapshot(prev.data);
         persistSnapshotOnly();
     } finally {
@@ -163,6 +174,7 @@ export function redo(count: number = 1): boolean {
         const next = history.future.shift()!;
         history.past.push(current!);
         history.present = $state.snapshot(next);
+        savePersistentHistory();
 
         applySnapshot(next.data);
         persistSnapshotOnly();
@@ -202,9 +214,17 @@ export function loadData() {
     applySnapshot(JSON.parse(stateStr ?? "{}"));
 
     //Reset history
-    history.past = [];
-    history.future = [];
-    history.present = { label: "Initial Load", data: snapshotMain() };
+    let persistedHistoryStr = localStorage.getItem('history');
+    if (persistedHistoryStr) {
+        const persistedHistory = JSON.parse(persistedHistoryStr);
+        history.past = persistedHistory.past || [];
+        history.present = persistedHistory.present || { label: "Initial Load", data: snapshotMain() };
+        history.future = persistedHistory.future || [];
+    } else {
+        history.past = [];
+        history.future = [];
+        history.present = { label: "Initial Load", data: snapshotMain() };
+    }
 }
 
 
