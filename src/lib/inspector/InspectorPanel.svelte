@@ -2,6 +2,7 @@
 	import { Menu, menuComponents, menuState } from './inspector.svelte.ts';
 	import { mainState } from '$lib/engine.svelte';
 	import { selectedWidgets } from '$lib/widget/widgets.svelte.ts';
+	import DataInspector from './DataInspector.svelte';
 
 	// const menus = Object.entries(Menu).filter((s, m) => typeof m === 'string');
 
@@ -26,6 +27,12 @@
 			<p style="padding: 1rem;">No Inspector for this</p>
 		{/if}
 	</div>
+
+	<div class="spacer" style="flex-grow: 1;"></div>
+
+	<div class="data-inspector">
+		<DataInspector targets={selectedWidgets} />
+	</div>
 </div>
 
 <style>
@@ -37,7 +44,7 @@
 
 	.menu-bar {
 		position: relative;
-		margin: 1em 0 .5rem;
+		margin: 1em 0 0.5rem;
 		display: flex;
 		justify-content: space-around;
 		background-color: var(--panel-background-color);
@@ -72,5 +79,14 @@
 		height: 100%;
 		flex-grow: 1;
 		overflow: auto;
+	}
+
+	.data-inspector {
+		max-height: 30%;
+		overflow-x: hidden;
+		border-top: solid 1px var(--border-color);
+		padding: 0.5rem;
+		font-size: 0.7rem;
+		color: var(--text-color);
 	}
 </style>

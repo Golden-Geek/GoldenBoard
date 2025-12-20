@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { PropertyType } from '$lib/property/property.svelte';
+	import { flip } from 'svelte/animate';
 	import { propertiesInspectorClass } from './inspector.svelte';
 	import PropertyContainer from './PropertyContainer.svelte';
+	import { slide } from 'svelte/transition';
+	import { saveData } from '$lib/engine.svelte';
 
 	let { targets, property, definition, level } = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
@@ -9,25 +12,44 @@
 	let propertyType = $derived(property ? (definition.type as PropertyType) : PropertyType.NONE);
 	let isContainer = $derived(definition.children != null);
 	let Property = $derived(propertiesInspectorClass[propertyType!]);
+
+	function savePropertyUpdate() {
+		saveData('Update ' + definition.name, {
+			coalesceID: `${target.id}-property-${level}-${definition.name}`
+		});
+	}
 </script>
 
-<div class="property-inspector">
+<div
+	class="property-inspector {isContainer ? 'container' : 'single'} {'level-' + level}"
+	transition:slide|local={{ duration: 200 }}
+>
 	{#if isContainer}
 		<PropertyContainer {targets} {property} {definition} {level} />
 	{:else if target != null && property != null}
 		<p class="property-label">{definition.name}</p>
-		<Property {targets} {property} />
+		<Property {targets} bind:property onUpdate={() => savePropertyUpdate()} />
 	{:else}
 		{definition.type} - {target != null} - {property}
 	{/if}
 </div>
 
 <style>
+	.property-inspector.level-0 {
+		margin: 0.25em 0;
+	}
+
 	.property-inspector {
 		width: 100%;
 		display: flex;
-        justify-content: space-between;
-        padding: 0 .25rem;
-        box-sizing: border-box;
+		justify-content: space-between;
+		box-sizing: border-box;
+		align-items: center;
+	}
+
+	.property-inspector.single {
+		padding: 0.1rem 0.3rem 0.2rem 0;
+		border-bottom: solid 1px rgb(from var(--border-color) r g b / 5%);
+		height: 1.5rem;
 	}
 </style>
