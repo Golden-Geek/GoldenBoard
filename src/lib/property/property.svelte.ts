@@ -74,6 +74,8 @@ export class InspectableWithProps {
     }
 
     applySnapshot(snapshot: any) {
+        if(snapshot === null || snapshot === undefined) return;
+        
         const newID = snapshot.id ?? this.id;
         if (newID !== this.id) {
             this.setID(newID);

@@ -223,10 +223,15 @@ export function loadData() {
     }
 
     const stateStr = localStorage.getItem('data');
-    applySnapshot(JSON.parse(stateStr ?? "{}"));
+    if (stateStr) {
+        const snap = JSON.parse(stateStr);
+        applySnapshot(snap);
+    } else {
+        applySnapshot($state.snapshot(defaultMainData));
+    }
 
     let modeOnLoad = mainState.globalSettings.getPropValue('modeOnLoad').current as string;
-    if(modeOnLoad != 'last') mainState.editor.editMode = modeOnLoad as EditMode;
+    if (modeOnLoad != 'last') mainState.editor.editMode = modeOnLoad as EditMode;
 
     let persistedHistoryStr = localStorage.getItem('history');
     if (persistedHistoryStr) {
