@@ -11,6 +11,6 @@
 />
 
 <style>
-	.checkbox-property {
-	}
+	/* .checkbox-property {
+	} */
 </style>

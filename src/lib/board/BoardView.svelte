@@ -4,5 +4,4 @@
 	let { board } = $props();
 </script>
 
-<div class="board-panel">
-</div>
+<div class="board-panel"></div>

@@ -5,7 +5,7 @@
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EditableButton from '$lib/components/EditableButton.svelte';
 	import { onMount } from 'svelte';
-	import { Menu, menuState } from '$lib/inspector/inspector.svelte.ts';
+	import { Menu, menuState } from '../inspector/inspector.svelte.ts';
 
 	let servers = $derived(mainState.servers);
 	let selectedServer = $derived(mainState.selectedServer);

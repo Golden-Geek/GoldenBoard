@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Menu, menuState } from './inspector.svelte.ts';
-	import { selectedWidgets } from '$lib/widget/widgets.svelte.ts';
+	import { selectedWidgets } from '../widget/widgets.svelte.ts';
 	import DataInspector from './DataInspector.svelte';
 	import GenericInspector from './GenericInspector.svelte';
-	import { mainState } from '$lib/engine/engine.svelte.ts';
+	import { mainState } from '../engine/engine.svelte.ts';
 	import { slide } from 'svelte/transition';
 
 	// const menus = Object.entries(Menu).filter((s, m) => typeof m === 'string');

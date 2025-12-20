@@ -1,10 +1,10 @@
 <script lang="ts">
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EditableButton from '$lib/components/EditableButton.svelte';
-	import Board from './Board.svelte';
-	import { addBoard, removeBoard } from './boards.svelte';
+	import BoardView from './BoardView.svelte';
+	import { addBoard, Board, removeBoard } from './boards.svelte';
 	import { mainState, saveData, EditMode, MenuContextType } from '$lib/engine/engine.svelte';
-	import { Menu, menuState } from '$lib/inspector/inspector.svelte.ts';
+	import { Menu, menuState } from '../inspector/inspector.svelte.ts';
 
 	let selectedBoard = $derived(mainState.selectedBoard);
 	let boards = $derived(mainState.boards);
@@ -34,12 +34,14 @@
 			onRemove={() => {
 				removeBoard(board);
 			}}
-			color={board.getPropValue('color').current as string || 'var(--board-color)'}
+			color={(board.getPropValue('color').current as string) || 'var(--board-color)'}
 		></EditableButton>
 	{/each}
 </div>
 
-<Board {selectedBoard} />
+{#if selectedBoard != null}
+	<BoardView board={selectedBoard} />
+{/if}
 
 <style>
 	.board-list {

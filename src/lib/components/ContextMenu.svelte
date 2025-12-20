@@ -170,12 +170,6 @@
 		border-top: 1px solid var(--border-color);
 	}
 
-	svg {
-		width: 1em;
-		height: 1em;
-		vertical-align: middle;
-	}
-
 	.submenu-container {
 		position: fixed;
 	}

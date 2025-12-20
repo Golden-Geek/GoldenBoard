@@ -5,7 +5,6 @@ import DropdownProperty from "./properties/DropdownProperty.svelte";
 import IconProperty from "./properties/IconProperty.svelte";
 import SliderProperty from "./properties/SliderProperty.svelte";
 import TextInputProperty from "./properties/TextInputProperty.svelte";
-import WidgetInspector from "./WidgetInspector.svelte";
 
 export enum Menu {
     Widget = "Widget",
