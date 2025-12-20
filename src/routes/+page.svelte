@@ -88,6 +88,7 @@
 						element: leftPaneSplitter!
 					}
 				],
+				columnMinSize: 150,
 				onDragEnd: () => {
 					saveLayout();
 				}
@@ -164,17 +165,20 @@
 		if (event.key === 'Delete' || event.key === 'Backspace') {
 			//should not be active when focused on input or textarea
 			const activeElement = document.activeElement;
-			if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+			if (
+				activeElement &&
+				(activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')
+			) {
 				return;
 			}
-			
+
 			if (selectedWidgets.length > 0) {
 				event.preventDefault();
 				let widgetsToDelete = [...selectedWidgets];
 				widgetsToDelete.forEach((w) => w.remove(false));
 				saveData('Delete Selected Widgets');
 			}
-		} 
+		}
 		if (event.key == 'F11') {
 			event.preventDefault();
 			if (!document.fullscreenElement) {
@@ -196,12 +200,12 @@
 			let snapSelection = [...selectedWidgets];
 			let newWidgets: any[] = [];
 			snapSelection.forEach((w) => {
-				let newW =w.duplicate({ save: false, select: false });
-				if(newW) newWidgets.push(newW);
+				let newW = w.duplicate({ save: false, select: false });
+				if (newW) newWidgets.push(newW);
 			});
 
 			selectWidgets(newWidgets, true, false);
-			
+
 			saveData('Duplicate Selected Widgets');
 		}
 	}
@@ -290,7 +294,7 @@
 		transition:
 			opacity 0.2s ease,
 			padding 0.3s ease;
-		overflow: auto;
+		overflow: hidden;
 	}
 
 	.content.loading {
@@ -309,7 +313,6 @@
 		grid-template-columns: 250px 8px 1fr 8px 300px;
 		width: 100%;
 		height: 100%;
-		min-width: 0;
 	}
 
 	.mode-live .content {
@@ -320,19 +323,19 @@
 
 	.outliner-area {
 		grid-area: outliner;
-		min-width: 100px;
+		min-width: 150px;
 		min-height: 100px;
 	}
 
 	.server-area {
 		grid-area: server;
-		min-width: 100px;
+		min-width: 150px;
 		min-height: 100px;
 	}
 
 	.inspector-area {
 		grid-area: inspector;
-		min-width: 100px;
+		min-width: 150px;
 		display: flex;
 		flex-direction: column;
 		gap: 0.2rem;

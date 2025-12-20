@@ -16,6 +16,7 @@
 		color: var(--text-color);
 		padding: 0.5rem;
 		position: relative;
+		overflow: hidden;
 	}
 
 	.panel-title {
