@@ -1,6 +1,7 @@
 import { PropertyType } from "$lib/property/property.svelte";
 import CheckboxProperty from "./properties/CheckboxProperty.svelte";
 import ColorPickerProperty from "./properties/ColorPickerProperty.svelte";
+import CSSSizeProperty from "./properties/CSSSizeProperty.svelte";
 import DropdownProperty from "./properties/DropdownProperty.svelte";
 import IconProperty from "./properties/IconProperty.svelte";
 import SliderProperty from "./properties/SliderProperty.svelte";
@@ -22,7 +23,7 @@ export const propertiesInspectorClass = {
     [PropertyType.STRING]: TextInputProperty,
     [PropertyType.FLOAT]: SliderProperty,
     [PropertyType.BOOLEAN]: CheckboxProperty,
-    [PropertyType.CSSSIZE]: TextInputProperty,
+    [PropertyType.CSSSIZE]: CSSSizeProperty,
     [PropertyType.COLOR]: ColorPickerProperty,
     [PropertyType.ENUM]: DropdownProperty,
     [PropertyType.ICON]: IconProperty,

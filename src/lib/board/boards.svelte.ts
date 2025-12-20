@@ -130,7 +130,7 @@ export function applyBoardsSnapshot(data: any) {
 const boardPropertyDefinitions: { [key: string]: PropertySingleDefinition | PropertyContainerDefinition } = {
     name: { name: "Name", type: PropertyType.STRING, label: "Name", default: "Board" } as PropertySingleDefinition,
     icon: { name: "Icon", type: PropertyType.ICON, label: "Icon", default: "📋" } as PropertySingleDefinition,
-    color: { name: "Color", type: PropertyType.COLOR, label: "Color", default: "#1481a1ff" } as PropertySingleDefinition,
+    color: { name: "Color", type: PropertyType.COLOR, label: "Color", default: "#1481a1" } as PropertySingleDefinition,
     description: { name: "Description", type: PropertyType.TEXT, label: "Description", default: "" } as PropertySingleDefinition,
     showDescription: { name: "Show Description", type: PropertyType.BOOLEAN, label: "Show Description", default: false } as PropertySingleDefinition,
     descriptionPlacement: { name: "Description Placement", type: PropertyType.ENUM, label: "Description Placement", default: "button", options: { "button": "Button", "bar": "Bar", "tooltip": "Tooltip" } } as PropertySingleDefinition,

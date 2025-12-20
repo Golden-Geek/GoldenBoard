@@ -4,6 +4,7 @@
 	import { propertiesInspectorClass } from './inspector.svelte.ts';
 	import PropertyContainer from './PropertyContainer.svelte';
 	import { saveData } from '$lib/engine/engine.svelte';
+	import { fade } from 'svelte/transition';
 
 	let { targets, property = $bindable(), definition, level } = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
@@ -32,7 +33,23 @@
 	{#if isContainer}
 		<PropertyContainer {targets} bind:property {definition} {level} />
 	{:else if target != null && property != null}
-		<p class="property-label">{definition.name}</p>
+		<p class="property-label">
+			{definition.name}
+			{#if !definition.readOnly && property.value != definition.default}
+				<button
+					class="reset-property"
+					aria-label="Reset Property"
+					onclick={() => {
+						property.value = definition.default;
+						checkAndSaveProperty();
+					}}
+					transition:fade={{ duration: 200 }}
+				>
+					⟲
+				</button>
+			{/if}
+		</p>
+
 		<Property
 			{targets}
 			bind:property
@@ -62,5 +79,21 @@
 		padding: 0.1rem 0.3rem 0.2rem 0;
 		border-bottom: solid 1px rgb(from var(--border-color) r g b / 5%);
 		min-height: 1.5rem;
+	}
+
+	.reset-property {
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-size: 0.8rem;
+		margin-left: 0.25rem;
+		color: var(--text-color);
+		padding: 0;
+		opacity: 0.5;
+		transition: opacity 0.5s;
+	}
+
+	.reset-property:hover {
+		opacity: 1;
 	}
 </style>

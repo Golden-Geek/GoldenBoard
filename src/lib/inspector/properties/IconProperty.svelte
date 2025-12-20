@@ -30,7 +30,7 @@
 	</button>
 
 	{#if !definition.readOnly}
-		<button onclick={() => (property.value = '')} class="clear-property" aria-label="Clear Icon">
+		<button onclick={() => { property.value = ''; onUpdate && onUpdate(); }} class="clear-property" aria-label="Clear Icon">
 			❌
 		</button>
 	{/if}

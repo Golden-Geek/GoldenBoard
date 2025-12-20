@@ -314,7 +314,7 @@ const globalWidgetProperties: { [key: string]: (PropertySingleDefinition | Prope
             showLabel: { name: 'Show Label', type: PropertyType.BOOLEAN, default: true, description: 'Whether to show the label' } as PropertySingleDefinition,
             text: { name: 'Text', type: PropertyType.STRING, default: '' } as PropertySingleDefinition,
             fontSize: { name: 'Font Size', type: PropertyType.INTEGER, default: 14 } as PropertySingleDefinition,
-            color: { name: 'Color', type: PropertyType.COLOR, default: '#cc0000ff' } as PropertySingleDefinition,
+            color: { name: 'Color', type: PropertyType.COLOR, default: '' } as PropertySingleDefinition,
             labelPlacement: { name: 'Label Placement', type: PropertyType.ENUM, default: 'inside', options: { 'top': 'Top', 'bottom': 'Bottom', 'left': 'Left', 'right': 'Right', 'inside': 'Inside' } } as PropertySingleDefinition,
         }
     },

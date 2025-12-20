@@ -9,7 +9,7 @@
 	// const menus = Object.entries(Menu).filter((s, m) => typeof m === 'string');
 
 	let targets = $state<any[]>([]);
-
+	
 	$effect(() => {
 		switch (menuState.currentMenu) {
 			case Menu.Widget:
@@ -59,7 +59,7 @@
 		</div>
 		{#if !dataInspectorCollapsed}
 			<div class="data-inspector-content" transition:slide|local={{ duration: 200 }}>
-				<DataInspector targets={selectedWidgets} />
+				<DataInspector {targets} />
 			</div>
 		{/if}
 	</div>
