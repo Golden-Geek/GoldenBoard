@@ -1,7 +1,7 @@
-import { Board, applyBoardsSnapshot, toBoardsSnaphot, getBoardByID } from "./board/boards.svelte.ts";
-import { applyServersSnapshot, getServerByID, toServersSnapshot, type OSCQueryClient } from "./servers/oscquery.svelte.ts";
-import { getWidgetContextMenuItems, widgetsMap } from "./widget/widgets.svelte.ts";
-
+import { Board, applyBoardsSnapshot, toBoardsSnaphot, getBoardByID } from "../board/boards.svelte.ts";
+import { applyServersSnapshot, getServerByID, toServersSnapshot, type OSCQueryClient } from "../servers/oscquery.svelte.ts";
+import { getWidgetContextMenuItems, widgetsMap } from "../widget/widgets.svelte.ts";
+import { GlobalSettings, toGlobalSettingsSnapshot, applyGlobalSettingsSnapshot } from "./globalsettings.svelte.ts";
 //-----------------------------
 // Editor
 //-----------------------------
@@ -9,6 +9,7 @@ import { getWidgetContextMenuItems, widgetsMap } from "./widget/widgets.svelte.t
 
 export type EditorData = {
     editMode: EditMode,
+    fullScreen: boolean,
     layout: {} | null
 };
 
@@ -19,6 +20,7 @@ export enum EditMode {
 
 export const defaultEditorData: EditorData = {
     editMode: EditMode.Edit,
+    fullScreen: false,
     layout: null
 };
 
@@ -66,12 +68,20 @@ export const mainState = $state(
         editor: defaultEditorData as EditorData,
         servers: [] as OSCQueryClient[],
         boards: [] as Board[],
+        globalSettings: new GlobalSettings(),
         selectedBoard: null as Board | null,
         selectedServer: null as OSCQueryClient | null
     }
 );
 
-const defaultMainData = $state.snapshot(mainState);
+const defaultMainData = {
+    editor: defaultEditorData as EditorData,
+    servers: [],
+    boards: [],
+    globalSettings: null,
+    selectedBoard: null,
+    selectedServer: null
+}
 
 // -----------------------------
 // Undo/Redo (snapshot-based)
@@ -104,6 +114,7 @@ function snapshotMain() {
         editor: $state.snapshot(mainState.editor),
         servers: toServersSnapshot(),
         boards: toBoardsSnaphot(),
+        globalSettings: toGlobalSettingsSnapshot(),
         selectedServerID: mainState.selectedServer ? mainState.selectedServer.id : null,
         selectedBoardID: mainState.selectedBoard ? mainState.selectedBoard.id : null
     }
@@ -118,6 +129,7 @@ function applySnapshot(snap: any) {
     mainState.editor = snap.editor ?? $state.snapshot(defaultMainData.editor);
     applyServersSnapshot(snap.servers);
     applyBoardsSnapshot(snap.boards);
+    applyGlobalSettingsSnapshot(snap.globalSettings);
     mainState.selectedServer = getServerByID(snap.selectedServerID);
     mainState.selectedBoard = getBoardByID(snap.selectedBoardID);
 }
@@ -213,7 +225,9 @@ export function loadData() {
     const stateStr = localStorage.getItem('data');
     applySnapshot(JSON.parse(stateStr ?? "{}"));
 
-    //Reset history
+    let modeOnLoad = mainState.globalSettings.getPropValue('modeOnLoad').current as string;
+    if(modeOnLoad != 'last') mainState.editor.editMode = modeOnLoad as EditMode;
+
     let persistedHistoryStr = localStorage.getItem('history');
     if (persistedHistoryStr) {
         const persistedHistory = JSON.parse(persistedHistoryStr);

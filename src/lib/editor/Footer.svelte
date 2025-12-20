@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { history, redo, undo } from '$lib/engine.svelte';
+	import { history, redo, undo } from '$lib/engine/engine.svelte';
 	import { selectedWidgets, widgetsMap } from '$lib/widget/widgets.svelte';
 </script>
 

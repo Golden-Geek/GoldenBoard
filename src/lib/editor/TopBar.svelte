@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { EditMode, clearData, mainState, saveData } from '$lib/engine.svelte';
+	import { EditMode, clearData, mainState, saveData } from '$lib/engine/engine.svelte';
 	import WidgetBar from '$lib/widget/WidgetBar.svelte';
-
 </script>
 
 <div class="topbar">
@@ -11,6 +10,28 @@
 	<WidgetBar></WidgetBar>
 
 	<div class="spacer"></div>
+	<div class="fullscreen-switch">
+		<button
+			onclick={() => {
+				if (!document.fullscreenElement) {
+					document.documentElement.requestFullscreen();
+					mainState.editor.fullScreen = true;
+				} else {
+					document.exitFullscreen();
+					mainState.editor.fullScreen = false;
+				}
+				saveData('Toggle Fullscreen', {
+					skipHistory: true
+				});
+			}}
+		>
+			{#if mainState.editor.fullScreen}
+				Exit Fullscreen
+			{:else}
+				Enter Fullscreen
+			{/if}
+		</button>
+	</div>
 	<div class="mode-switch">
 		<button
 			onclick={() => {
@@ -20,7 +41,7 @@
 			Switch to Live
 		</button>
 
-		<button onclick={() => saveData('Save from TopBar', { skipHistory: true })}> Save </button>
+		<button onclick={() => saveData('Save', { skipHistory: true })}> Save </button>
 		<button onclick={() => clearData()}> Clear </button>
 	</div>
 </div>

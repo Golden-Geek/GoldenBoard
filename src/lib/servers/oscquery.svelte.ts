@@ -1,5 +1,5 @@
-import { mainState, saveData } from '$lib/engine.svelte.js';
-import { getPropsFromDefinitions, InspectableWithProps, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from '$lib/property/property.svelte.js';
+import { mainState, saveData } from '$lib/engine/engine.svelte.js';
+import { InspectableWithProps, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from '$lib/property/property.svelte.js';
 import type { OscPacket } from './osc.js';
 import { decodeOscPacket, encodeOscPacket } from './osc.js';
 
@@ -53,8 +53,8 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	constructor() {
 		super("server");
+		this.setupProps();
 		this.ws = null;
-		this.props = getPropsFromDefinitions(serverPropertyDefinitions);
 		this.connect();
 	}
 
@@ -65,10 +65,11 @@ export class OSCQueryClient extends InspectableWithProps {
 		this.ws = null;
 	}
 
+	getPropertyDefinitions(): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition); } | null {
+		return serverPropertyDefinitions;
+	}
+
 	//WS Connection 
-
-
-
 	connect(): void {
 		this.disconnect();
 		this.setStatus(ConnectionStatus.Connecting);
@@ -578,10 +579,8 @@ const serverPropertyDefinitions: { [key: string]: (PropertySingleDefinition | Pr
 	ip: { name: "ip", type: PropertyType.STRING, label: "IP Address", default: "127.0.0.1" } as PropertySingleDefinition,
 	port: { name: "port", type: PropertyType.INTEGER, label: "Port", default: 42000 } as PropertySingleDefinition,
 	advanced: {
-		name: "advanced", children: {
-			min: { name: 'Min', type: PropertyType.FLOAT, default: 0 } as PropertySingleDefinition,
-			max: { name: 'Max', type: PropertyType.FLOAT, default: 100 } as PropertySingleDefinition,
-			step: { name: 'Step', type: PropertyType.FLOAT, default: 1 } as PropertySingleDefinition,
+		name: "Advanced", children: {
+			
 		}
 	}
 };

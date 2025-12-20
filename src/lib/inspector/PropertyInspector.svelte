@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { PropertyType } from '$lib/property/property.svelte';
 	import { flip } from 'svelte/animate';
-	import { propertiesInspectorClass } from './inspector.svelte';
+	import { propertiesInspectorClass } from './inspector.svelte.ts';
 	import PropertyContainer from './PropertyContainer.svelte';
 	import { slide } from 'svelte/transition';
-	import { saveData } from '$lib/engine.svelte';
+	import { saveData } from '$lib/engine/engine.svelte';
 
-	let { targets, property, definition, level } = $props();
+	let { targets, property = $bindable(), definition, level } = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 
 	let propertyType = $derived(property ? (definition.type as PropertyType) : PropertyType.NONE);
@@ -25,10 +25,10 @@
 	transition:slide|local={{ duration: 200 }}
 >
 	{#if isContainer}
-		<PropertyContainer {targets} {property} {definition} {level} />
+		<PropertyContainer {targets} bind:property {definition} {level} />
 	{:else if target != null && property != null}
 		<p class="property-label">{definition.name}</p>
-		<Property {targets} bind:property onUpdate={() => savePropertyUpdate()} />
+		<Property {targets} bind:property onUpdate={() => savePropertyUpdate()} {definition} />
 	{:else}
 		{definition.type} - {target != null} - {property}
 	{/if}

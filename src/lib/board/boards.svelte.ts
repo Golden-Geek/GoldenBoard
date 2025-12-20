@@ -1,30 +1,35 @@
 import { Widget } from "../widget/widgets.svelte.ts";
-import { mainState, saveData } from "../engine.svelte.ts";
-import { getPropsFromDefinitions, InspectableWithProps, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from "../property/property.svelte.ts";
+import { mainState, saveData } from "../engine/engine.svelte.ts";
+import { InspectableWithProps, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from "../property/property.svelte.ts";
 
 
 let boards = $derived(mainState.boards);
 
 export class Board extends InspectableWithProps {
 
-    name: string = $state('');
+
     icon: string = $state('');
     rootWidget: Widget = Widget.createRootWidgetContainer();
     isSelected: boolean = $derived(mainState.selectedBoard === this);
 
+    name = $derived(this.getPropRawValue("name") as string);
+
     constructor() {
         super("board");
-        this.props = getPropsFromDefinitions(boardPropertyDefinitions);
+        this.setupProps();
     }
 
     cleanup() {
         this.rootWidget.cleanup();
     }
 
+    getPropertyDefinitions(): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition); } | null {
+        return boardPropertyDefinitions;
+    }
+
     toSnapshot(includeID: boolean = true): any {
         let data = {
             ...super.toSnapshot(includeID),
-            name: this.name,
             icon: this.icon,
             rootWidget: this.rootWidget.toSnapshot(includeID)
         };
@@ -38,7 +43,6 @@ export class Board extends InspectableWithProps {
 
     applySnapshot(data: any) {
         super.applySnapshot(data);
-        this.name = data.name;
         this.icon = data.icon;
         this.rootWidget.applySnapshot(data.rootWidget);
     }
@@ -61,7 +65,7 @@ export function addBoard(): Board {
     let name = getUniqueBoardName("Board");
 
     const newBoard = new Board();
-    newBoard.name = name;
+    newBoard.setPropRawValue('name', name);
 
     boards.push(newBoard);
     saveData("Add Board " + newBoard.name);//+ " (" + boards.length + ")");
@@ -121,5 +125,8 @@ export function applyBoardsSnapshot(data: any) {
 const boardPropertyDefinitions: { [key: string]: PropertySingleDefinition | PropertyContainerDefinition } = {
     name: { name: "Name", type: PropertyType.STRING, label: "Name", default: "Board" } as PropertySingleDefinition,
     icon: { name: "Icon", type: PropertyType.ICON, label: "Icon", default: "📋" } as PropertySingleDefinition,
-    description: { name: "Description", type: PropertyType.TEXT, label: "Description", default: "" } as PropertySingleDefinition
+    color: { name: "Color", type: PropertyType.COLOR, label: "Color", default: "#1481a1ff" } as PropertySingleDefinition,
+    description: { name: "Description", type: PropertyType.TEXT, label: "Description", default: "" } as PropertySingleDefinition,
+    showDescription: { name: "Show Description", type: PropertyType.BOOLEAN, label: "Show Description", default: false } as PropertySingleDefinition,
+    descriptionPlacement: { name: "Description Placement", type: PropertyType.ENUM, label: "Description Placement", default: "below", options: { "above": "Above", "below": "Below", "tooltip": "Tooltip" } } as PropertySingleDefinition,
 };

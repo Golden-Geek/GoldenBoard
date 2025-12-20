@@ -1,6 +1,7 @@
 import { PropertyType } from "$lib/property/property.svelte";
 import CheckboxProperty from "./properties/CheckboxProperty.svelte";
 import ColorPickerProperty from "./properties/ColorPickerProperty.svelte";
+import DropdownProperty from "./properties/DropdownProperty.svelte";
 import SliderProperty from "./properties/SliderProperty.svelte";
 import TextInputProperty from "./properties/TextInputProperty.svelte";
 import WidgetInspector from "./WidgetInspector.svelte";
@@ -10,13 +11,6 @@ export enum Menu {
     Board = "Board",
     Server = "Server",
     Global = "Global"
-};
-
-export const menuComponents = {
-    [Menu.Widget]: WidgetInspector,
-    [Menu.Board]: null,
-    [Menu.Server]: null,
-    [Menu.Global]: null
 };
 
 export const menuState = $state({
@@ -30,4 +24,5 @@ export const propertiesInspectorClass = {
     [PropertyType.BOOLEAN]: CheckboxProperty,
     [PropertyType.CSSSIZE]: TextInputProperty,
     [PropertyType.COLOR]: ColorPickerProperty,
+    [PropertyType.ENUM]: DropdownProperty,
 }

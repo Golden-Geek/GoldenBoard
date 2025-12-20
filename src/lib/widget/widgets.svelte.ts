@@ -1,6 +1,7 @@
-import { saveData, type ContextMenuItem } from '../engine.svelte.ts';
+import { Menu, menuState } from '$lib/inspector/inspector.svelte.ts';
+import { menuContext, MenuContextType, saveData, type ContextMenuItem } from '../engine/engine.svelte.ts';
 import type { PropertyContainerDefinition, PropertySingleDefinition, PropertyContainerData, PropertyData } from '../property/property.svelte.ts';
-import { getPropsFromDefinitions, InspectableWithProps, PropertyType } from '../property/property.svelte.ts';
+import { InspectableWithProps, PropertyType } from '../property/property.svelte.ts';
 
 //WIDGET
 type WidgetDefinition = {
@@ -16,7 +17,6 @@ type WidgetDefinition = {
 
 export class Widget extends InspectableWithProps {
 
-
     type: string = $state('');
     parent: Widget | null = $state(null);
     children: Widget[] | null = $state(null);
@@ -31,13 +31,14 @@ export class Widget extends InspectableWithProps {
 
     constructor(type: string, isContainer?: boolean, id?: string) {
         super('widget', id);
+        this.type = type;
 
         this.isContainer = isContainer ?? false;
         if (this.isContainer) this.children = [];
-        this.type = type;
         const def = getWidgetDefinitionForType(type);
         this.icon = def?.icon;
 
+        this.setupProps();
         registerWidget(this);
     }
 
@@ -62,16 +63,20 @@ export class Widget extends InspectableWithProps {
     static createFromDefinition(def: WidgetDefinition): Widget {
 
         let w = new Widget(def.type, def.isContainer || false);
-        w.props = getPropsFromDefinitions(def.props || {});
         w.setPropRawValue('label.text', def.name);
         return w;
     }
 
     static createRootWidgetContainer(): Widget {
-        return Widget.createFromDefinition(widgetContainerDefinitions[0]);
+        let w = Widget.createFromDefinition(widgetContainerDefinitions[0]);
+        w.setPropRawValue('label.text', 'Root');
+        return w;
     }
 
 
+    getPropertyDefinitions(): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition); } | null {
+        return getWidgetDefinitionForType(this.type)?.props || null;
+    }
 
     toSnapshot(includeID: boolean = true): any {
         let data = super.toSnapshot(includeID);
@@ -100,7 +105,7 @@ export class Widget extends InspectableWithProps {
                 let child = this.children!.find(c => c.id === dataChild.id);
 
                 if (!child) {
-                    child = this.addWidget(dataChild.type, false, dataChild.id);
+                    child = this.addWidget(dataChild.type, {save:false, id: dataChild.id});
                 }
 
                 child.applySnapshot(dataChild);
@@ -111,37 +116,58 @@ export class Widget extends InspectableWithProps {
         }
     }
 
-    duplicate(): Widget | undefined {
+    duplicate(options?: { save?: boolean, select?: boolean }): Widget | undefined {
         if (this.parent === null) return undefined;
 
         let widget = new Widget(this.type, this.isContainer);
         widget.applySnapshot(this.toSnapshot(false));
-        this.parent.addWidget(widget);
+        this.parent.addWidget(widget, { select: false, save: false, after: this });
 
-        saveData("Duplicate Widget " + this.getName());
+        if (options?.select ?? true) {
+            widget.select(true);
+        }
+        if (options?.save ?? true) saveData("Duplicate Widget " + this.getName());
         return widget;
     }
 
 
-    addWidget(typeOrChild: string | Widget, save: boolean = true, id?: string): Widget {
+    addWidget(typeOrChild: string | Widget, options?: { select?: boolean, save?: boolean, id?: string, after?: Widget }): Widget {
 
         let child: Widget;
         if (typeof typeOrChild === 'string') {
-            child = new Widget(typeOrChild, false, id);
+            child = new Widget(typeOrChild, false, options?.id ?? undefined);
         } else {
             child = typeOrChild;
         }
 
+        let save = options?.save ?? true;
         if (!this.isContainer) {
-            throw new Error("Cannot add widget to non-container widget");
+            if (!this.parent) {
+                throw new Error("Cannot add widget to non-container widget without parent");
+            }
+            return this.parent.addWidget(child, options);
         }
 
         if (!this.children) {
             this.children = [];
         }
 
-        this.children.push(child);
-        child.parent = this;
+        let afterWidget = options?.after;
+        if (afterWidget) {
+            let index = this.children.indexOf(afterWidget);
+            if (index === -1) {
+                throw new Error("After widget not found in container");
+            }
+            this.children.splice(index + 1, 0, child);
+            child.parent = this;
+        } else {
+            this.children.push(child);
+            child.parent = this;
+        }
+
+        if (options?.select ?? true) {
+            child.select(true, true, false);
+        }
 
         if (save) {
             saveData("Add Widget " + child.getName());
@@ -177,7 +203,7 @@ export class Widget extends InspectableWithProps {
         this.select(!this.isSelected, false);
     }
 
-    select(doSelect: boolean = true, clearSelection: boolean = true) {
+    select(doSelect: boolean = true, clearSelection: boolean = true, save: boolean = true) {
 
         if (this.isSelected === doSelect && !clearSelection) return;
 
@@ -195,24 +221,26 @@ export class Widget extends InspectableWithProps {
                 selectedWidgets.splice(index, 1);
             }
         }
-
-        saveData("Select Widget", { coalesceID: 'select-widget' });
+        menuState.currentMenu = Menu.Widget;
+        if (save) {
+            saveData("Select Widget", { coalesceID: 'select-widget' });
+        }
     }
 
-    selectToThis() {
+    selectToThis(save: boolean = true) {
 
         if (selectedWidgets.length === 0) {
-            this.select(true, false);
+            this.select(true, false, save);
             return;
         }
 
         let lastSelected = selectedWidgets[selectedWidgets.length - 1];
         if (lastSelected.parent !== this.parent) {
-            this.select(true, false);
+            this.select(true, false, save);
             return;
         }
         if (!this.parent || !this.parent.children) {
-            this.select(true, false);
+            this.select(true, false, save);
             return;
         }
 
@@ -220,17 +248,20 @@ export class Widget extends InspectableWithProps {
         let startIndex = siblings.indexOf(lastSelected);
         let endIndex = siblings.indexOf(this);
         if (startIndex === -1 || endIndex === -1) {
-            this.select(true, false);
+            this.select(true, false, save);
             return;
         }
 
         let start = Math.min(startIndex, endIndex);
         let end = Math.max(startIndex, endIndex);
         for (let i = start; i <= end; i++) {
-            siblings[i].select(true, false);
+            siblings[i].select(true, false, false);
         }
 
-        saveData("Select Widget", { coalesceID: 'select-widget' });
+        menuContext.type = MenuContextType.Widget;
+        if (save) {
+            saveData("Select To Widget", { coalesceID: 'select-widget' });
+        }
     }
 
     getName(): string {
@@ -244,6 +275,15 @@ export class Widget extends InspectableWithProps {
 
 export const widgetsMap: { [key: string]: Widget } = $state({});
 export const selectedWidgets: Widget[] = $state([]);
+
+export const selectWidgets = function (widgets: Widget[], clearSelection: boolean = true, save: boolean = true) {
+    if (clearSelection) {
+        deselectAllWidgets();
+    }
+    for (let w of widgets) {
+        w.select(true, false, save);
+    }
+};
 
 export const deselectAllWidgets = function () {
     for (let w of selectedWidgets) {
@@ -270,16 +310,16 @@ const globalWidgetProperties: { [key: string]: (PropertySingleDefinition | Prope
 
     readOnly: { name: 'Read Only', type: PropertyType.BOOLEAN, default: false } as PropertySingleDefinition,
     label: {
-        name: 'Label', children: {
-            showLabel: { name: 'Show Label', type: PropertyType.BOOLEAN, default: true } as PropertySingleDefinition,
+        name: 'Label', color: '#d98d13ff', children: {
+            showLabel: { name: 'Show Label', type: PropertyType.BOOLEAN, default: true, description: 'Whether to show the label' } as PropertySingleDefinition,
             text: { name: 'Text', type: PropertyType.STRING, default: '' } as PropertySingleDefinition,
             fontSize: { name: 'Font Size', type: PropertyType.INTEGER, default: 14 } as PropertySingleDefinition,
             color: { name: 'Color', type: PropertyType.COLOR, default: '#cc0000ff' } as PropertySingleDefinition,
-            labelPlacement: { name: 'Label Placement', type: PropertyType.ENUM, default: 'inside', options: ['top', 'bottom', 'left', 'right', 'inside'] } as PropertySingleDefinition,
+            labelPlacement: { name: 'Label Placement', type: PropertyType.ENUM, default: 'inside', options: { 'top': 'Top', 'bottom': 'Bottom', 'left': 'Left', 'right': 'Right', 'inside': 'Inside' } } as PropertySingleDefinition,
         }
     },
     position: {
-        name: 'Position', collapsedByDefault: true, children: {
+        name: 'Position', color: '#1a73e8ff', collapsedByDefault: true, children: {
             left: { name: 'Left', type: PropertyType.CSSSIZE, default: 0 } as PropertySingleDefinition,
             top: { name: 'Top', type: PropertyType.CSSSIZE, default: 0 } as PropertySingleDefinition,
             right: { name: 'Right', type: PropertyType.CSSSIZE, default: 0 } as PropertySingleDefinition,
@@ -335,7 +375,7 @@ export const widgetDefinitions: WidgetDefinition[] = [
     {
         name: 'Dropdown', icon: '⬇️', type: 'dropdown', description: 'A widget for selecting an option from a dropdown list', props: {
             ...globalWidgetProperties,
-            value: { name: 'Value', type: PropertyType.ENUM, default: 'option1', options: ['option1', 'option2', 'option3'] } as PropertySingleDefinition
+            value: { name: 'Value', type: PropertyType.ENUM, default: 'option1', options: { 'option1': 'Option 1', 'option2': 'Option 2', 'option3': 'Option 3' } } as PropertySingleDefinition
         }
     },
     {
@@ -348,15 +388,15 @@ export const widgetDefinitions: WidgetDefinition[] = [
     {
         name: 'Button Bar', icon: '🔳', type: 'button-bar', description: 'A widget that displays a bar of buttons', props: {
             ...globalWidgetProperties,
-            value: { name: 'Value', type: PropertyType.ENUM, default: 'option1', options: ['option1', 'option2', 'option3'] } as PropertySingleDefinition,
-            orientation: { name: 'Orientation', type: PropertyType.ENUM, default: 'horizontal', options: ['horizontal', 'vertical'] } as PropertySingleDefinition,
+            value: { name: 'Value', type: PropertyType.ENUM, default: 'option1', options: { 'option1': 'Option 1', 'option2': 'Option 2', 'option3': 'Option 3' } } as PropertySingleDefinition,
+            orientation: { name: 'Orientation', type: PropertyType.ENUM, default: 'horizontal', options: { 'horizontal': 'Horizontal', 'vertical': 'Vertical' } } as PropertySingleDefinition,
             showLabels: { name: 'Show Labels', type: PropertyType.BOOLEAN, default: true } as PropertySingleDefinition
         }
     },
     {
-        name: 'Label', icon: '🏷️', type: 'label', props: {
+        name: 'Comment', icon: '🏷️', type: 'comment', description: 'A comment text', props: {
             ...globalWidgetProperties,
-            text: { name: 'Text', type: PropertyType.STRING, default: 'Label' } as PropertySingleDefinition,
+            text: { name: 'Text', type: PropertyType.STRING, default: 'Comment' } as PropertySingleDefinition,
             fontSize: { name: 'Font Size', type: PropertyType.INTEGER, default: 14 } as PropertySingleDefinition,
         }
     }];
@@ -365,13 +405,13 @@ export const widgetContainerDefinitions: WidgetDefinition[] = [
     {
         name: 'Container', icon: '📦', isContainer: true, type: 'container', description: 'A basic container widget that can hold other widgets in different layouts', props: {
             ...globalWidgetProperties,
-            layout: { name: 'Layout', type: PropertyType.ENUM, default: 'vertical', options: ['vertical', 'horizontal', 'grid', 'free', 'custom'] } as PropertySingleDefinition
+            layout: { name: 'Layout', type: PropertyType.ENUM, default: 'vertical', options: { 'vertical': 'Vertical', 'horizontal': 'Horizontal', 'grid': 'Grid', 'free': 'Free', 'custom': 'Custom' } } as PropertySingleDefinition
         }
     },
     {
         name: 'Tab Container', icon: '📑', isContainer: true, type: 'tab-container', description: 'A container widget that organizes its children into tabs', props: {
             ...globalWidgetProperties,
-            tabPosition: { name: 'Tab Position', type: PropertyType.ENUM, default: 'top', options: ['top', 'bottom', 'left', 'right'] } as PropertySingleDefinition
+            tabPosition: { name: 'Tab Position', type: PropertyType.ENUM, default: 'top', options: { 'top': 'Top', 'bottom': 'Bottom', 'left': 'Left', 'right': 'Right' } } as PropertySingleDefinition
         }
     },
     {

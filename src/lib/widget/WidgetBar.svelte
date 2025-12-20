@@ -9,25 +9,27 @@
 	function addWidgetFromDef(def: any) {
 		const lastSelected =
 			selectedWidgets.length > 0 ? selectedWidgets[selectedWidgets.length - 1] : null;
-		if (lastSelected && lastSelected.isContainer) {
-			lastSelected.addWidget(Widget.createFromDefinition(def));
+		if (lastSelected) {
+			lastSelected.addWidget(Widget.createFromDefinition(def), {
+				after: !lastSelected.isContainer ? lastSelected : undefined
+			});
 		}
 	}
 </script>
 
 <div class="widget-bar">
 	{#each [...widgetContainerDefinitions, null, ...widgetDefinitions] as widget}
-	{#if widget === null}
-		<div class="separation"></div>
-	{:else}
-		<button
-			class="widget-button"
-			title={widget.name + '\n' + widget.description}
-			onclick={() => addWidgetFromDef(widget)}
-		>
-			<span class="widget-icon">{widget.icon}</span>
-		</button>
-	{/if}
+		{#if widget === null}
+			<div class="separation"></div>
+		{:else}
+			<button
+				class="widget-button"
+				title={widget.name + '\n' + widget.description}
+				onclick={() => addWidgetFromDef(widget)}
+			>
+				<span class="widget-icon">{widget.icon}</span>
+			</button>
+		{/if}
 	{/each}
 </div>
 

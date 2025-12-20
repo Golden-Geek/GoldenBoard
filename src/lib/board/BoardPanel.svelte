@@ -3,7 +3,8 @@
 	import EditableButton from '$lib/components/EditableButton.svelte';
 	import Board from './Board.svelte';
 	import { addBoard, removeBoard } from './boards.svelte';
-	import { mainState, saveData, EditMode } from '$lib/engine.svelte';
+	import { mainState, saveData, EditMode, MenuContextType } from '$lib/engine/engine.svelte';
+	import { Menu, menuState } from '$lib/inspector/inspector.svelte.ts';
 
 	let selectedBoard = $derived(mainState.selectedBoard);
 	let boards = $derived(mainState.boards);
@@ -17,15 +18,20 @@
 
 	{#each boards as board}
 		<EditableButton
-			onselect={() => {
+			onSelect={() => {
 				mainState.selectedBoard = board;
-				saveData('Select Board', {coalesceID: 'select-board'});
+				menuState.currentMenu = Menu.Board;
+				saveData('Select Board', { coalesceID: 'select-board' });
 			}}
 			editable={true}
-			bind:value={board.name}
+			value={board.name}
+			onChange={(newValue:string) => {
+				board.setPropRawValue('name', newValue);
+				saveData('Rename Board', { coalesceID: 'rename-board-' + board.id });
+			}}
 			hasRemoveButton={boards.length > 1}
 			selected={board.isSelected}
-			onremove={() => {
+			onRemove={() => {
 				removeBoard(board);
 			}}
 			color={'var(--board-color)'}
