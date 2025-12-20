@@ -9,9 +9,7 @@
 	let color = $derived(definition.color || 'var(--border-color)');
 </script>
 
-<div
-	class="property-container"
-	style="--container-color: {color}">
+<div class="property-container" style="--container-color: {color}">
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<div
 		class="property-container-header"
@@ -26,7 +24,7 @@
 		</span>
 	</div>
 
-	<div class="property-container-content" transition:slide|local={{ duration: 200 }}>
+	<div class="property-container-content">
 		{#if !collapsed}
 			<div class="property-container-children" transition:slide|local={{ duration: 200 }}>
 				{#if property && definition.children}

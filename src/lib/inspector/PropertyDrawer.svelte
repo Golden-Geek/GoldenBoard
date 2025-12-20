@@ -16,7 +16,7 @@
 <div class="property-drawer">
 	{#if props}
 		{#each orderedDefs as [key, property]}
-			<div class="property-item">
+			<div class="property-item" >
 				<PropertyInspector
 					{targets}
 					bind:property={props[key]}
