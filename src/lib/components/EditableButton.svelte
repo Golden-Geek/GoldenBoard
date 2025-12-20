@@ -13,6 +13,7 @@
 		separator = '',
 		warning = '',
 		extraClass = '',
+		icon = '',
 		color = ''
 	} = $props();
 	let isEditing = $state(false);
@@ -77,10 +78,10 @@
 			}}
 		/>
 	{:else if separator !== ''}
-		<span class="first-line">{value?.split(separator)[0]}</span><br />
+		<span class="first-line">{icon} {value?.split(separator)[0]}</span><br />
 		<span class="second-line">{value?.split(separator)[1]}</span>
 	{:else}
-		{value}
+		{icon}{value}
 	{/if}
 	{#if hasRemoveButton}
 		<div class="remove-bt">
