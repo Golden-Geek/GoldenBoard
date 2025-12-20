@@ -1,114 +1,369 @@
 <script lang="ts">
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import OscTreePanel from '$lib/components/OscTreePanel.svelte';
-	import BoardCanvas from '$lib/components/BoardCanvas.svelte';
-	import InspectorPanel from '$lib/components/InspectorPanel.svelte';
-	import ModeToggle from '$lib/components/ModeToggle.svelte';
-	import { editorMode, mainSettings, toggleEditorMode } from '$lib/stores/ui';
-	import type { EditorMode } from '$lib/stores/ui';
-	import {
-		activeBoard,
-		selectedWidget,
-		removeWidgetFromBoard,
-		undoBoardChange,
-		redoBoardChange
-	} from '$lib/stores/boards';
-	import type { ContainerWidget, Widget } from '$lib/types/widgets';
+	import BoardPanel from '$lib/board/BoardPanel.svelte';
+	import InspectorPanel from '$lib/inspector/InspectorPanel.svelte';
+	import OutlinerPanel from '$lib/widget/OutlinerPanel.svelte';
+	import ServerPanel from '$lib/servers/ServerPanel.svelte';
+	import TopBar from '$lib/editor/TopBar.svelte';
+	import Split from 'split-grid';
+	import { onMount, tick } from 'svelte';
+	import { EditMode, mainState, redo, saveData, undo } from '$lib/engine/engine.svelte';
+	import { fly } from 'svelte/transition';
+	import Panel from '$lib/editor/Panel.svelte';
+	import Footer from '$lib/editor/Footer.svelte';
+	import ContextMenu from '$lib/components/ContextMenu.svelte';
+	import { selectedWidgets, selectWidgets } from '$lib/widget/widgets.svelte';
 
-	let boardCss = '';
-	let globalCss = '';
-	let selection: { widget: Widget; parent?: ContainerWidget } | null = null;
-	$: mode = $editorMode;
-	$: isLive = mode === 'live';
-	$: showLiveBoards = $mainSettings.showLiveBoards;
-	$: showEditLiveButtons = $mainSettings.showEditLiveButtons;
-	$: canvasShowsHeader = !isLive || showLiveBoards;
-	$: canvasShowsPanel = !isLive;
-	$: globalCss = $mainSettings.globalCss;
-	$: boardCss = $activeBoard?.css ?? '';
-	$: selection = $selectedWidget;
+	let editorState: any = $derived(mainState.editor);
+	let editorLayout: any = $derived(editorState?.layout);
+	let editMode = $derived(editorState?.editMode);
 
-	const isEditableTarget = (target: EventTarget | null): target is HTMLElement => {
-		if (!(target instanceof HTMLElement)) return false;
-		const tag = target.tagName;
-		if (target.isContentEditable) return true;
-		return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
-	};
+	let contentDiv = $state<HTMLDivElement | null>(null);
+	let leftSplitter = $state<HTMLDivElement | null>(null);
+	let rightSplitter = $state<HTMLDivElement | null>(null);
+	let leftPaneSplitter = $state<HTMLDivElement | null>(null);
 
-	const handleGlobalKeydown = (event: KeyboardEvent) => {
+	let layoutLoaded = $state(false);
 
-		if (event.key === 'e' && event.ctrlKey) {
-			event.preventDefault();
-			toggleEditorMode();
-			return;
+	$effect(() => {
+		loadLayout();
+	});
+
+	$effect(() => {
+		if (!editMode) return;
+		tick().then(() => {
+			initSplitter();
+		});
+	});
+
+	onMount(() => {
+		window.addEventListener('keydown', handleKeydown);
+		window.addEventListener('fullscreenchange', () => {
+			mainState.editor.fullScreen = document.fullscreenElement != null;
+			saveData('Toggle Fullscreen', {
+				skipHistory: true
+			});
+		});
+
+		let fullScreenOnLoad = mainState.globalSettings.getPropValue('fullScreenOnLoad').current;
+
+		let doFullScreen =
+			fullScreenOnLoad == 'on' || (mainState.editor.fullScreen && fullScreenOnLoad == 'last');
+
+		if (doFullScreen) {
+			// Only request fullscreen if already in fullscreen due to user gesture
+			if (!document.fullscreenElement) {
+				console.warn('Fullscreen request skipped: must be triggered by user gesture.');
+			}
+			document.documentElement.requestFullscreen();
+			mainState.editor.fullScreen = true;
+		} else {
+			if (document.fullscreenElement) document.exitFullscreen();
+			mainState.editor.fullScreen = false;
 		}
 
+		// mainState.editor.fullScreen = document.fullscreenElement != null;
 
-		if (isLive) return;
-		const targetIsEditable = isEditableTarget(event.target);
-		const metaPressed = event.metaKey || event.ctrlKey;
-		const key = event.key;
-		const normalizedKey = key.toLowerCase();
+		return () => {
+			window.removeEventListener('keydown', handleKeydown);
+		};
+	});
 
-		if (metaPressed && !targetIsEditable) {
-			if (normalizedKey === 'z') {
-				event.preventDefault();
-				if (event.shiftKey) {
-					redoBoardChange();
-				} else {
-					undoBoardChange();
+	function initSplitter() {
+		if (!leftSplitter || !rightSplitter || !leftPaneSplitter || !contentDiv) return;
+		tick().then(() => {
+			Split({
+				columnGutters: [
+					{
+						track: 1,
+						element: leftSplitter!
+					},
+					{
+						track: 3,
+						element: rightSplitter!
+					}
+				],
+				rowGutters: [
+					{
+						track: 1,
+						element: leftPaneSplitter!
+					}
+				],
+				onDragEnd: () => {
+					saveLayout();
 				}
-				return;
+			});
+
+			loadLayout();
+		});
+	}
+
+	function loadLayout() {
+		if (contentDiv == null) return;
+		if (editorLayout) {
+			const { inspectorWidth, leftPaneWidth, outlinerHeight } = editorLayout as {
+				inspectorWidth: string;
+				leftPaneWidth: string;
+				outlinerHeight: string;
+			};
+			if (contentDiv) {
+				contentDiv.style.gridTemplateColumns = `${leftPaneWidth} 8px 1fr 8px ${inspectorWidth}`;
+				contentDiv.style.gridTemplateRows = `${outlinerHeight} 8px 1fr`;
 			}
-			if (normalizedKey === 'y') {
-				event.preventDefault();
-				redoBoardChange();
+		} else {
+			// Set defaults
+			if (contentDiv) {
+				contentDiv.style.gridTemplateColumns = `250px 8px 1fr 8px 300px`;
+				contentDiv.style.gridTemplateRows = `1fr 8px 1fr`;
+			}
+		}
+		layoutLoaded = true;
+	}
+
+	function saveLayout() {
+		if (!contentDiv) return;
+
+		// Get computed grid sizes
+		const style = getComputedStyle(contentDiv);
+		const columns = style.gridTemplateColumns.split(' ').map((s) => s.trim());
+		const rows = style.gridTemplateRows.split(' ').map((s) => s.trim());
+
+		// Inspector width: last column
+		const inspectorWidth = columns[columns.length - 1];
+		// Left pane width: first column
+		const leftPaneWidth = columns[0];
+		// Outliner height: first row
+		const outlinerHeight = rows[0];
+
+		editorLayout = {
+			inspectorWidth,
+			leftPaneWidth,
+			outlinerHeight
+		};
+
+		saveData('Change Layout');
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		const mod = event.ctrlKey || event.metaKey;
+		if (mod && (event.key === 'z' || event.key === 'Z')) {
+			event.preventDefault();
+			if (event.shiftKey) redo();
+			else undo();
+			return;
+		}
+		if (event.ctrlKey && (event.key === 'y' || event.key === 'Y')) {
+			event.preventDefault();
+			redo();
+			return;
+		}
+		if (event.ctrlKey && (event.key === 'e' || event.key === 'E')) {
+			event.preventDefault();
+			mainState.editor.editMode = editMode === EditMode.Edit ? EditMode.Live : EditMode.Edit;
+			saveData('Toggle Edit Mode', { skipHistory: true });
+		}
+		if (event.key === 'Delete' || event.key === 'Backspace') {
+			//should not be active when focused on input or textarea
+			const activeElement = document.activeElement;
+			if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
 				return;
 			}
 			
+			if (selectedWidgets.length > 0) {
+				event.preventDefault();
+				let widgetsToDelete = [...selectedWidgets];
+				widgetsToDelete.forEach((w) => w.remove(false));
+				saveData('Delete Selected Widgets');
+			}
+		} 
+		if (event.key == 'F11') {
+			event.preventDefault();
+			if (!document.fullscreenElement) {
+				document.documentElement.requestFullscreen();
+			} else {
+				document.exitFullscreen();
+			}
+			console.log('Toggling fullscreen from F11', mainState.editor.fullScreen);
+			saveData('Toggle Fullscreen', {
+				skipHistory: true
+			});
 		}
+		if (event.key == 's' && mod) {
+			event.preventDefault();
+			saveData('Save', { skipHistory: true });
+		}
+		if (event.key == 'd' && mod) {
+			event.preventDefault();
+			let snapSelection = [...selectedWidgets];
+			let newWidgets: any[] = [];
+			snapSelection.forEach((w) => {
+				let newW =w.duplicate({ save: false, select: false });
+				if(newW) newWidgets.push(newW);
+			});
 
-		if (targetIsEditable) return;
-		if (!selection || !$activeBoard) return;
-		if (selection.widget.id === $activeBoard.root.id) return;
-		if (!['Delete', 'Backspace'].includes(key)) return;
-		event.preventDefault();
-		removeWidgetFromBoard(selection.widget.id);
-
-		
-	};
+			selectWidgets(newWidgets, true, false);
+			
+			saveData('Duplicate Selected Widgets');
+		}
+	}
 </script>
 
-<svelte:head>
-	{#if globalCss.trim()}
-		<style id="goldenboard-global-css">{globalCss}</style>
+<div class="root mode-{editMode}">
+	{#if editMode == EditMode.Edit}
+		<div class="topbar-area" transition:fly={{ y: -50 }}>
+			<TopBar />
+		</div>
 	{/if}
-	{#if boardCss.trim()}
-		<style id="goldenboard-board-css">{boardCss}</style>
-	{/if}
-</svelte:head>
 
-<svelte:window on:keydown={handleGlobalKeydown} />
+	<div class="content {layoutLoaded ? '' : 'loading'}" bind:this={contentDiv}>
+		{#if editMode == EditMode.Edit}
+			<div class="outliner-area">
+				<Panel name="Outliner">
+					<OutlinerPanel />
+				</Panel>
+			</div>
 
-{#if mode !== 'loading'}
-<div class={`app-root mode-${mode}`}>
-	{#if !showEditLiveButtons}
-	<ModeToggle />
-	{/if}
-	<div class={`toolbar-wrapper ${isLive ? 'toolbar-collapsed' : ''}`} aria-hidden={isLive}>
-		<Toolbar  />
+			<div class="server-area">
+				<Panel name="Servers">
+					<ServerPanel />
+				</Panel>
+			</div>
+		{/if}
+
+		<div class="board-area">
+			<Panel name="Board">
+				<BoardPanel />
+			</Panel>
+		</div>
+
+		{#if editMode == EditMode.Edit}
+			<div class="inspector-area">
+				<Panel name="Inspector">
+					<InspectorPanel />
+				</Panel>
+			</div>
+
+			<div class="left-splitter" bind:this={leftSplitter}></div>
+			<div class="right-splitter" bind:this={rightSplitter}></div>
+			<div class="leftpane-splitter" bind:this={leftPaneSplitter}></div>
+		{/if}
 	</div>
 
-	<div class={`workspace ${isLive ? 'workspace-live' : 'workspace-edit'}`}>
-		<aside class={`panel-column panel-left ${isLive ? 'panel-collapsed' : ''}`} aria-hidden={isLive}>
-			<OscTreePanel />
-		</aside>
-		<main class={`canvas-wrapper ${isLive ? 'live-only' : ''}`}>
-			<BoardCanvas showHeader={canvasShowsHeader} showPanel={canvasShowsPanel} />
-		</main>
-		<aside class={`panel-column panel-right ${isLive ? 'panel-collapsed' : ''}`} aria-hidden={isLive}>
-			<InspectorPanel />
-		</aside>
-	</div>
+	{#if editMode}
+		<div class="footer-area" transition:fly={{ y: 50 }}>
+			<Footer />
+		</div>
+	{/if}
 </div>
-{/if}
+
+<ContextMenu />
+
+<style>
+	.root {
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		transition: gap 0.3s ease;
+	}
+
+	.root.mode-live {
+		--panel-bg: #ffffff;
+		--border-color: #cccccc;
+		gap: 0;
+	}
+
+	.topbar-area,
+	.footer-area {
+		width: 100%;
+		transition: height 0.3s ease;
+	}
+
+	.mode-live .topbar-area,
+	.mode-live .footer-area {
+		height: 0;
+	}
+
+	.content {
+		width: 100%;
+		height: 100%;
+		opacity: 1;
+		padding: 0.5rem;
+		transition:
+			opacity 0.2s ease,
+			padding 0.3s ease;
+		overflow: auto;
+	}
+
+	.content.loading {
+		opacity: 0;
+	}
+
+	.mode-edit .content {
+		flex: 1 1 auto;
+		display: grid;
+		grid-template-areas:
+			'outliner       left-split content right-split inspector'
+			'leftpane-split left-split content right-split inspector'
+			'server         left-split content right-split inspector';
+
+		grid-template-rows: 1fr 8px 1fr;
+		grid-template-columns: 250px 8px 1fr 8px 300px;
+		width: 100%;
+		height: 100%;
+		min-width: 0;
+	}
+
+	.mode-live .content {
+		width: 100%;
+		height: 100%;
+		padding: 0;
+	}
+
+	.outliner-area {
+		grid-area: outliner;
+		min-width: 100px;
+		min-height: 100px;
+	}
+
+	.server-area {
+		grid-area: server;
+		min-width: 100px;
+		min-height: 100px;
+	}
+
+	.inspector-area {
+		grid-area: inspector;
+		min-width: 100px;
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+
+	.mode-edit .board-area {
+		grid-area: content;
+		min-width: 0;
+	}
+
+	.mode-live .board-area {
+		width: 100%;
+		height: 100%;
+		min-width: 0;
+	}
+
+	.left-splitter {
+		grid-area: left-split;
+		cursor: col-resize;
+		width: 8px;
+	}
+
+	.right-splitter {
+		grid-area: right-split;
+		cursor: col-resize;
+		width: 8px;
+	}
+
+	.leftpane-splitter {
+		grid-area: leftpane-split;
+		cursor: row-resize;
+		height: 8px;
+	}
+</style>

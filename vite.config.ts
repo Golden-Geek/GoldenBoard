@@ -1,25 +1,17 @@
-import { defineConfig } from 'vitest/config';
-import { playwright } from '@vitest/browser-playwright';
+import devtoolsJson from 'vite-plugin-devtools-json';
+import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+
+const file = fileURLToPath(new URL('package.json', import.meta.url));
+const json = readFileSync(file, 'utf8');
+const pkg = JSON.parse(json);
 
 export default defineConfig({
-	plugins: [sveltekit()],
-	test: {
-		expect: { requireAssertions: true },
-		projects: [
-			{
-				extends: './vite.config.ts',
-				test: {
-					name: 'client',
-					browser: {
-						enabled: true,
-						provider: playwright(),
-						instances: [{ browser: 'chromium', headless: true }]
-					},
-					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
-					exclude: ['src/lib/server/**']
-				}
-			}
-		]
-	}
+    plugins: [tailwindcss(), sveltekit(), devtoolsJson()],
+    define: {
+        PKG: pkg
+    }
 });
