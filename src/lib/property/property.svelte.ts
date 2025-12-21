@@ -1,5 +1,6 @@
 import { ColorUtil, type Color } from "./Color.svelte";
-import { InspectableWithProps, activeUserIDs } from "./inspectable.svelte";
+import { InspectableWithProps } from "./inspectable.svelte";
+import { Expression, type ExpressionMode } from "./expression.svelte";
 
 
 export enum PropertyType {
@@ -57,7 +58,6 @@ export type ResolvedProperty<T> = {
 };
 
 
-
 export abstract class PropertyNodeBase<TDefinition extends PropertySingleDefinition | PropertyContainerDefinition> {
     owner: InspectableWithProps | undefined;
     keyPath: string | undefined;
@@ -84,15 +84,14 @@ export abstract class PropertyNodeBase<TDefinition extends PropertySingleDefinit
 export class Property extends PropertyNodeBase<PropertySingleDefinition> {
     value: PropertyValueType;
     enabled: boolean | undefined;
-    mode: PropertyMode | undefined;
-    expression: string | undefined;
+    expr: Expression;
 
     constructor(definition: PropertySingleDefinition, owner?: InspectableWithProps, keyPath?: string) {
         super(definition, owner, keyPath);
         this.value = $state(this.coerce(definition.default));
         this.enabled = $state(undefined);
-        this.mode = $state(undefined);
-        this.expression = $state(undefined);
+
+		this.expr = new Expression();
     }
 
     override cleanup() {
@@ -104,33 +103,26 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         return this.definition;
     }
 
-    getResolved<T>(defaultValue = null as T): ResolvedProperty<T> {
-        const def = this.definition;
-        const canDisable = !!def.canDisable;
+  
 
-        let enabled = this.enabled;
-        if (enabled === undefined) enabled = !canDisable;
+    get mode(): PropertyMode | undefined {
+        return this.expr.mode as PropertyMode | undefined;
+    }
 
-        const fallback = (defaultValue !== null ? defaultValue : (def.default as T)) as T;
-        if (!enabled) {
-            return { current: fallback, raw: fallback };
-        }
+    set mode(value: PropertyMode | undefined) {
+        this.expr.mode = value as ExpressionMode | undefined;
+    }
 
-        const raw = this.value as T;
+    get expression(): string | undefined {
+        return this.expr.text;
+    }
 
-        if (!this.mode || this.mode === PropertyMode.VALUE) {
-            return { current: raw, raw };
-        }
-
-        return this.parseExpression<T>(this.expression || '', raw, fallback);
+    set expression(value: string | undefined) {
+        this.expr.text = value;
     }
 
     get<T>(defaultValue = null as T): T | null {
         return this.getResolved<T>(defaultValue).current;
-    }
-
-    getValue<T>(defaultValue = null as T): T | null {
-        return this.get<T>(defaultValue);
     }
 
     getRaw(defaultValue: any = null): PropertyValueType | null {
@@ -144,103 +136,44 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         return (this.value as PropertyValueType) ?? defaultValue;
     }
 
+      getResolved<T>(defaultValue = null as T): ResolvedProperty<T> {
+        const def = this.definition;
+        const canDisable = !!def.canDisable;
+
+        let enabled = this.enabled;
+        if (enabled === undefined) enabled = !canDisable;
+
+        const fallback = (defaultValue !== null ? defaultValue : (def.default as T)) as T;
+        if (!enabled) {
+            return { current: fallback, raw: fallback };
+        }
+
+        const raw = this.value as T;
+
+        if (this.mode !== PropertyMode.EXPRESSION) {
+            return { current: raw, raw };
+        }
+
+        if (!this.owner || !this.keyPath) {
+            return { current: raw, raw };
+        }
+
+        return this.expr.evaluate<T>({
+            owner: this.owner,
+            selfKeyPath: this.keyPath,
+            rawValue: raw,
+            fallbackValue: fallback,
+            filter: def.filterFunction,
+            coerce: (v) => this.coerceToType(v, def.type) as T
+        });
+    }
+
     setRaw(value: PropertyValueType) {
         this.value = value;
     }
 
     set(value: PropertyValueType) {
         this.setRaw(value);
-    }
-
-
-    private parseExpression<T>(expression: string, rawValue: any, fallbackValue: any): ResolvedProperty<T> {
-        let result = {} as ResolvedProperty<T>;
-
-        result.current = rawValue as T;
-        result.raw = rawValue as T;
-
-        const expr = (expression ?? '').trim();
-        if (expr === '') return result;
-
-        const owner = this.owner;
-        const propKey = this.keyPath;
-        if (!owner || !propKey) return result;
-
-        // Optional "formula" style prefix
-        const js = expr.startsWith('=') ? expr.slice(1).trim() : expr;
-
-        // Very small safety net (still not fully secure if user-controlled)
-        const forbidden = [
-            'function',
-            '=>',
-            'new ',
-            'this',
-            'window',
-            'document',
-            'globalThis',
-            'import',
-            'eval',
-            'constructor',
-            '__proto__'
-        ];
-        if (forbidden.some((t) => js.includes(t))) {
-            result.error = 'Expression contains forbidden syntax.';
-            return result;
-        }
-
-        try {
-            // Allow reading other props via prop("some.key", fallback?)
-            const prop = <U>(key: string, fallback?: U) => {
-                let keySplit = key.split(':');
-                let target = owner as InspectableWithProps;
-                let tKey = key;
-                if (keySplit.length > 1) {
-                    target = keySplit[0] == 'this' || keySplit[0] == '' ? owner : activeUserIDs[keySplit[0]];
-                    tKey = keySplit[1];
-                }
-
-                if (!target) {
-                    throw new Error(`Target '${keySplit[0]}' not found for prop('${key}').`);
-                }
-
-                if (!target.getProp(tKey)) {
-                    throw new Error(
-                        `Property '${tKey}' not found on target '${keySplit[0]}' for prop('${key}').`
-                    );
-                }
-
-                const node = target.getProp(tKey);
-                if (!node || 'children' in node) {
-                    throw new Error(
-                        `Property '${tKey}' not found on target '${keySplit[0]}' for prop('${key}').`
-                    );
-                }
-
-                return (node as Property).getResolved<U>(fallback as U).current as U;
-            };
-
-            const fn = new Function('Math', 'prop', `return (${js});`) as (m: Math, p: typeof prop) => unknown;
-
-            const computed = fn(Math, prop);
-
-            if (computed !== undefined && computed !== null) {
-                const def = this.definition;
-                let filtered = def.filterFunction ? def.filterFunction(computed) : computed;
-                if (filtered === undefined || filtered === null) {
-                    throw new Error('Filtered expression value is undefined or null.');
-                }
-
-                filtered = this.coerceToType(filtered, def.type);
-                result.current = filtered as T;
-            } else {
-                result.current = fallbackValue as T;
-            }
-        } catch (e: unknown) {
-            result.error = e instanceof Error ? e.message : String(e);
-            result.current = fallbackValue as T;
-        }
-
-        return result;
     }
 
     toSnapshot(): any {
@@ -255,8 +188,9 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
             value: $state.snapshot(this.value)
         };
         if (this.enabled !== undefined) out.enabled = this.enabled;
-        if (this.mode !== undefined) out.mode = this.mode;
-        if (this.expression !== undefined) out.expression = this.expression;
+		const exprSnap = this.expr.toSnapshot();
+		if (exprSnap.mode !== undefined) out.mode = exprSnap.mode;
+		if (exprSnap.expression !== undefined) out.expression = exprSnap.expression;
         return out;
     }
 
@@ -264,8 +198,7 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         if (!snapshot || typeof snapshot !== 'object') return;
 
         if ('enabled' in snapshot) this.enabled = snapshot.enabled;
-        this.mode = snapshot.mode ?? PropertyMode.VALUE;
-        if ('expression' in snapshot) this.expression = snapshot.expression;
+		this.expr.applySnapshot(snapshot);
 
         if ('value' in snapshot) {
             const raw = this.definition.filterFunction
@@ -278,13 +211,12 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
     resetToDefault() {
         this.value = this.coerce(this.definition.default);
         this.enabled = undefined;
-        this.mode = undefined;
-        this.expression = undefined;
+		this.expr.reset();
     }
 
     isValueOverridden(trueIfHasExpression:boolean = true): boolean {
         // special types
-        if(trueIfHasExpression && (this.mode === PropertyMode.EXPRESSION || this.expression !== undefined)) return true;
+		if (trueIfHasExpression && this.expr.isOverridden()) return true;
 
         switch (this.definition.type) {
             case PropertyType.COLOR:
