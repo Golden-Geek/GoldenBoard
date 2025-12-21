@@ -54,16 +54,12 @@ export class InspectableWithProps {
         return {
             name: 'User ID',
             type: PropertyType.STRING,
-            default: sanitizeUserID(this.defaultUserID),
+            default: this.defaultUserID,
             canDisable: true,
             filterFunction: (value: any) => {
                 return sanitizeUserID(value as string);
             }
         }
-    }
-
-    setUserID(newUserID: string) {
-        this.setPropRawValue('userID', sanitizeUserID(newUserID));
     }
 
     getPropertyDefinitions(): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } | null {
@@ -139,9 +135,10 @@ export class InspectableWithProps {
         }
 
         // For now, just return the raw value. TODO: implement expression evaluation, etc.
-        if (prop.mode === PropertyMode.VALUE) {
+        if (!prop.mode || prop.mode === PropertyMode.VALUE) {
             return { current: prop.value as T, raw: prop.value as T };
         }
+        // return { current: prop.value as T, raw: prop.value as T };
 
         return this.parseExpression(prop.expression || '', prop.value, propKey);
     }
@@ -168,8 +165,70 @@ export class InspectableWithProps {
 
     parseExpression<T>(expression: string, fallbackValue: any, propKey: string): ResolvedProperty<T> {
 
-        // For now, just return the fallback value. TODO: implement expression evaluation.
-        return { current: expression as T, raw: fallbackValue as T };
+        let result = {} as ResolvedProperty<T>;
+
+        result.current = fallbackValue as T;
+        result.raw = fallbackValue as T;
+
+        const expr = (expression ?? '').trim();
+        if (expr === '') return result;
+
+        // Optional "formula" style prefix
+        const js = expr.startsWith('=') ? expr.slice(1).trim() : expr;
+
+        // Very small safety net (still not fully secure if user-controlled)
+        const forbidden = [
+            'function',
+            '=>',
+            'new ',
+            'this',
+            'window',
+            'document',
+            'globalThis',
+            'import',
+            'eval',
+            'constructor',
+            '__proto__'
+        ];
+        if (forbidden.some((t) => js.includes(t))) {
+            result.error = 'Expression contains forbidden syntax.';
+            return result;
+        }
+
+        try {
+            // Allow reading other props via prop("some.key", fallback?)
+            const prop = <U>(key: string, fallback?: U) => {
+                let keySplit = key.split(':');
+                if (keySplit.length == 1)
+                    return this.getPropValue<U>(key, fallback as U).current as U;
+
+                let uID = keySplit[0];
+                let tKey = keySplit.slice(1).join(':');
+
+                const obj = activeUserIDs[uID];
+                if (obj) {
+                    return obj.getPropValue<U>(tKey, fallback as U).current as U;
+                }
+            };
+
+            const fn = new Function('Math', 'prop', `return (${js});`) as (m: Math, p: typeof prop) => unknown;
+
+            const computed = fn(Math, prop);
+
+            if (computed !== undefined && computed !== null) {
+                const def = this.getDefinitionForProp(propKey);
+                const filtered = def?.filterFunction ? def.filterFunction(computed) : computed;
+
+                result.current = filtered as T;
+            } else {
+                result.current = fallbackValue as T;
+            }
+        } catch (e: unknown) {
+            result.error = e instanceof Error ? e.message : String(e);
+            result.current = fallbackValue as T;
+        }
+
+        return result;
     }
 
     toSnapshot(includeID: boolean = true): any {

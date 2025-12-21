@@ -31,7 +31,7 @@ export class Widget extends InspectableWithProps {
 
     defaultUIDDestroy = $effect.root(() => {
         $effect(() => {
-            this.defaultUserID = sanitizeUserID(this.label);
+            this.defaultUserID = sanitizeUserID(this.label? this.label : 'widget');
         });
 
         return () => {

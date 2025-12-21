@@ -92,7 +92,9 @@
 
 		{#if property.mode == PropertyMode.EXPRESSION}
 			<div class="property-expression" transition:slide={{ duration: 200 }}>
-				<ExpressionEditor {targets} bind:property {definition}></ExpressionEditor>
+				<ExpressionEditor {targets} bind:property {definition}
+					onUpdate={() => checkAndSaveProperty(true)}
+				></ExpressionEditor>
 			</div>
 		{/if}
 	{:else}

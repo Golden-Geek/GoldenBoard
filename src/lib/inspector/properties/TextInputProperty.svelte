@@ -14,18 +14,18 @@
 	let expressionMode = $derived(property.mode == PropertyMode.EXPRESSION);
 	let resolvedValue = $derived((target as InspectableWithProps)?.getPropValue(propKey));
 	let shownValue = $derived(resolvedValue?.error ?? resolvedValue?.current ?? '');
+	let expressionHasError = $derived(resolvedValue?.error != null);
 
 	let initValue = $derived(property.value);
-
-	$inspect(resolvedValue);
 </script>
 
 <input
 	type="text"
-	class="text-property"
+	class="text-property {expressionMode ? 'expression' : ''} {expressionHasError ? 'error' : ''}"
 	disabled={definition.readOnly || expressionMode}
-	value={property.value}
+	value={shownValue}
 	onchange={(e) => {
+		if (expressionMode) return;
 		let newValue = (e.target as HTMLInputElement).value;
 		// Apply filter function if defined
 		if (definition.filterFunction) {
@@ -33,9 +33,10 @@
 		}
 		property.value = newValue;
 	}}
-	onfocus={() => onStartEdit && onStartEdit(initValue)}
-	onblur={() => onUpdate && onUpdate()}
+	onfocus={() => (expressionMode ? null : onStartEdit && onStartEdit(initValue))}
+	onblur={() => (expressionMode ? null : onUpdate && onUpdate())}
 	onkeydown={(e) => {
+		if (expressionMode) return;
 		if (e.key === 'Enter') {
 			onUpdate && onUpdate();
 			(e.target as HTMLInputElement).blur();
@@ -48,6 +49,15 @@
 		height: 100%;
 		box-sizing: border-box;
 		font-size: 0.75rem;
+	}
+
+	.text-property.expression {
+		font-style: italic;
+		background-color: rgba(from var(--expression-color) r g b / 20%) !important;
+	}
+
+	.text-property.expression.error {
+		background-color: rgba(from var(--error-color) r g b / 20%) !important;
 	}
 
 	.text-property:disabled {

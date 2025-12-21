@@ -47,10 +47,10 @@
 	}
 
 	onMount(() => {
-		document.addEventListener('pointerdown', handleDocumentPointer);
+		// document.addEventListener('pointerdown', handleDocumentPointer);
 		document.addEventListener('keydown', handleKeydown);
 		return () => {
-			document.removeEventListener('pointerdown', handleDocumentPointer);
+			// document.removeEventListener('pointerdown', handleDocumentPointer);
 			document.removeEventListener('keydown', handleKeydown);
 		};
 	});

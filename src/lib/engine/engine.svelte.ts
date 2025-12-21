@@ -225,7 +225,6 @@ export function loadData() {
         widget.remove();
     }
 
-
     const stateStr = localStorage.getItem('data');
     if (stateStr) {
         const snap = JSON.parse(stateStr);

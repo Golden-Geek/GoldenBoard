@@ -26,6 +26,8 @@
     --slider-fg: var(--accent-color);
 
     --expression-color: #b29c12;
+
+    --error-color: #d42e2e;
 }
 
 html,
