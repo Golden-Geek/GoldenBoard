@@ -209,6 +209,10 @@
 	}
 </script>
 
+<svelte:head>
+    <title>Golden Board</title> 
+</svelte:head>
+
 <div class="root mode-{editMode}">
 	{#if editMode == EditMode.Edit}
 		<div class="topbar-area" transition:fly={{ y: -50 }}>

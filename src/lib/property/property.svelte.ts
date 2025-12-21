@@ -201,17 +201,24 @@ export class InspectableWithProps {
             // Allow reading other props via prop("some.key", fallback?)
             const prop = <U>(key: string, fallback?: U) => {
                 let keySplit = key.split(':');
-                if (keySplit.length == 1)
-                    return this.getPropValue<U>(key, fallback as U).current as U;
-
-                let uID = keySplit[0];
-                let tKey = keySplit.slice(1).join(':');
-
-                const obj = activeUserIDs[uID];
-                if (obj) {
-                    return obj.getPropValue<U>(tKey, fallback as U).current as U;
+                let target = this as InspectableWithProps;
+                let tKey = key;
+                if (keySplit.length > 1) {
+                    target = keySplit[0] == 'this' || keySplit[0] == '' ? this : activeUserIDs[keySplit[0]];
+                    tKey = keySplit[1];
                 }
+
+                if (!target) {
+                    throw new Error(`Target '${keySplit[0]}' not found for prop('${key}').`);
+                }
+
+                if (!target.getProp(tKey)) {
+                    throw new Error(`Property '${tKey}' not found on target '${keySplit[0]}' for prop('${key}').`);
+                }
+
+                return target.getPropValue<U>(tKey, fallback as U).current as U;
             };
+
 
             const fn = new Function('Math', 'prop', `return (${js});`) as (m: Math, p: typeof prop) => unknown;
 
@@ -219,7 +226,18 @@ export class InspectableWithProps {
 
             if (computed !== undefined && computed !== null) {
                 const def = this.getDefinitionForProp(propKey);
-                const filtered = def?.filterFunction ? def.filterFunction(computed) : computed;
+                let filtered = def?.filterFunction ? def.filterFunction(computed) : computed;
+                if (filtered === undefined || filtered === null) {
+                    throw new Error('Filtered expression value is undefined or null.');
+                }
+
+                //check compatibility with expected type T
+
+
+                if (def!.type != typeof filtered) {
+                    filtered = convertType(filtered, def!.type);
+                    result.warning = `Type mismatch: expected ${def!.type}, got ${typeof filtered}.`;
+                }
 
                 result.current = filtered as T;
             } else {
@@ -400,6 +418,7 @@ export type ResolvedProperty<T> = {
     current: T | null; // The actual calculated value (float, hex color, etc.)
     raw: T | null; // The raw value (before calculations)
     error?: string; // If parsing failed
+    warning?: string; // If there was a non-fatal issue
 };
 
 
@@ -420,4 +439,21 @@ export const getPropsFromDefinitions = function (defProps: { [key: string]: (Pro
     }
 
     return props;
+}
+
+
+const convertType = function <T>(value: any, targetType: PropertyType): T {
+    switch (targetType) {
+        case PropertyType.INTEGER:
+            return parseInt(value) as T;
+        case PropertyType.FLOAT:
+            return parseFloat(value) as T;
+        case PropertyType.BOOLEAN:
+            return Boolean(value) as T;
+        case PropertyType.STRING:
+        case PropertyType.TEXT:
+            return String(value) as T;
+        default:
+            return value;
+    }
 }

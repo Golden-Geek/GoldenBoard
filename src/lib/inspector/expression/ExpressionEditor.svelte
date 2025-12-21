@@ -14,6 +14,7 @@
 	let initExpression = $derived(property.expression);
 	let propValue = $derived(target.getPropValue(propKey));
 	let errorMessage = $derived(propValue.error);
+	let warningMessage = $derived(propValue.warning);
 
 	$inspect('ExpressionEditor', definition);
 </script>
@@ -46,6 +47,12 @@
 			{errorMessage}
 		</div>
 	{/if}
+
+	{#if warningMessage != null}
+		<div class="warning-message" transition:slide={{ duration: 200 }}>
+			{warningMessage}
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -73,6 +80,14 @@
 		padding: 0.25rem;
 		background-color: rgba(from var(--error-color) r g b / 20%);
 		color: var(--error-color);
+		font-size: 0.75rem;
+		border-radius: 4px;
+	}
+
+	.warning-message {
+		padding: 0.25rem;
+		background-color: rgba(from var(--warning-color) r g b / 10%);
+		color: var(--warning-color);
 		font-size: 0.75rem;
 		border-radius: 4px;
 	}

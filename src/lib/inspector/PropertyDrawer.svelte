@@ -11,6 +11,8 @@
 			return ((valueA as any)?.children ? 1 : 0) - ((valueB as any)?.children ? 1 : 0);
 		})
 	);
+
+	$inspect('PropertyDrawer', target, props);
 </script>
 
 <div class="property-drawer">

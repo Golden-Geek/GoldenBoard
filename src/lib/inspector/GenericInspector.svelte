@@ -5,15 +5,21 @@
 	let { targets } = $props();
 
 	let target = $derived(targets.length > 0 ? targets[0] : null);
-	let propertiesDefinitions = $derived(target.getPropertyDefinitions() || null);
+
+	let propertiesDefinitions = $derived(target ? target.getPropertyDefinitions() : null);
+	$inspect('GenericInspector', target);
 </script>
 
 <div class="inspector">
-	{#if target != null}
-		<PropertyDrawer {targets} bind:props={target.props} definitions={propertiesDefinitions} level={0} />
+	{#if target && propertiesDefinitions}
+		<PropertyDrawer
+			{targets}
+			bind:props={target!.props}
+			definitions={propertiesDefinitions}
+			level={0}
+		/>
 		<!-- <pre>{JSON.stringify(target.toSnapshot(), null, 2)}</pre> -->
 	{:else}
-		{target}
 		<p>Select something to edit here</p>
 	{/if}
 </div>
