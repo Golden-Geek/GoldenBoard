@@ -219,7 +219,7 @@
 		<div class="color-picker-content" transition:slide={{ duration: animTime }}>
 			<div
 				bind:this={areaRef}
-				class="cp-area {dragging?'dragging':''}"
+				class="cp-area {dragging ? 'dragging' : ''}"
 				style="background-color: {areaBackground};"
 				onpointerdown={(e: PointerEvent) => {
 					(e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -360,16 +360,19 @@
 
 <style>
 	.cp-container {
-		background-color: #18181b;
 		border-radius: 0.75rem;
 		color: #e4e4e7; /* Zinc 200 */
-		border: 0.0625rem solid #27272a;
 		user-select: none;
-		min-width: 2rem;
-		transition: padding 0.2s;
+		padding: 0;
+		transition:
+			padding 0.2s,
+			background-color 0.2s,
+			width 0.2s;
 	}
 
 	.cp-container.expanded {
+		border: 0.0625rem solid #27272a;
+		background-color: #18181b;
 		width: 15rem;
 		padding: 0.3rem 0.7rem;
 	}
@@ -379,7 +382,11 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 0.625rem;
+		transition: margin-bottom 0.2s;
+	}
+
+	.cp-container.expanded .cp-header {
+		margin-bottom: 0.5rem;
 	}
 
 	.cp-modes {
