@@ -234,11 +234,7 @@ export class InspectableWithProps {
                 //check compatibility with expected type T
 
 
-                if (def!.type != typeof filtered) {
-                    filtered = convertType(filtered, def!.type);
-                    result.warning = `Type mismatch: expected ${def!.type}, got ${typeof filtered}.`;
-                }
-
+                filtered = convertType(filtered, def!.type);
                 result.current = filtered as T;
             } else {
                 result.current = fallbackValue as T;
@@ -370,6 +366,8 @@ export enum PropertyType {
     ICON = 'icon', /* Emoji or icon name */
     CSSSIZE = 'css-size',
     BOUNDS = 'bounds',
+    POINT2D = 'point2d',
+    POINT3D = 'point3d',
     NONE = ''
 }
 
@@ -442,26 +440,46 @@ export const getPropsFromDefinitions = function (defProps: { [key: string]: (Pro
 }
 
 
-const convertType = function <T>(value: any, targetType: PropertyType): T {
+const convertType = function (value: any, targetType: PropertyType): PropertyValueType {
     switch (targetType) {
         case PropertyType.INTEGER:
-            return parseInt(value) as T;
+            return parseInt(value);
         case PropertyType.FLOAT:
-            return parseFloat(value) as T;
+            return parseFloat(value);
         case PropertyType.BOOLEAN:
-            return Boolean(value) as T;
+            return Boolean(value);
         case PropertyType.STRING:
         case PropertyType.TEXT:
-            return String(value) as T;
+            return String(value);
+
+        case PropertyType.COLOR:
+            return ColorUtil.fromAny(value) as Color;
+
         default:
             return value;
     }
 }
 
 export const isPropValueOverriden = function (prop: PropertyData, def: PropertySingleDefinition): boolean {
-    if (def.type === PropertyType.COLOR) {
-        return ColorUtil.notEquals(prop.value as Color, def.default as Color);
 
-        return prop.value !== def.default;
+    //special types
+    switch (def.type) {
+        case PropertyType.COLOR:
+            return ColorUtil.notEquals(prop.value as Color, def.default as Color);
+
+        default:
+            break;
     }
+
+    //array types
+    if (Array.isArray(prop.value) && Array.isArray(def.default)) {
+        if (prop.value.length !== def.default.length) return true;
+        for (let i = 0; i < prop.value.length; i++) {
+            if (prop.value[i] !== def.default[i]) return true;
+        }
+        return false
+    }
+
+    //primitive types
+    return prop.value !== def.default;
 }

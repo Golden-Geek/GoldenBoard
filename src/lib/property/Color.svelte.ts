@@ -141,4 +141,26 @@ export class ColorUtil {
     static notEquals(c1: Color, c2: Color): boolean {
         return !this.equals(c1, c2);
     }
+
+        static isCompatible(value: any): boolean {
+        if (typeof value === 'string') {
+            //check hex color
+            return /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/.test(value);
+        }
+        if (Array.isArray(value) && (value.length === 3 || value.length === 4)) {
+            return value.every(v => typeof v === 'number');
+        }
+        if (
+            value &&
+            typeof value === 'object' &&
+            'r' in value &&
+            'g' in value &&
+            'b' in value &&
+            'a' in value
+        ) {
+            return (typeof value.r === 'number' && typeof value.g === 'number' &&
+                typeof value.b === 'number' && typeof value.a === 'number');
+        }
+        return false;
+    }
 };

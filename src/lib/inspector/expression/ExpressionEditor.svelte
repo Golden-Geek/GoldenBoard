@@ -16,7 +16,6 @@
 	let errorMessage = $derived(propValue.error);
 	let warningMessage = $derived(propValue.warning);
 
-	$inspect('ExpressionEditor', definition);
 </script>
 
 <div class="expression-editor-property">

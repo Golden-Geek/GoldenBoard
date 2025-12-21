@@ -6,14 +6,20 @@
 		property = $bindable(),
 		definition,
 		onStartEdit = null,
-		onUpdate = null
+		onUpdate = null,
+		shownValue,
+		expressionMode,
+		expressionHasError
 	} = $props();
-
 </script>
 
 <ColorPicker
-	previewIsSwitch={true}
-	bind:color={property.value}
+	previewIsSwitch={!expressionMode && !definition.readOnly}
+	color={shownValue}
+	onchange={(value: any) => {
+		if (expressionMode) return;
+		property.value = value;
+	}}
 	onStartEdit={() => onStartEdit && onStartEdit(property.value)}
 	onEndEdit={() => onUpdate && onUpdate()}
 ></ColorPicker>

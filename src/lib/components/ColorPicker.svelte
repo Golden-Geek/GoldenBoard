@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { type Color, ColorUtil } from '$lib/property/Color.svelte';
-	import { unixMsFromNtp } from '$lib/servers/osc';
 	import { slide } from 'svelte/transition';
 
 	let {
@@ -8,12 +7,20 @@
 		onchange = undefined,
 		onStartEdit = undefined,
 		onEndEdit = undefined,
-		previewIsSwitch = false
+		previewIsSwitch = false,
+		forceExpanded = false
 	} = $props();
+
+	let isSwitch = $derived(previewIsSwitch);
+	let previewOnly = $state(true);
+
+	$effect(() => {
+		if (forceExpanded) previewOnly = true;
+		else if (!isSwitch && !previewOnly) previewOnly = true;
+	});
 
 	// --- State ---
 	// Interaction Mode: 0 = Sat/Val (Standard), 1 = Hue/Val, 2 = Hue/Sat
-	let previewOnly = $derived(previewIsSwitch);
 	let mode = $state(0);
 	let showInputs = $state(true);
 	let dragging = $state(false);
@@ -68,8 +75,12 @@
 		if (colorsCloseEnough(prev, normalized)) {
 			return;
 		}
-		color = normalized;
-		onchange && onchange();
+		if(onchange === undefined) {
+			color = normalized;
+			return;
+		}
+		
+		onchange && onchange(normalized);
 	}
 
 	function notifyStartEdit(): void {
