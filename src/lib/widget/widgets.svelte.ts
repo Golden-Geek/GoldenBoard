@@ -1,7 +1,7 @@
 import { Menu } from '../inspector/inspector.svelte.ts';
 import { mainState, menuContext, MenuContextType, saveData, type ContextMenuItem } from '../engine/engine.svelte.ts';
-import type { PropertyContainerDefinition, PropertySingleDefinition } from '../property/property.svelte.ts';
-import { Property, PropertyType} from '../property/property.svelte.ts';
+import type { PropertyContainer, PropertyContainerDefinition, PropertySingleDefinition } from '../property/property.svelte.ts';
+import { Property, PropertyType } from '../property/property.svelte.ts';
 import { ColorUtil, type Color } from '$lib/property/Color.svelte';
 import { InspectableWithProps, sanitizeUserID } from "../property/inspectable.svelte.ts";
 
@@ -282,7 +282,7 @@ export class Widget extends InspectableWithProps {
     }
 
     getName(): string {
-        return ((this.props['label'] as PropertyContainerData)?.children?.text as PropertyData)?.value as string || this.type;
+        return ((this.props['label'] as PropertyContainer)?.children?.text as Property)?.value as string || this.type;
     }
 
     toString(): string {
