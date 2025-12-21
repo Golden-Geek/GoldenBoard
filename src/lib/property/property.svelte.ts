@@ -1,39 +1,58 @@
 import { ColorUtil, type Color } from "./Color.svelte";
 
-export class Property {
+export abstract class PropertyNodeBase<TDefinition extends PropertySingleDefinition | PropertyContainerDefinition> {
+    owner: InspectableWithProps | undefined;
+    keyPath: string | undefined;
+    definition: TDefinition;
+
+    // private _destroyers: Array<() => void> = [];
+
+    constructor(definition: TDefinition, owner?: InspectableWithProps, keyPath?: string) {
+        this.definition = definition;
+        this.owner = owner;
+        this.keyPath = keyPath;
+    }
+
+    cleanup() {
+    }
+
+    abstract toSnapshot(): any;
+    abstract applySnapshot(snapshot: any): void;
+    abstract resetToDefault(): void;
+}
+
+
+
+export class Property extends PropertyNodeBase<PropertySingleDefinition> {
     value: PropertyValueType;
     enabled: boolean | undefined;
     mode: PropertyMode | undefined;
     expression: string | undefined;
 
-    owner: InspectableWithProps | undefined;
-    keyPath: string | undefined;
-
     constructor(definition: PropertySingleDefinition, owner?: InspectableWithProps, keyPath?: string) {
-        this.value = $state(convertType(definition.default, definition.type));
+        super(definition, owner, keyPath);
+        this.value = $state(this.coerce(definition.default));
         this.enabled = $state(undefined);
         this.mode = $state(undefined);
         this.expression = $state(undefined);
-
-        this.owner = owner;
-        this.keyPath = keyPath;
     }
 
-    getDefinition(): PropertySingleDefinition | null {
-        const owner = this.owner;
-        const keyPath = this.keyPath;
-        if (!owner || !keyPath) return null;
-        return owner.getDefinitionForProp(keyPath);
+    override cleanup() {
+        super.cleanup();
+    }
+
+    getDefinition(): PropertySingleDefinition {
+        return this.definition;
     }
 
     getResolved<T>(defaultValue = null as T): ResolvedProperty<T> {
-        const def = this.getDefinition();
-        const canDisable = !!def?.canDisable;
+        const def = this.definition;
+        const canDisable = !!def.canDisable;
 
         let enabled = this.enabled;
         if (enabled === undefined) enabled = !canDisable;
 
-        const fallback = (defaultValue !== null ? defaultValue : (def?.default as T)) as T;
+        const fallback = (defaultValue !== null ? defaultValue : (def.default as T)) as T;
         if (!enabled) {
             return { current: fallback, raw: fallback };
         }
@@ -56,8 +75,8 @@ export class Property {
     }
 
     getRaw(defaultValue: any = null): PropertyValueType | null {
-        const def = this.getDefinition();
-        const canDisable = !!def?.canDisable;
+        const def = this.definition;
+        const canDisable = !!def.canDisable;
 
         let enabled = this.enabled;
         if (enabled === undefined) enabled = !canDisable;
@@ -138,13 +157,13 @@ export class Property {
             const computed = fn(Math, prop);
 
             if (computed !== undefined && computed !== null) {
-                const def = owner.getDefinitionForProp(propKey);
-                let filtered = def?.filterFunction ? def.filterFunction(computed) : computed;
+                const def = this.definition;
+                let filtered = def.filterFunction ? def.filterFunction(computed) : computed;
                 if (filtered === undefined || filtered === null) {
                     throw new Error('Filtered expression value is undefined or null.');
                 }
 
-                filtered = convertType(filtered, def!.type);
+                filtered = this.coerceToType(filtered, def.type);
                 result.current = filtered as T;
             } else {
                 result.current = fallbackValue as T;
@@ -157,34 +176,155 @@ export class Property {
         return result;
     }
 
-    destroy() {
-        // placeholder for user-added per-property teardown
-    }
-}
+    toSnapshot(): any {
+        const def = this.definition;
+        const canDisable = !!def.canDisable;
+        const isDisabled = this.enabled === false || (this.enabled === undefined && canDisable);
+        const isDefault = !this.isValueOverridden();
 
-export class PropertyContainer {
+        if (canDisable && isDisabled && isDefault) return undefined;
+
+        const out: any = {
+            value: $state.snapshot(this.value)
+        };
+        if (this.enabled !== undefined) out.enabled = this.enabled;
+        if (this.mode !== undefined) out.mode = this.mode;
+        if (this.expression !== undefined) out.expression = this.expression;
+        return out;
+    }
+
+    applySnapshot(snapshot: any) {
+        if (!snapshot || typeof snapshot !== 'object') return;
+
+        if ('enabled' in snapshot) this.enabled = snapshot.enabled;
+        if ('mode' in snapshot) this.mode = snapshot.mode;
+        if ('expression' in snapshot) this.expression = snapshot.expression;
+
+        if ('value' in snapshot) {
+            const raw = this.definition.filterFunction
+                ? this.definition.filterFunction(snapshot.value)
+                : snapshot.value;
+            this.value = this.coerce(raw);
+        }
+    }
+
+    resetToDefault() {
+        this.value = this.coerce(this.definition.default);
+        this.enabled = undefined;
+        this.mode = undefined;
+        this.expression = undefined;
+    }
+
+    isValueOverridden(): boolean {
+        // special types
+        switch (this.definition.type) {
+            case PropertyType.COLOR:
+                return ColorUtil.notEquals(this.value as Color, this.definition.default as Color);
+            default:
+                break;
+        }
+
+        // array types
+        if (Array.isArray(this.value) && Array.isArray(this.definition.default)) {
+            if (this.value.length !== this.definition.default.length) return true;
+            for (let i = 0; i < this.value.length; i++) {
+                if (this.value[i] !== this.definition.default[i]) return true;
+            }
+            return false;
+        }
+
+        // primitive types
+        return this.value !== this.definition.default;
+    }
+
+    private coerce(value: any): PropertyValueType {
+        return this.coerceToType(value, this.definition.type);
+    }
+
+    private coerceToType(value: any, targetType: PropertyType): PropertyValueType {
+        switch (targetType) {
+            case PropertyType.INTEGER:
+                return parseInt(value);
+            case PropertyType.FLOAT:
+                return parseFloat(value);
+            case PropertyType.BOOLEAN:
+                return Boolean(value);
+            case PropertyType.STRING:
+            case PropertyType.TEXT:
+                return String(value);
+            case PropertyType.COLOR:
+                return ColorUtil.fromAny(value) as Color;
+            default:
+                return value;
+        }
+    }
+};
+
+export class PropertyContainer extends PropertyNodeBase<PropertyContainerDefinition> {
     children: { [key: string]: PropertyNode };
     collapsed: boolean | undefined;
 
-    owner: InspectableWithProps | undefined;
-    keyPath: string | undefined;
-
     constructor(
+        definition: PropertyContainerDefinition,
         children: { [key: string]: PropertyNode },
         owner?: InspectableWithProps,
         keyPath?: string,
         collapsed?: boolean
     ) {
+        super(definition, owner, keyPath);
         this.children = $state(children);
         this.collapsed = $state(collapsed);
-
-        this.owner = owner;
-        this.keyPath = keyPath;
     }
 
-    destroy() {
+    override cleanup() {
         for (const key in this.children) {
-            this.children[key]?.destroy?.();
+            this.children[key]?.cleanup?.();
+        }
+        super.cleanup();
+    }
+
+    toSnapshot(): any {
+        const def = this.definition;
+        const childrenDef = def.children ?? {};
+
+        const childrenSnapshot: any = {};
+        for (const childKey of Object.keys(childrenDef)) {
+            const child = this.children[childKey];
+            const snap = child?.toSnapshot?.();
+            if (snap !== undefined) {
+                childrenSnapshot[childKey] = snap;
+            }
+        }
+
+        const collapsedByDefault = def.collapsedByDefault ?? false;
+        const collapsed =
+            this.collapsed !== undefined && this.collapsed !== collapsedByDefault ? this.collapsed : undefined;
+
+        if (Object.keys(childrenSnapshot).length === 0 && collapsed === undefined) return undefined;
+        return { collapsed, children: childrenSnapshot };
+    }
+
+    applySnapshot(snapshot: any) {
+        if (!snapshot || typeof snapshot !== 'object') return;
+
+        if ('collapsed' in snapshot) {
+            this.collapsed = snapshot.collapsed;
+        }
+
+        const sourceChildren = snapshot.children;
+        if (!sourceChildren || typeof sourceChildren !== 'object') return;
+
+        const childrenDef = this.definition.children ?? {};
+        for (const childKey of Object.keys(childrenDef)) {
+            if (!Object.prototype.hasOwnProperty.call(sourceChildren, childKey)) continue;
+            this.children[childKey]?.applySnapshot?.(sourceChildren[childKey]);
+        }
+    }
+
+    resetToDefault() {
+        this.collapsed = undefined;
+        for (const key of Object.keys(this.children)) {
+            this.children[key]?.resetToDefault?.();
         }
     }
 }
@@ -231,8 +371,107 @@ export class InspectableWithProps {
 
     }
 
+    private unloadPropsTree(props: { [key: string]: PropertyNode } | undefined = this.props) {
+        if (!props) return;
+        for (const key of Object.keys(props)) {
+            props[key]?.cleanup?.();
+        }
+    }
+
+    private buildPropsFromDefinitions(
+        defProps: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) },
+        basePath: string = ''
+    ): { [key: string]: PropertyNode } {
+        let props: { [key: string]: PropertyNode } = {};
+
+        for (let propKey in defProps) {
+            let propDef = defProps[propKey];
+            const keyPath = basePath ? `${basePath}.${propKey}` : propKey;
+            let propChildren = (propDef as PropertyContainerDefinition).children;
+            if (propChildren !== undefined) {
+                let childrenProps = this.buildPropsFromDefinitions(propChildren, keyPath);
+                props[propKey] = new PropertyContainer(
+                    propDef as PropertyContainerDefinition,
+                    childrenProps,
+                    this,
+                    keyPath,
+                    (propDef as PropertyContainerDefinition).collapsedByDefault
+                );
+            } else {
+                props[propKey] = new Property(propDef as PropertySingleDefinition, this, keyPath);
+            }
+        }
+
+        return props;
+    }
+
+    private reconcilePropsFromDefinitions(
+        existing: { [key: string]: PropertyNode },
+        defs: { [key: string]: PropertySingleDefinition | PropertyContainerDefinition },
+        basePath: string = ''
+    ) {
+        // Remove keys no longer in defs
+        for (const key of Object.keys(existing)) {
+            if (!Object.prototype.hasOwnProperty.call(defs, key)) {
+                existing[key]?.cleanup?.();
+                delete existing[key];
+            }
+        }
+
+        for (const key of Object.keys(defs)) {
+            const def = defs[key];
+            const keyPath = basePath ? `${basePath}.${key}` : key;
+            const isContainer = (def as PropertyContainerDefinition).children !== undefined;
+
+            const current = existing[key];
+
+            if (isContainer) {
+                const containerDef = def as PropertyContainerDefinition;
+                if (current && 'children' in current) {
+                    // reuse container node
+                    (current as PropertyContainer).definition = containerDef;
+                    (current as PropertyContainer).owner = this;
+                    (current as PropertyContainer).keyPath = keyPath;
+
+                    const childrenDef = containerDef.children ?? {};
+                    this.reconcilePropsFromDefinitions(
+                        (current as PropertyContainer).children,
+                        childrenDef,
+                        keyPath
+                    );
+                } else {
+                    // replace leaf/missing with container
+                    current?.cleanup?.();
+                    const childrenProps = this.buildPropsFromDefinitions(containerDef.children ?? {}, keyPath);
+                    existing[key] = new PropertyContainer(
+                        containerDef,
+                        childrenProps,
+                        this,
+                        keyPath,
+                        containerDef.collapsedByDefault
+                    );
+                }
+            } else {
+                const leafDef = def as PropertySingleDefinition;
+                if (current && !('children' in current)) {
+                    // reuse leaf node
+                    (current as Property).definition = leafDef;
+                    (current as Property).owner = this;
+                    (current as Property).keyPath = keyPath;
+                } else {
+                    // replace container/missing with leaf
+                    current?.cleanup?.();
+                    existing[key] = new Property(leafDef, this, keyPath);
+                }
+            }
+        }
+
+        return existing;
+    }
+
     setupProps() {
-        this.props = getPropsFromDefinitions(this.definitions || {}, this);
+        this.unloadPropsTree(this.props);
+        this.props = this.buildPropsFromDefinitions(this.definitions || {});
     }
 
     cleanup() {
@@ -241,6 +480,8 @@ export class InspectableWithProps {
             unregisterActiveUserID(this._registeredUserID);
             this._registeredUserID = '';
         }
+
+        this.unloadPropsTree(this.props);
     }
 
     getUserIDDefinition(): PropertySingleDefinition {
@@ -333,53 +574,10 @@ export class InspectableWithProps {
     toSnapshot(includeID: boolean = true): any {
         const definitions = this.getPropertyDefinitions() || {};
 
-        const snapshotNode = (
-            node: PropertyNode | undefined,
-            def: PropertySingleDefinition | PropertyContainerDefinition | undefined
-        ): any => {
-            if (!node || !def) return undefined;
-
-            if ('children' in node) {
-                const containerDef = def as PropertyContainerDefinition;
-                if (!containerDef.children) return undefined;
-                const childrenSnapshot: any = {};
-                for (const childKey of Object.keys(containerDef.children)) {
-                    const childSnap = snapshotNode(node.children[childKey], containerDef.children[childKey]);
-                    if (childSnap !== undefined) {
-                        childrenSnapshot[childKey] = childSnap;
-                    }
-                }
-
-                const collapsedByDefault = containerDef.collapsedByDefault ?? false;
-                const collapsed = node.collapsed !== undefined && node.collapsed !== collapsedByDefault
-                    ? node.collapsed
-                    : undefined;
-
-                if (Object.keys(childrenSnapshot).length === 0 && collapsed === undefined) return undefined;
-                return { collapsed, children: childrenSnapshot };
-            }
-
-            // leaf
-            const leaf = node as Property;
-            const singleDef = def as PropertySingleDefinition;
-            const canDisable = !!singleDef.canDisable;
-            const isDisabled = leaf.enabled === false || (leaf.enabled === undefined && canDisable);
-            const isDefault = !isPropValueOverriden(leaf, singleDef);
-
-            if (canDisable && isDisabled && isDefault) return undefined;
-
-            const out: any = {
-                value: $state.snapshot(leaf.value)
-            };
-            if (leaf.enabled !== undefined) out.enabled = leaf.enabled;
-            if (leaf.mode !== undefined) out.mode = leaf.mode;
-            if (leaf.expression !== undefined) out.expression = leaf.expression;
-            return out;
-        };
-
         const propsSnapshot: any = {};
         for (const key of Object.keys(definitions)) {
-            const snap = snapshotNode(this.props[key], definitions[key]);
+            const node = this.props[key];
+            const snap = node?.toSnapshot?.();
             if (snap !== undefined) propsSnapshot[key] = snap;
         }
 
@@ -389,7 +587,7 @@ export class InspectableWithProps {
         };
     }
 
-    applySnapshot(snapshot: any) {
+    applySnapshot(snapshot: any, options?: { mode?: 'patch' | 'replace' }) {
         if (snapshot === null || snapshot === undefined) return;
 
 
@@ -398,58 +596,38 @@ export class InspectableWithProps {
             this.setID(newID);
         }
         const defs = this.getPropertyDefinitions() || {};
-        let initProps = getPropsFromDefinitions(defs, this);
-
-        // Recursively copy values from snapshot.props into initProps, only for keys that exist in initProps
-
-
-        if (snapshot.props && typeof snapshot.props === 'object') {
-            this.applySnapshotToProps(initProps, snapshot.props, defs);
+        // Reconcile existing nodes in-place to avoid recreating thousands of properties.
+        // Only creates/removes nodes when definitions changed.
+        if (!this.props || typeof this.props !== 'object') {
+            this.props = this.buildPropsFromDefinitions(defs);
+        } else {
+            this.reconcilePropsFromDefinitions(this.props, defs);
         }
 
-        this.props = initProps;
+        if (snapshot.props && typeof snapshot.props === 'object') {
+            const mode = options?.mode ?? 'patch';
+
+            if (mode === 'replace') {
+                // Only reset nodes that are NOT present in the incoming snapshot.
+                // This avoids touching everything when applying a small patch.
+                for (const key of Object.keys(this.props)) {
+                    if (Object.prototype.hasOwnProperty.call(snapshot.props, key)) continue;
+                    this.props[key]?.resetToDefault?.();
+                }
+            }
+
+            // Patch/apply only nodes present in snapshot.
+            for (const key of Object.keys(snapshot.props)) {
+                if (!Object.prototype.hasOwnProperty.call(this.props, key)) continue;
+                this.props[key]?.applySnapshot?.(snapshot.props[key]);
+            }
+        }
     }
 
     setID(newID: string) {
         this.id = newID;
     }
 
-    applySnapshotToProps(
-        target: { [key: string]: PropertyNode },
-        source: any,
-        defs: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {}
-    ) {
-        for (const key of Object.keys(target)) {
-            if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
-
-            const targetNode = target[key];
-            const sourceNode = source[key];
-            const def = defs[key];
-
-            if (!targetNode || !def || !sourceNode || typeof sourceNode !== 'object') continue;
-
-            if ('children' in targetNode) {
-                const containerDef = def as PropertyContainerDefinition;
-                if (containerDef.children && sourceNode.children) {
-                    targetNode.collapsed = sourceNode.collapsed ?? targetNode.collapsed;
-                    this.applySnapshotToProps(targetNode.children, sourceNode.children, containerDef.children);
-                }
-                continue;
-            }
-
-            const leaf = targetNode as Property;
-            const singleDef = def as PropertySingleDefinition;
-
-            if ('enabled' in sourceNode) leaf.enabled = sourceNode.enabled;
-            if ('mode' in sourceNode) leaf.mode = sourceNode.mode;
-            if ('expression' in sourceNode) leaf.expression = sourceNode.expression;
-
-            if ('value' in sourceNode) {
-                const raw = singleDef.filterFunction ? singleDef.filterFunction(sourceNode.value) : sourceNode.value;
-                leaf.value = convertType(raw, singleDef.type);
-            }
-        }
-    }
 };
 
 
@@ -524,76 +702,6 @@ export type ResolvedProperty<T> = {
     warning?: string; // If there was a non-fatal issue
 };
 
-
-
-export const getPropsFromDefinitions = function (
-    defProps: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) },
-    owner?: InspectableWithProps,
-    basePath: string = ''
-): { [key: string]: PropertyNode } {
-    let props: { [key: string]: PropertyNode } = {};
-
-    for (let propKey in defProps) {
-        let propDef = defProps[propKey];
-        const keyPath = basePath ? `${basePath}.${propKey}` : propKey;
-        let propChildren = (propDef as PropertyContainerDefinition).children;
-        if (propChildren !== undefined) {
-            let childrenProps = getPropsFromDefinitions(propChildren, owner, keyPath);
-            props[propKey] = new PropertyContainer(
-                childrenProps,
-                owner,
-                keyPath,
-                (propDef as PropertyContainerDefinition).collapsedByDefault
-            );
-        } else {
-            props[propKey] = new Property(propDef as PropertySingleDefinition, owner, keyPath);
-        }
-    }
-
-    return props;
-}
-
-
-const convertType = function (value: any, targetType: PropertyType): PropertyValueType {
-    switch (targetType) {
-        case PropertyType.INTEGER:
-            return parseInt(value);
-        case PropertyType.FLOAT:
-            return parseFloat(value);
-        case PropertyType.BOOLEAN:
-            return Boolean(value);
-        case PropertyType.STRING:
-        case PropertyType.TEXT:
-            return String(value);
-
-        case PropertyType.COLOR:
-            return ColorUtil.fromAny(value) as Color;
-
-        default:
-            return value;
-    }
-}
-
 export const isPropValueOverriden = function (prop: PropertyData, def: PropertySingleDefinition): boolean {
-
-    //special types
-    switch (def.type) {
-        case PropertyType.COLOR:
-            return ColorUtil.notEquals(prop.value as Color, def.default as Color);
-
-        default:
-            break;
-    }
-
-    //array types
-    if (Array.isArray(prop.value) && Array.isArray(def.default)) {
-        if (prop.value.length !== def.default.length) return true;
-        for (let i = 0; i < prop.value.length; i++) {
-            if (prop.value[i] !== def.default[i]) return true;
-        }
-        return false
-    }
-
-    //primitive types
-    return prop.value !== def.default;
+    return prop.isValueOverridden();
 }
