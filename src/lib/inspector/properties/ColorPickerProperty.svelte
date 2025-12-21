@@ -18,7 +18,7 @@
 	color={shownValue}
 	onchange={(value: any) => {
 		if (expressionMode) return;
-		property.value = value;
+		property.set(value);
 	}}
 	onStartEdit={() => onStartEdit && onStartEdit(property.value)}
 	onEndEdit={() => onUpdate && onUpdate()}

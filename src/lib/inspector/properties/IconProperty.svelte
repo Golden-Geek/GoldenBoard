@@ -10,7 +10,7 @@
 	$effect(() => {
 		if (showPicker && picker) {
 			picker.addEventListener('emoji-click', (event: any) => {
-				property.value = event.detail.unicode;
+				property.set(event.detail.unicode);
 				onUpdate && onUpdate();
 				showPicker = false;
 			});
@@ -30,7 +30,14 @@
 	</button>
 
 	{#if !definition.readOnly}
-		<button onclick={() => { property.value = ''; onUpdate && onUpdate(); }} class="clear-property" aria-label="Clear Icon">
+		<button
+			onclick={() => {
+				property.set('');
+				onUpdate && onUpdate();
+			}}
+			class="clear-property"
+			aria-label="Clear Icon"
+		>
 			❌
 		</button>
 	{/if}

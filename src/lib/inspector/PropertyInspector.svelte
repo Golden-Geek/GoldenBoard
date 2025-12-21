@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { isPropValueOverriden, PropertyMode, PropertyType } from '$lib/property/property.svelte';
+	import { PropertyMode, PropertyType, type Property } from '$lib/property/property.svelte';
 	import { propertiesInspectorClass } from './inspector.svelte.ts';
 	import PropertyContainer from './PropertyContainer.svelte';
 	import { saveData } from '$lib/engine/engine.svelte';
@@ -16,13 +16,13 @@
 
 	//Expression
 	let expressionMode = $derived(property.mode == PropertyMode.EXPRESSION);
-	let resolvedValue = $derived(expressionMode ? target?.getPropValue(propKey) : null);
+	let resolvedValue = $derived(expressionMode ? (property as Property).getResolved() : null);
 	let expressionHasError = $derived(resolvedValue?.error != null);
 	let shownValue = $derived(
 		expressionMode ? (resolvedValue?.error ?? resolvedValue?.current!) : property.value
 	);
 
-	let Property: any = $derived(
+	let PropertyClass: any = $derived(
 		propertiesInspectorClass[propertyType as keyof typeof propertiesInspectorClass]
 	);
 
@@ -62,13 +62,15 @@
 					</button>
 				{/if}
 				{definition.name}
-				{#if !definition.readOnly && isPropValueOverriden(property, definition)}
+				{#if !definition.readOnly && property.isValueOverridden()}
 					<button
 						class="reset-property"
 						aria-label="Reset Property"
 						onclick={() => {
-							property.value = definition.default;
-							checkAndSaveProperty();
+							property.resetToDefault();
+							saveData('Reset Property', {
+								coalesceID: `${target.id}-property-${level}-${definition.name}-reset`
+							});
 						}}
 						transition:fade={{ duration: 200 }}
 					>
@@ -79,7 +81,7 @@
 
 			<div class="spacer"></div>
 			<div class="property-wrapper {expressionMode ? 'expression-mode' : ''}">
-				<Property
+				<PropertyClass
 					{targets}
 					bind:property
 					onStartEdit={(value: any) => (valueOnFocus = value)}

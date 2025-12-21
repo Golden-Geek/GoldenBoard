@@ -10,8 +10,6 @@
 		onStartEdit = null,
 		onUpdate = null
 	} = $props();
-
-
 </script>
 
 <input
@@ -25,9 +23,10 @@
 		if (definition.filterFunction) {
 			newValue = definition.filterFunction(newValue);
 		}
-		property.value = newValue;
+		property.set(newValue);
 	}}
-	onfocus={() => (expressionMode ? null : onStartEdit && onStartEdit($state.snapshot(property.value)))}
+	onfocus={() =>
+		expressionMode ? null : onStartEdit && onStartEdit($state.snapshot(property.value))}
 	onblur={() => (expressionMode ? null : onUpdate && onUpdate())}
 	onkeydown={(e) => {
 		if (expressionMode) return;

@@ -1,5 +1,5 @@
 import { mainState, saveData } from '$lib/engine/engine.svelte.js';
-import { InspectableWithProps, PropertyType, sanitizeUserID, type PropertyContainerDefinition, type PropertySingleDefinition } from '$lib/property/property.svelte.js';
+import { InspectableWithProps, Property, PropertyType, sanitizeUserID, type PropertyContainerDefinition, type PropertySingleDefinition } from '$lib/property/property.svelte.js';
 import type { OscPacket } from './osc.js';
 import { decodeOscPacket, encodeOscPacket } from './osc.js';
 
@@ -11,11 +11,16 @@ export enum ConnectionStatus {
 
 export class OSCQueryClient extends InspectableWithProps {
 
-	name = $derived(this.getPropRawValue("name") as string);
-	ip = $derived(this.getPropRawValue("ip") as string);
-	port = $derived(this.getPropRawValue("port") as number);
-	useFixedRateSending = $derived(this.getPropRawValue("advanced.useFixedRateSending") as boolean);
-	fixedSendRateHz = $derived(this.getPropRawValue("advanced.fixedSendRateHz") as number);
+	name = $derived((this.getSingleProp('name').getRaw() as string));
+	ip = $derived((this.getSingleProp('ip').get() as string));
+	port = $derived((this.getSingleProp('port').get() as number));
+
+	useFixedRateSending = $derived(
+		(this.getProp('advanced.useFixedRateSending') as Property | null)?.get() as boolean
+	);
+	fixedSendRateHz = $derived(
+		(this.getProp('advanced.fixedSendRateHz') as Property | null)?.get() as number
+	);
 
 	isSelected: boolean = $derived(mainState.selectedServer == this);
 
@@ -140,7 +145,7 @@ export class OSCQueryClient extends InspectableWithProps {
 
 			case ConnectionStatus.Disconnected:
 				this.stopOutboundPump();
-				this.setPropRawValue("name", this.ip + " - " + this.port);
+				(this.getProp('name') as Property | null)?.setRaw(this.ip + ' - ' + this.port);
 				break;
 		}
 	}
@@ -163,8 +168,8 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	setIPAndPort(ip: string, port: number, save: boolean = true): void {
 		if (this.ip === ip && this.port === port) return;
-		this.setPropRawValue("ip", ip);
-		this.setPropRawValue("port", port);
+		(this.getProp('ip') as Property | null)?.setRaw(ip);
+		(this.getProp('port') as Property | null)?.setRaw(port);
 		if (save) {
 			saveData("Update Server " + this.name);
 		}
@@ -182,7 +187,7 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	applySnapshot(data: any) {
 		this.id = data.id;
-		this.name = data.name;
+		(this.getProp('name') as Property | null)?.setRaw(data.name);
 		this.setIPAndPort(data.ip, data.port, false);
 	}
 
@@ -285,8 +290,7 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	parseHostInfo(json: any): void {
 		this.hostInfo = json;
-
-		this.setPropRawValue("name", this.hostInfo.NAME);
+		(this.getProp('name') as Property | null)?.setRaw(this.hostInfo.NAME);
 
 	}
 
@@ -428,8 +432,8 @@ export class OSCQueryClient extends InspectableWithProps {
 	}
 
 	setFixedRateSending(enabled: boolean, rateHz?: number) {
-		this.setPropRawValue("advanced.useFixedRateSending", enabled);
-		if (rateHz != null) this.setPropRawValue("advanced.fixedSendRateHz", rateHz);
+		(this.getProp('advanced.useFixedRateSending') as Property | null)?.setRaw(enabled);
+		if (rateHz != null) (this.getProp('advanced.fixedSendRateHz') as Property | null)?.setRaw(rateHz);
 		if (this.useFixedRateSending) {
 			this.startOutboundPump();
 		} else {

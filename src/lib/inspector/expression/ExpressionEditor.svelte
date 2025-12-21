@@ -12,7 +12,7 @@
 
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 	let initExpression = $derived(property.expression);
-	let propValue = $derived(target.getPropValue(propKey));
+	let propValue = $derived(property ? property.getResolved() : { current: null, raw: null });
 	let errorMessage = $derived(propValue.error);
 	let warningMessage = $derived(propValue.warning);
 

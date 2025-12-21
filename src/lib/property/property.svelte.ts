@@ -40,6 +40,7 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
     override cleanup() {
         super.cleanup();
     }
+    
 
     getDefinition(): PropertySingleDefinition {
         return this.definition;
@@ -92,6 +93,7 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
     set(value: PropertyValueType) {
         this.setRaw(value);
     }
+
 
     private parseExpression<T>(expression: string, rawValue: any, fallbackValue: any): ResolvedProperty<T> {
         let result = {} as ResolvedProperty<T>;
@@ -149,7 +151,14 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
                     );
                 }
 
-                return target.getPropValue<U>(tKey, fallback as U).current as U;
+                const node = target.getProp(tKey);
+                if (!node || 'children' in node) {
+                    throw new Error(
+                        `Property '${tKey}' not found on target '${keySplit[0]}' for prop('${key}').`
+                    );
+                }
+
+                return (node as Property).getResolved<U>(fallback as U).current as U;
             };
 
             const fn = new Function('Math', 'prop', `return (${js});`) as (m: Math, p: typeof prop) => unknown;
@@ -197,7 +206,7 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         if (!snapshot || typeof snapshot !== 'object') return;
 
         if ('enabled' in snapshot) this.enabled = snapshot.enabled;
-        if ('mode' in snapshot) this.mode = snapshot.mode;
+        this.mode = snapshot.mode ?? PropertyMode.VALUE;
         if ('expression' in snapshot) this.expression = snapshot.expression;
 
         if ('value' in snapshot) {
@@ -215,8 +224,10 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         this.expression = undefined;
     }
 
-    isValueOverridden(): boolean {
+    isValueOverridden(trueIfHasExpression:boolean = true): boolean {
         // special types
+        if(trueIfHasExpression && (this.mode === PropertyMode.EXPRESSION || this.expression !== undefined)) return true;
+
         switch (this.definition.type) {
             case PropertyType.COLOR:
                 return ColorUtil.notEquals(this.value as Color, this.definition.default as Color);
@@ -329,8 +340,6 @@ export class PropertyContainer extends PropertyNodeBase<PropertyContainerDefinit
     }
 }
 
-export type PropertyData = Property;
-export type PropertyContainerData = PropertyContainer;
 export type PropertyNode = Property | PropertyContainer;
 
 export class InspectableWithProps {
@@ -342,7 +351,7 @@ export class InspectableWithProps {
     private _registeredUserID = '';
 
     defaultUserID: string = $state('');
-    userID: string = $derived(this.getPropValue('userID', '').current as string);
+    userID: string = $derived((this.getProp('userID') as Property | null)?.get<string>('') ?? '');
 
     userIDEffectDestroy = $effect.root(() => {
         $effect(() => {
@@ -524,7 +533,9 @@ export class InspectableWithProps {
         return null;
     }
 
-    getProp(propKey: string): PropertyData | PropertyContainerData | null {
+
+
+    getProp(propKey: string): Property | PropertyContainer | null {
 
         let keySplit = propKey.split('.');
         if (keySplit.length >= 1) {
@@ -546,29 +557,9 @@ export class InspectableWithProps {
         return null;
     }
 
-    getPropValue<T>(propKey: string, defaultValue = null as T): ResolvedProperty<T> {
-        const node = this.getProp(propKey);
-        if (!node || 'children' in node) {
-            return { current: defaultValue!, raw: defaultValue! };
-        }
-        return (node as Property).getResolved<T>(defaultValue);
-    }
-
-    getPropRawValue(propKey: string, defaultValue: any = null): PropertyValueType | null {
-        const node = this.getProp(propKey);
-        if (!node || 'children' in node) return defaultValue;
-        return (node as Property).getRaw(defaultValue);
-    }
-
-    setPropRawValue(propKey: string, value: PropertyValueType) {
-        const node = this.getProp(propKey);
-
-        if (node && !('children' in node)) {
-            (node as Property).setRaw(value);
-        } else {
-            console.warn(`Property ${propKey} not found on InspectableWithProps ${this.id}`, this);
-        }
-
+    getSingleProp(propKey: string): Property {
+        const prop = this.getProp(propKey);
+        return prop! as Property;
     }
 
     toSnapshot(includeID: boolean = true): any {
@@ -702,6 +693,3 @@ export type ResolvedProperty<T> = {
     warning?: string; // If there was a non-fatal issue
 };
 
-export const isPropValueOverriden = function (prop: PropertyData, def: PropertySingleDefinition): boolean {
-    return prop.isValueOverridden();
-}

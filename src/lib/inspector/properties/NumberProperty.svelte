@@ -26,9 +26,9 @@
 
 		const newValue = parseFloat(numberInput!.value);
 		if (!isNaN(newValue)) {
-			property.value = hasRange
-				? Math.min(Math.max(newValue, definition.min), definition.max)
-				: newValue;
+			property.set(
+				hasRange ? Math.min(Math.max(newValue, definition.min), definition.max) : newValue
+			);
 			onUpdate && onUpdate();
 		}
 	}
@@ -44,7 +44,7 @@
 			disabled={definition.readOnly}
 			onValueChange={(value: number) => {
 				if (expressionMode) return;
-				property.value = value;
+				property.set(value);
 			}}
 			onStartEdit={() => onStartEdit && onStartEdit(property.value)}
 			onEndEdit={() => onUpdate && onUpdate()}
@@ -58,9 +58,11 @@
 
 	<input
 		bind:this={numberInput}
-		type={expressionMode ? "text" : "number"}
+		type={expressionMode ? 'text' : 'number'}
 		step="0.01"
-		class="number-field {hasRange ? 'with-slider' : 'no-slider'} {expressionMode ? 'expression' : ''} {expressionHasError ? 'error' : ''}"
+		class="number-field {hasRange ? 'with-slider' : 'no-slider'} {expressionMode
+			? 'expression'
+			: ''} {expressionHasError ? 'error' : ''}"
 		disabled={definition.readOnly}
 		value={expressionMode
 			? expressionHasError

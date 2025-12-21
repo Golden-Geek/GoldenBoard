@@ -1,7 +1,7 @@
 import { Menu } from '../inspector/inspector.svelte.ts';
 import { mainState, menuContext, MenuContextType, saveData, type ContextMenuItem } from '../engine/engine.svelte.ts';
-import type { PropertyContainerDefinition, PropertySingleDefinition, PropertyContainerData, PropertyData } from '../property/property.svelte.ts';
-import { InspectableWithProps, PropertyType, sanitizeUserID } from '../property/property.svelte.ts';
+import type { PropertyContainerDefinition, PropertySingleDefinition } from '../property/property.svelte.ts';
+import { InspectableWithProps, Property, PropertyType, sanitizeUserID } from '../property/property.svelte.ts';
 import { ColorUtil, type Color } from '$lib/property/Color.svelte';
 
 //WIDGET
@@ -28,8 +28,8 @@ export class Widget extends InspectableWithProps {
     isSelected: boolean = $state(false);
 
     //derived properties
-    label = $derived(this.getPropValue("label.text").current) as string;
-    labelColor = $derived(this.getPropValue("label.color").current) as Color | null;
+    label = $derived(this.getSingleProp('label.text').get() as string);
+    labelColor = $derived(this.getSingleProp('label.color').get() as Color);
 
     defaultUIDDestroy = $effect.root(() => {
         $effect(() => {
@@ -75,15 +75,15 @@ export class Widget extends InspectableWithProps {
     static createFromDefinition(def: WidgetDefinition): Widget {
 
         let w = new Widget(def.type, def.isContainer || false);
-        w.setPropRawValue('label.text', def.name);
+        (w.getProp('label.text') as Property | null)?.setRaw(def.name);
         return w;
     }
 
     static createRootWidgetContainer(): Widget {
         let w = Widget.createFromDefinition(widgetContainerDefinitions[0]);
-        let p = w.getProp('label.text') as PropertyData;
+        let p = w.getSingleProp('label.text');
         if (p) {
-            p.value = 'Root';
+            p.set('Root');
             p.enabled = true;
         }
         return w;
@@ -305,7 +305,7 @@ export const deselectAllWidgets = function () {
     for (let w of selectedWidgets) {
         w.isSelected = false;
     }
-    while(selectedWidgets.length > 0) {
+    while (selectedWidgets.length > 0) {
         selectedWidgets.pop();
     }
 

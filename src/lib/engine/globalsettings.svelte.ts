@@ -1,13 +1,12 @@
-import { InspectableWithProps, PropertyType, type PropertyContainerDefinition, type PropertyData, type PropertySingleDefinition } from "$lib/property/property.svelte";
+import { InspectableWithProps, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from "$lib/property/property.svelte";
 import { mainState } from "./engine.svelte";
 
 export class GlobalSettings extends InspectableWithProps {
 
-    fullScreenOnLoad = $derived(this.getPropValue('fullScreenOnLoad').current as string);
-    modeOnLoad = $derived(this.getPropValue('modeOnLoad').current as string);
-    showBoardsListInLiveMode = $derived(this.getPropValue('showBoardsListInLiveMode').current as boolean);
-    hideListIfOnlyOneBoard = $derived(this.getPropValue('hideListIfOnlyOneBoard').current as boolean);
-
+    fullScreenOnLoad = $derived((this.getSingleProp('fullScreenOnLoad').get() as string));
+    modeOnLoad = $derived((this.getSingleProp('modeOnLoad').get() as string));
+    showBoardsListInLiveMode = $derived((this.getSingleProp('showBoardsListInLiveMode').get() as boolean));
+    hideListIfOnlyOneBoard = $derived((this.getSingleProp('hideListIfOnlyOneBoard').get() as boolean));
 
     constructor() {
         super('global-settings', 'Global Settings');

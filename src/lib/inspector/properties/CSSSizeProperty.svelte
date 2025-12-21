@@ -32,7 +32,7 @@
 			}
 		}
 
-		property.value = `${numberValue}${unitValue}`;
+		property.set(`${numberValue}${unitValue}`);
 		onUpdate && onUpdate();
 	}
 </script>

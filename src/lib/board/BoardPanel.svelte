@@ -6,6 +6,7 @@
 	import { mainState, saveData, EditMode, MenuContextType } from '$lib/engine/engine.svelte';
 	import { Menu } from '../inspector/inspector.svelte.ts';
 	import { ColorUtil } from '../property/Color.svelte';
+	import type { Property } from '$lib/property/property.svelte';
 
 	let selectedBoard = $derived(mainState.selectedBoard);
 	let boards = $derived(mainState.boards);
@@ -39,7 +40,7 @@
 					: board.name}
 				separator={'\n'}
 				onChange={(newValue: string) => {
-					board.setPropRawValue('name', newValue);
+					(board.getProp('name') as Property | null)?.setRaw(newValue);
 					saveData('Rename Board', { coalesceID: 'rename-board-' + board.id });
 				}}
 				hasRemoveButton={editMode && boards.length > 1}
