@@ -1,8 +1,9 @@
 import { Menu } from '../inspector/inspector.svelte.ts';
 import { mainState, menuContext, MenuContextType, saveData, type ContextMenuItem } from '../engine/engine.svelte.ts';
 import type { PropertyContainerDefinition, PropertySingleDefinition } from '../property/property.svelte.ts';
-import { InspectableWithProps, Property, PropertyType, sanitizeUserID } from '../property/property.svelte.ts';
+import { Property, PropertyType} from '../property/property.svelte.ts';
 import { ColorUtil, type Color } from '$lib/property/Color.svelte';
+import { InspectableWithProps, sanitizeUserID } from "../property/inspectable.svelte.ts";
 
 //WIDGET
 type WidgetDefinition = {

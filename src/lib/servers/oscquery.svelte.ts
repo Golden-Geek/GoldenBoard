@@ -1,5 +1,6 @@
 import { mainState, saveData } from '$lib/engine/engine.svelte.js';
-import { InspectableWithProps, Property, PropertyType, sanitizeUserID, type PropertyContainerDefinition, type PropertySingleDefinition } from '$lib/property/property.svelte.js';
+import { InspectableWithProps, sanitizeUserID } from "../property/inspectable.svelte.ts";
+import { Property, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from '$lib/property/property.svelte.js';
 import type { OscPacket } from './osc.js';
 import { decodeOscPacket, encodeOscPacket } from './osc.js';
 

@@ -1,13 +1,13 @@
 import { Widget } from "../widget/widgets.svelte.ts";
 import { mainState, saveData } from "../engine/engine.svelte.ts";
-import { InspectableWithProps, Property, PropertyType, sanitizeUserID, type PropertyContainerDefinition, type PropertySingleDefinition } from "../property/property.svelte.ts";
+import { Property, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from "../property/property.svelte.ts";
 import { type Color, ColorUtil } from "$lib/property/Color.svelte";
+import { InspectableWithProps, sanitizeUserID } from "../property/inspectable.svelte.ts";
 
 
 let boards = $derived(mainState.boards);
 
 export class Board extends InspectableWithProps {
-
 
     rootWidget: Widget = Widget.createRootWidgetContainer();
     isSelected: boolean = $derived(mainState.selectedBoard === this);

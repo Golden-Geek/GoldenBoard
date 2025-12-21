@@ -1,4 +1,5 @@
-import { InspectableWithProps, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from "$lib/property/property.svelte";
+import { InspectableWithProps } from "$lib/property/inspectable.svelte";
+import {  PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from "$lib/property/property.svelte";
 import { mainState } from "./engine.svelte";
 
 export class GlobalSettings extends InspectableWithProps {

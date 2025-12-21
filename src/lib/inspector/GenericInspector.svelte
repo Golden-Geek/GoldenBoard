@@ -1,24 +1,32 @@
 <script lang="ts">
-	import { getWidgetDefinitionForType } from '$lib/widget/widgets.svelte';
-	import PropertyDrawer from './PropertyDrawer.svelte';
+	import PropertyInspector from './PropertyInspector.svelte';
 
 	let { targets } = $props();
-
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 
-	let propertiesDefinitions = $derived(target ? target.getPropertyDefinitions() : null);
-
+	let definitions = $derived(target ? target.getPropertyDefinitions() : null);
+	let orderedDefs = $derived(
+		Object.entries(definitions).sort(([keyA, valueA], [keyB, valueB]) => {
+			if (valueA == undefined) return 1;
+			if (valueB == undefined) return -1;
+			return ((valueA as any)?.children ? 1 : 0) - ((valueB as any)?.children ? 1 : 0);
+		})
+	);
 </script>
 
 <div class="inspector">
-	{#if target && propertiesDefinitions}
-		<PropertyDrawer
-			{targets}
-			bind:props={target.props}
-			definitions={propertiesDefinitions}
-			level={0}
-		/>
-		<!-- <pre>{JSON.stringify(target.toSnapshot(), null, 2)}</pre> -->
+	{#if target && definitions}
+		{#each orderedDefs as [key]}
+			<div class="property-item">
+				<PropertyInspector
+					{targets}
+					bind:property={target.props[key]}
+					definition={definitions[key]}
+					level={0}
+					propKey={key}
+				></PropertyInspector>
+			</div>
+		{/each}
 	{:else}
 		<p>Select something to edit here</p>
 	{/if}

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { PropertyMode, PropertyType, type Property } from '$lib/property/property.svelte';
 	import { propertiesInspectorClass } from './inspector.svelte.ts';
-	import PropertyContainer from './PropertyContainer.svelte';
 	import { saveData } from '$lib/engine/engine.svelte';
 	import { fade, slide } from 'svelte/transition';
 	import ExpressionEditor from './expression/ExpressionEditor.svelte';
+	import PropertyContainerInspector from './PropertyContainerInspector.svelte';
 
 	let { targets, property = $bindable(), propKey, definition, level } = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
@@ -46,7 +46,7 @@
 		: 'disabled'}"
 >
 	{#if isContainer}
-		<PropertyContainer {targets} bind:property {propKey} {definition} {level} />
+		<PropertyContainerInspector {targets} bind:property {propKey} {definition} {level} />
 	{:else if target != null && property != null}
 		<div class="firstline">
 			<div class="property-label {expressionHasError ? 'error' : ''}">

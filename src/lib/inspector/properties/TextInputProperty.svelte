@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { InspectableWithProps, PropertyMode } from '$lib/property/property.svelte';
 
 	let {
 		property = $bindable(),

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { history, redo, undo } from '$lib/engine/engine.svelte';
-	import { activeUserIDs } from '$lib/property/property.svelte';
+	import { activeUserIDs } from '$lib/property/inspectable.svelte';
 	import { selectedWidgets, widgetsMap } from '$lib/widget/widgets.svelte';
 </script>
 
