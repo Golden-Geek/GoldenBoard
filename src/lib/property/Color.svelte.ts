@@ -133,5 +133,12 @@ export class ColorUtil {
         return `hsla(${h}, ${s}%, ${v}%, ${hsv.a})`;
     }
 
+    //add operator == and != for Color
+    static equals(c1: Color, c2: Color): boolean {
+        return c1.r === c2.r && c1.g === c2.g && c1.b === c2.b && c1.a === c2.a;
+    }
 
+    static notEquals(c1: Color, c2: Color): boolean {
+        return !this.equals(c1, c2);
+    }
 };

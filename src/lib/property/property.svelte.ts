@@ -1,4 +1,4 @@
-import type { Color } from "./Color.svelte";
+import { ColorUtil, type Color } from "./Color.svelte";
 
 export class InspectableWithProps {
     id: string = $state('');
@@ -455,5 +455,13 @@ const convertType = function <T>(value: any, targetType: PropertyType): T {
             return String(value) as T;
         default:
             return value;
+    }
+}
+
+export const isPropValueOverriden = function (prop: PropertyData, def: PropertySingleDefinition): boolean {
+    if (def.type === PropertyType.COLOR) {
+        return ColorUtil.notEquals(prop.value as Color, def.default as Color);
+
+        return prop.value !== def.default;
     }
 }

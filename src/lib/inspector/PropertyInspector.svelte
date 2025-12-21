@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PropertyMode, PropertyType } from '$lib/property/property.svelte';
+	import { isPropValueOverriden, PropertyMode, PropertyType } from '$lib/property/property.svelte';
 	import { propertiesInspectorClass } from './inspector.svelte.ts';
 	import PropertyContainer from './PropertyContainer.svelte';
 	import { saveData } from '$lib/engine/engine.svelte';
@@ -15,7 +15,6 @@
 	let enabled = $derived(canDisable ? (property.enabled ?? false) : true);
 
 	//Expression
-	let propRawValue = $derived(target?.getPropValue(propKey).raw || null);
 	let expressionMode = $derived(property.mode == PropertyMode.EXPRESSION);
 	let resolvedValue = $derived(expressionMode ? target?.getPropValue(propKey) : null);
 	let expressionHasError = $derived(resolvedValue?.error != null);
@@ -63,7 +62,7 @@
 					</button>
 				{/if}
 				{definition.name}
-				{#if !definition.readOnly && propRawValue !== definition.default}
+				{#if !definition.readOnly && isPropValueOverriden(property, definition)}
 					<button
 						class="reset-property"
 						aria-label="Reset Property"

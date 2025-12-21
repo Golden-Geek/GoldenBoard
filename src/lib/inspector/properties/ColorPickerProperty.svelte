@@ -11,12 +11,12 @@
 
 </script>
 
-<!-- <ColorPicker
+<ColorPicker
 	previewIsSwitch={true}
 	bind:color={property.value}
 	onStartEdit={() => onStartEdit && onStartEdit(property.value)}
 	onEndEdit={() => onUpdate && onUpdate()}
-></ColorPicker> -->
+></ColorPicker>
 
 <style>
 </style>
