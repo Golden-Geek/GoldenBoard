@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { PropertyType } from '$lib/property/property.svelte';
-	import { flip } from 'svelte/animate';
+	import { PropertyMode, PropertyType } from '$lib/property/property.svelte';
 	import { propertiesInspectorClass } from './inspector.svelte.ts';
 	import PropertyContainer from './PropertyContainer.svelte';
 	import { saveData } from '$lib/engine/engine.svelte';
-	import { fade } from 'svelte/transition';
+	import { fade, slide } from 'svelte/transition';
+	import ExpressionEditor from './expression/ExpressionEditor.svelte';
 
-	let { targets, property = $bindable(), definition, level } = $props();
+	let { targets, property = $bindable(), propKey, definition, level } = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 
 	let propertyType = $derived(property ? (definition.type as PropertyType) : PropertyType.NONE);
@@ -32,47 +32,71 @@
 	}
 </script>
 
-<div class="property-inspector {isContainer ? 'container' : 'single'} {'level-' + level} {enabled?'' : 'disabled'}">
+<div
+	class="property-inspector {isContainer ? 'container' : 'single'} {'level-' + level} {enabled
+		? ''
+		: 'disabled'}"
+>
 	{#if isContainer}
-		<PropertyContainer {targets} bind:property {definition} {level} />
+		<PropertyContainer {targets} bind:property {propKey} {definition} {level} />
 	{:else if target != null && property != null}
-		<div class="property-label">
-			{#if canDisable}
-				<button
-					class="enable-property"
-					onclick={() => {
-						property.enabled = !enabled? true : undefined;
-						checkAndSaveProperty(true);
-					}}
-				>
-					{enabled ? '🟢' : '⚪'}
-				</button>
-			{/if}
-			{definition.name}
-			{#if !definition.readOnly && property.value != definition.default}
-				<button
-					class="reset-property"
-					aria-label="Reset Property"
-					onclick={() => {
-						property.value = definition.default;
-						checkAndSaveProperty();
-					}}
-					transition:fade={{ duration: 200 }}
-				>
-					⟲
-				</button>
-			{/if}
+		<div class="firstline">
+			<div class="property-label">
+				{#if canDisable}
+					<button
+						class="enable-property"
+						onclick={() => {
+							property.enabled = !enabled ? true : undefined;
+							checkAndSaveProperty(true);
+						}}
+					>
+						{enabled ? '🟢' : '⚪'}
+					</button>
+				{/if}
+				{definition.name}
+				{#if !definition.readOnly && property.value != definition.default}
+					<button
+						class="reset-property"
+						aria-label="Reset Property"
+						onclick={() => {
+							property.value = definition.default;
+							checkAndSaveProperty();
+						}}
+						transition:fade={{ duration: 200 }}
+					>
+						⟲
+					</button>
+				{/if}
+			</div>
+
+			<div class="spacer"></div>
+			<Property
+				{targets}
+				bind:property
+				onStartEdit={(value: any) => (valueOnFocus = value)}
+				onUpdate={() => checkAndSaveProperty()}
+				{definition}
+				{propKey}
+			/>
+			<button
+				class="expression-toggle {property.mode ?? PropertyMode.VALUE}"
+				onclick={() => {
+					property.mode =
+						property.mode == PropertyMode.EXPRESSION ? undefined : PropertyMode.EXPRESSION;
+					saveData('Set Property Mode', {
+						coalesceID: `${target.id}-property-${level}-${definition.name}-mode`
+					});
+				}}>ƒ</button
+			>
 		</div>
 
-		<Property
-			{targets}
-			bind:property
-			onStartEdit={(value: any) => (valueOnFocus = value)}
-			onUpdate={() => checkAndSaveProperty()}
-			{definition}
-		/>
+		{#if property.mode == PropertyMode.EXPRESSION}
+			<div class="property-expression" transition:slide={{ duration: 200 }}>
+				<ExpressionEditor {targets} bind:property {definition}></ExpressionEditor>
+			</div>
+		{/if}
 	{:else}
-		{definition.type} - {target != null} - {property}
+		{definition.type} - {target} - {property}
 	{/if}
 </div>
 
@@ -84,10 +108,21 @@
 	.property-inspector {
 		width: 100%;
 		display: flex;
-		justify-content: space-between;
+		gap: 0.25rem;
+		flex-direction: column;
 		box-sizing: border-box;
-		align-items: center;
 		transition: opacity 0.2s ease;
+	}
+
+	.property-inspector .firstline {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.spacer {
+		flex-grow: 1;
 	}
 
 	.property-inspector.disabled {
@@ -128,5 +163,31 @@
 
 	.reset-property:hover {
 		opacity: 1;
+	}
+
+	.expression-toggle {
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-size: 1rem;
+		padding: 0 0.2rem 0 0.5rem;
+		color: var(--text-color);
+		opacity: 0.5;
+		transition: opacity 0.1s;
+	}
+
+	.expression-toggle:hover {
+		opacity: 1;
+	}
+
+	.expression-toggle.expression {
+		opacity: 0.9;
+		color: var(--expression-color);
+		font-weight: bold;
+	}
+
+	.property-inspector .property-expression {
+		flex-grow: 1;
+		width: 100%;
 	}
 </style>

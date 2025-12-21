@@ -1,39 +1,30 @@
 <script lang="ts">
-	import { InspectableWithProps, PropertyMode } from '$lib/property/property.svelte';
-
 	let {
 		targets,
 		property = $bindable(),
 		definition,
-		propKey,
 		onStartEdit = null,
 		onUpdate = null
 	} = $props();
-
 	let target = $derived(targets.length > 0 ? targets[0] : null);
-	let expressionMode = $derived(property.mode == PropertyMode.EXPRESSION);
-	let resolvedValue = $derived((target as InspectableWithProps)?.getPropValue(propKey));
-	let shownValue = $derived(resolvedValue?.error ?? resolvedValue?.current ?? '');
 
-	let initValue = $derived(property.value);
-
-	$inspect(resolvedValue);
+	let initExpression = $derived(property.expression);
 </script>
 
 <input
 	type="text"
 	class="text-property"
-	disabled={definition.readOnly || expressionMode}
-	value={property.value}
+	disabled={definition.readOnly}
+	value={property.expression}
 	onchange={(e) => {
 		let newValue = (e.target as HTMLInputElement).value;
 		// Apply filter function if defined
 		if (definition.filterFunction) {
 			newValue = definition.filterFunction(newValue);
 		}
-		property.value = newValue;
+		property.expression = newValue == '' ? undefined : newValue;
 	}}
-	onfocus={() => onStartEdit && onStartEdit(initValue)}
+	onfocus={() => onStartEdit && onStartEdit(initExpression)}
 	onblur={() => onUpdate && onUpdate()}
 	onkeydown={(e) => {
 		if (e.key === 'Enter') {
@@ -48,6 +39,8 @@
 		height: 100%;
 		box-sizing: border-box;
 		font-size: 0.75rem;
+		width: 100%;
+		color: var(--expression-color);
 	}
 
 	.text-property:disabled {

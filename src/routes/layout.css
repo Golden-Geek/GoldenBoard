@@ -24,6 +24,8 @@
 
     --slider-bg: rgba(255, 255, 255, 0.05);
     --slider-fg: var(--accent-color);
+
+    --expression-color: #b29c12;
 }
 
 html,

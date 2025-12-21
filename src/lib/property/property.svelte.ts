@@ -129,7 +129,7 @@ export class InspectableWithProps {
             let def = this.getDefinitionForProp(propKey);
 
             let fallback = defaultValue !== null ? defaultValue : def?.default as T;
-            if(propKey === 'userID' && fallback === '') {
+            if (propKey === 'userID' && fallback === '') {
             }
             let canDisable = (def && 'canDisable' in def) ? def.canDisable : false;
             if (enabled == undefined) enabled = !canDisable; //default to enabled if canDisable is false
@@ -138,9 +138,12 @@ export class InspectableWithProps {
             }
         }
 
+        // For now, just return the raw value. TODO: implement expression evaluation, etc.
+        if (prop.mode === PropertyMode.VALUE) {
+            return { current: prop.value as T, raw: prop.value as T };
+        }
 
-
-        return { current: prop.value as T, raw: prop.value as T }; // TODO: compute resolved value (bindings, etc.)
+        return this.parseExpression(prop.expression || '', prop.value, propKey);
     }
 
     getPropRawValue(propKey: string, defaultValue: any = null): number | string | boolean | number[] | null {
@@ -160,6 +163,13 @@ export class InspectableWithProps {
             console.warn(`Property ${propKey} not found on InspectableWithProps ${this.id}`, this);
         }
 
+    }
+
+
+    parseExpression<T>(expression: string, fallbackValue: any, propKey: string): ResolvedProperty<T> {
+
+        // For now, just return the fallback value. TODO: implement expression evaluation.
+        return { current: expression as T, raw: fallbackValue as T };
     }
 
     toSnapshot(includeID: boolean = true): any {
@@ -270,7 +280,6 @@ function unregisterActiveUserID(userID: string) {
     delete activeUserIDs[userID];
 }
 
-
 export enum PropertyType {
     BOOLEAN = 'boolean',
     FLOAT = 'float',
@@ -286,8 +295,8 @@ export enum PropertyType {
 }
 
 export enum PropertyMode {
-    DIRECT = 'direct',
-    BINDING = 'binding'
+    VALUE = 'value',
+    EXPRESSION = 'expression'
 }
 
 export type PropertyContainerDefinition = {
@@ -320,7 +329,7 @@ export type PropertyData = {
     value: number | string | boolean | number[];
     enabled?: boolean;
     mode?: PropertyMode;
-    binding?: string;
+    expression?: string;
 };
 
 // The resolved structure your  consumes (Runtime)

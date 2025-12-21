@@ -61,8 +61,6 @@
 			mainState.editor.fullScreen = false;
 		}
 
-		// mainState.editor.fullScreen = document.fullscreenElement != null;
-
 		return () => {
 			window.removeEventListener('keydown', handleKeydown);
 		};

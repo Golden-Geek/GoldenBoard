@@ -3,7 +3,7 @@
 	import PropertyInspector from './PropertyInspector.svelte';
 	import { saveData } from '$lib/engine/engine.svelte';
 
-	let { targets, property = $bindable(), definition, level } = $props();
+	let { targets, property = $bindable(), propKey, definition, level } = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 
 	let collapsed = $derived(property.collapsed ?? definition.collapsedByDefault ?? false);
@@ -15,7 +15,8 @@
 		<span
 			class="title-text"
 			onclick={() => {
-				property.collapsed = (!collapsed != (definition.collapsedByDefault ?? false)) ? !collapsed : undefined;
+				property.collapsed =
+					!collapsed != (definition.collapsedByDefault ?? false) ? !collapsed : undefined;
 				saveData('Collapse Container', {
 					coalesceID: `${target.id}-property-${level}-${definition.name}-collapse`
 				});
@@ -38,6 +39,7 @@
 							bind:property={property.children[key]}
 							definition={childDefinition}
 							level={level + 1}
+							propKey={propKey + '.' + key}
 						></PropertyInspector>
 					{/each}
 				{:else}

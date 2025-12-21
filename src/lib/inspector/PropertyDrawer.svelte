@@ -22,6 +22,7 @@
 					bind:property={props[key]}
 					definition={definitions[key]}
 					{level}
+					propKey={key}
 				></PropertyInspector>
 			</div>
 		{/each}
