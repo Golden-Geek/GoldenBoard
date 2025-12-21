@@ -53,7 +53,6 @@
 	<div class="inspector-content">
 		<GenericInspector {targets} />
 	</div>
-
 	<div class="data-inspector {dataInspectorCollapsed ? 'collapsed' : ''}">
 		<div class="data-inspector-header">
 			<div class="button" onclick={() => (dataInspectorCollapsed = !dataInspectorCollapsed)}>

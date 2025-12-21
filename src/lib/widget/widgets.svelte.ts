@@ -305,11 +305,9 @@ export const deselectAllWidgets = function () {
     for (let w of selectedWidgets) {
         w.isSelected = false;
     }
-    console.log('Deselecting all widgets', selectedWidgets.length);
     while(selectedWidgets.length > 0) {
         selectedWidgets.pop();
     }
-    console.log('Deselecting all widgets', selectedWidgets.length);
 
 }
 

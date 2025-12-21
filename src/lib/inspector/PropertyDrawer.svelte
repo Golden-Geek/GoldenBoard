@@ -12,7 +12,6 @@
 		})
 	);
 
-	$inspect('PropertyDrawer', target, props);
 </script>
 
 <div class="property-drawer">

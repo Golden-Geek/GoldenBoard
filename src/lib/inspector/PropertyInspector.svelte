@@ -15,6 +15,7 @@
 	let enabled = $derived(canDisable ? (property.enabled ?? false) : true);
 
 	//Expression
+	let propRawValue = $derived(target?.getPropValue(propKey).raw || null);
 	let expressionMode = $derived(property.mode == PropertyMode.EXPRESSION);
 	let resolvedValue = $derived(expressionMode ? target?.getPropValue(propKey) : null);
 	let expressionHasError = $derived(resolvedValue?.error != null);
@@ -62,7 +63,7 @@
 					</button>
 				{/if}
 				{definition.name}
-				{#if !definition.readOnly && property.value != definition.default}
+				{#if !definition.readOnly && propRawValue !== definition.default}
 					<button
 						class="reset-property"
 						aria-label="Reset Property"

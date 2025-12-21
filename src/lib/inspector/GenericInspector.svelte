@@ -7,14 +7,14 @@
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 
 	let propertiesDefinitions = $derived(target ? target.getPropertyDefinitions() : null);
-	$inspect('GenericInspector', target);
+
 </script>
 
 <div class="inspector">
 	{#if target && propertiesDefinitions}
 		<PropertyDrawer
 			{targets}
-			bind:props={target!.props}
+			bind:props={target.props}
 			definitions={propertiesDefinitions}
 			level={0}
 		/>
