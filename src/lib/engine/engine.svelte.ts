@@ -225,6 +225,7 @@ export function loadData() {
         widget.remove();
     }
 
+
     const stateStr = localStorage.getItem('data');
     if (stateStr) {
         const snap = JSON.parse(stateStr);
@@ -233,7 +234,7 @@ export function loadData() {
         applySnapshot($state.snapshot(defaultMainData));
     }
 
-    if (mainState.globalSettings.modeOnLoad != 'last') mainState.editor.editMode = mainState.globalSettings.modeOnLoad as EditMode;
+    mainState.selectedBoard = mainState.boards.length > 0 ? mainState.boards[0] : null;    if (mainState.globalSettings.modeOnLoad != 'last') mainState.editor.editMode = mainState.globalSettings.modeOnLoad as EditMode;
 
     let persistedHistoryStr = localStorage.getItem('history');
     if (persistedHistoryStr) {

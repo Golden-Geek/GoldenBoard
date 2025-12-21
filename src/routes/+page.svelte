@@ -17,6 +17,8 @@
 	let editorLayout: any = $derived(editorState?.layout);
 	let editMode = $derived(editorState?.editMode);
 
+	$inspect(editorLayout, editMode);
+
 	let contentDiv = $state<HTMLDivElement | null>(null);
 	let leftSplitter = $state<HTMLDivElement | null>(null);
 	let rightSplitter = $state<HTMLDivElement | null>(null);
@@ -68,6 +70,7 @@
 
 	function initSplitter() {
 		if (!leftSplitter || !rightSplitter || !leftPaneSplitter || !contentDiv) return;
+		console.log('Initializing splitters');
 		tick().then(() => {
 			Split({
 				columnGutters: [
@@ -97,6 +100,7 @@
 	}
 
 	function loadLayout() {
+		console.log('Loading layout', editorLayout);
 		if (contentDiv == null) return;
 		if (editorLayout) {
 			const { inspectorWidth, leftPaneWidth, outlinerHeight } = editorLayout as {
@@ -115,6 +119,7 @@
 				contentDiv.style.gridTemplateRows = `1fr 8px 1fr`;
 			}
 		}
+		console.log('Layout loaded:', layoutLoaded);
 		layoutLoaded = true;
 	}
 
