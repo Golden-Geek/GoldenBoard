@@ -1,9 +1,202 @@
 import { ColorUtil, type Color } from "./Color.svelte";
 
+export class Property {
+    value: PropertyValueType;
+    enabled: boolean | undefined;
+    mode: PropertyMode | undefined;
+    expression: string | undefined;
+
+    owner: InspectableWithProps | undefined;
+    keyPath: string | undefined;
+
+    constructor(definition: PropertySingleDefinition, owner?: InspectableWithProps, keyPath?: string) {
+        this.value = $state(convertType(definition.default, definition.type));
+        this.enabled = $state(undefined);
+        this.mode = $state(undefined);
+        this.expression = $state(undefined);
+
+        this.owner = owner;
+        this.keyPath = keyPath;
+    }
+
+    getDefinition(): PropertySingleDefinition | null {
+        const owner = this.owner;
+        const keyPath = this.keyPath;
+        if (!owner || !keyPath) return null;
+        return owner.getDefinitionForProp(keyPath);
+    }
+
+    getResolved<T>(defaultValue = null as T): ResolvedProperty<T> {
+        const def = this.getDefinition();
+        const canDisable = !!def?.canDisable;
+
+        let enabled = this.enabled;
+        if (enabled === undefined) enabled = !canDisable;
+
+        const fallback = (defaultValue !== null ? defaultValue : (def?.default as T)) as T;
+        if (!enabled) {
+            return { current: fallback, raw: fallback };
+        }
+
+        const raw = this.value as T;
+
+        if (!this.mode || this.mode === PropertyMode.VALUE) {
+            return { current: raw, raw };
+        }
+
+        return this.parseExpression<T>(this.expression || '', raw, fallback);
+    }
+
+    get<T>(defaultValue = null as T): T | null {
+        return this.getResolved<T>(defaultValue).current;
+    }
+
+    getValue<T>(defaultValue = null as T): T | null {
+        return this.get<T>(defaultValue);
+    }
+
+    getRaw(defaultValue: any = null): PropertyValueType | null {
+        const def = this.getDefinition();
+        const canDisable = !!def?.canDisable;
+
+        let enabled = this.enabled;
+        if (enabled === undefined) enabled = !canDisable;
+        if (!enabled) return defaultValue;
+
+        return (this.value as PropertyValueType) ?? defaultValue;
+    }
+
+    setRaw(value: PropertyValueType) {
+        this.value = value;
+    }
+
+    set(value: PropertyValueType) {
+        this.setRaw(value);
+    }
+
+    private parseExpression<T>(expression: string, rawValue: any, fallbackValue: any): ResolvedProperty<T> {
+        let result = {} as ResolvedProperty<T>;
+
+        result.current = rawValue as T;
+        result.raw = rawValue as T;
+
+        const expr = (expression ?? '').trim();
+        if (expr === '') return result;
+
+        const owner = this.owner;
+        const propKey = this.keyPath;
+        if (!owner || !propKey) return result;
+
+        // Optional "formula" style prefix
+        const js = expr.startsWith('=') ? expr.slice(1).trim() : expr;
+
+        // Very small safety net (still not fully secure if user-controlled)
+        const forbidden = [
+            'function',
+            '=>',
+            'new ',
+            'this',
+            'window',
+            'document',
+            'globalThis',
+            'import',
+            'eval',
+            'constructor',
+            '__proto__'
+        ];
+        if (forbidden.some((t) => js.includes(t))) {
+            result.error = 'Expression contains forbidden syntax.';
+            return result;
+        }
+
+        try {
+            // Allow reading other props via prop("some.key", fallback?)
+            const prop = <U>(key: string, fallback?: U) => {
+                let keySplit = key.split(':');
+                let target = owner as InspectableWithProps;
+                let tKey = key;
+                if (keySplit.length > 1) {
+                    target = keySplit[0] == 'this' || keySplit[0] == '' ? owner : activeUserIDs[keySplit[0]];
+                    tKey = keySplit[1];
+                }
+
+                if (!target) {
+                    throw new Error(`Target '${keySplit[0]}' not found for prop('${key}').`);
+                }
+
+                if (!target.getProp(tKey)) {
+                    throw new Error(
+                        `Property '${tKey}' not found on target '${keySplit[0]}' for prop('${key}').`
+                    );
+                }
+
+                return target.getPropValue<U>(tKey, fallback as U).current as U;
+            };
+
+            const fn = new Function('Math', 'prop', `return (${js});`) as (m: Math, p: typeof prop) => unknown;
+
+            const computed = fn(Math, prop);
+
+            if (computed !== undefined && computed !== null) {
+                const def = owner.getDefinitionForProp(propKey);
+                let filtered = def?.filterFunction ? def.filterFunction(computed) : computed;
+                if (filtered === undefined || filtered === null) {
+                    throw new Error('Filtered expression value is undefined or null.');
+                }
+
+                filtered = convertType(filtered, def!.type);
+                result.current = filtered as T;
+            } else {
+                result.current = fallbackValue as T;
+            }
+        } catch (e: unknown) {
+            result.error = e instanceof Error ? e.message : String(e);
+            result.current = fallbackValue as T;
+        }
+
+        return result;
+    }
+
+    destroy() {
+        // placeholder for user-added per-property teardown
+    }
+}
+
+export class PropertyContainer {
+    children: { [key: string]: PropertyNode };
+    collapsed: boolean | undefined;
+
+    owner: InspectableWithProps | undefined;
+    keyPath: string | undefined;
+
+    constructor(
+        children: { [key: string]: PropertyNode },
+        owner?: InspectableWithProps,
+        keyPath?: string,
+        collapsed?: boolean
+    ) {
+        this.children = $state(children);
+        this.collapsed = $state(collapsed);
+
+        this.owner = owner;
+        this.keyPath = keyPath;
+    }
+
+    destroy() {
+        for (const key in this.children) {
+            this.children[key]?.destroy?.();
+        }
+    }
+}
+
+export type PropertyData = Property;
+export type PropertyContainerData = PropertyContainer;
+export type PropertyNode = Property | PropertyContainer;
+
 export class InspectableWithProps {
     id: string = $state('');
     iType: string = $state('');
-    props: { [key: string]: (PropertyData | PropertyContainerData) } = $state({});
+    props: { [key: string]: PropertyNode } = $state({});
     definitions = $derived(this.getPropertyDefinitions());
 
     private _registeredUserID = '';
@@ -39,7 +232,7 @@ export class InspectableWithProps {
     }
 
     setupProps() {
-        this.props = getPropsFromDefinitions(this.definitions || {});
+        this.props = getPropsFromDefinitions(this.definitions || {}, this);
     }
 
     cleanup() {
@@ -113,178 +306,86 @@ export class InspectableWithProps {
     }
 
     getPropValue<T>(propKey: string, defaultValue = null as T): ResolvedProperty<T> {
-        let prop = this.getProp(propKey) as PropertyData;
-
-        if (prop === null) {
+        const node = this.getProp(propKey);
+        if (!node || 'children' in node) {
             return { current: defaultValue!, raw: defaultValue! };
         }
-
-        let enabled = prop.enabled;
-
-        if (enabled == undefined || enabled == false) {
-            let def = this.getDefinitionForProp(propKey);
-
-            let fallback = defaultValue !== null ? defaultValue : def?.default as T;
-            if (propKey === 'userID' && fallback === '') {
-            }
-            let canDisable = (def && 'canDisable' in def) ? def.canDisable : false;
-            if (enabled == undefined) enabled = !canDisable; //default to enabled if canDisable is false
-            if (!enabled) {
-                return { current: fallback, raw: fallback };
-            }
-        }
-
-        // For now, just return the raw value. TODO: implement expression evaluation, etc.
-        if (!prop.mode || prop.mode === PropertyMode.VALUE) {
-            return { current: prop.value as T, raw: prop.value as T };
-        }
-        // return { current: prop.value as T, raw: prop.value as T };
-
-        return this.parseExpression(prop.expression || '', prop.value, propKey);
+        return (node as Property).getResolved<T>(defaultValue);
     }
 
     getPropRawValue(propKey: string, defaultValue: any = null): PropertyValueType | null {
-        let prop = this.getProp(propKey) as PropertyData;
-        if ((prop?.enabled ?? true) === false) {
-            return defaultValue;
-        }
-        return prop?.value || defaultValue;
+        const node = this.getProp(propKey);
+        if (!node || 'children' in node) return defaultValue;
+        return (node as Property).getRaw(defaultValue);
     }
 
     setPropRawValue(propKey: string, value: PropertyValueType) {
-        let prop = this.getProp(propKey) as PropertyData;
+        const node = this.getProp(propKey);
 
-        if (prop !== null) {
-            prop.value = value;
+        if (node && !('children' in node)) {
+            (node as Property).setRaw(value);
         } else {
             console.warn(`Property ${propKey} not found on InspectableWithProps ${this.id}`, this);
         }
 
     }
 
-
-    parseExpression<T>(expression: string, fallbackValue: any, propKey: string): ResolvedProperty<T> {
-
-        let result = {} as ResolvedProperty<T>;
-
-        result.current = fallbackValue as T;
-        result.raw = fallbackValue as T;
-
-        const expr = (expression ?? '').trim();
-        if (expr === '') return result;
-
-        // Optional "formula" style prefix
-        const js = expr.startsWith('=') ? expr.slice(1).trim() : expr;
-
-        // Very small safety net (still not fully secure if user-controlled)
-        const forbidden = [
-            'function',
-            '=>',
-            'new ',
-            'this',
-            'window',
-            'document',
-            'globalThis',
-            'import',
-            'eval',
-            'constructor',
-            '__proto__'
-        ];
-        if (forbidden.some((t) => js.includes(t))) {
-            result.error = 'Expression contains forbidden syntax.';
-            return result;
-        }
-
-        try {
-            // Allow reading other props via prop("some.key", fallback?)
-            const prop = <U>(key: string, fallback?: U) => {
-                let keySplit = key.split(':');
-                let target = this as InspectableWithProps;
-                let tKey = key;
-                if (keySplit.length > 1) {
-                    target = keySplit[0] == 'this' || keySplit[0] == '' ? this : activeUserIDs[keySplit[0]];
-                    tKey = keySplit[1];
-                }
-
-                if (!target) {
-                    throw new Error(`Target '${keySplit[0]}' not found for prop('${key}').`);
-                }
-
-                if (!target.getProp(tKey)) {
-                    throw new Error(`Property '${tKey}' not found on target '${keySplit[0]}' for prop('${key}').`);
-                }
-
-                return target.getPropValue<U>(tKey, fallback as U).current as U;
-            };
-
-            const fn = new Function('Math', 'prop', `return (${js});`) as (m: Math, p: typeof prop) => unknown;
-
-            const computed = fn(Math, prop);
-
-            if (computed !== undefined && computed !== null) {
-                const def = this.getDefinitionForProp(propKey);
-                let filtered = def?.filterFunction ? def.filterFunction(computed) : computed;
-                if (filtered === undefined || filtered === null) {
-                    throw new Error('Filtered expression value is undefined or null.');
-                }
-
-                filtered = convertType(filtered, def!.type);
-                result.current = filtered as T;
-            } else {
-                result.current = fallbackValue as T;
-            }
-        } catch (e: unknown) {
-            result.error = e instanceof Error ? e.message : String(e);
-            result.current = fallbackValue as T;
-        }
-
-        return result;
-    }
-
     toSnapshot(includeID: boolean = true): any {
-
-        let snapshot = $state.snapshot(this.props)
-
-        // Remove props that are disabled and have the same value as the definition
         const definitions = this.getPropertyDefinitions() || {};
-        function filterProps(props: any, defs: any): any {
-            const result: any = Array.isArray(props) ? [] : {};
-            for (const key in props) {
-                if (!Object.prototype.hasOwnProperty.call(props, key)) continue;
-                const prop = props[key];
-                const def = defs[key];
-                if (prop && def) {
-                    if ('children' in prop && def.children) {
 
-                        const filtered = filterProps(prop.children, def.children);
+        const snapshotNode = (
+            node: PropertyNode | undefined,
+            def: PropertySingleDefinition | PropertyContainerDefinition | undefined
+        ): any => {
+            if (!node || !def) return undefined;
 
-                        let collapsed = undefined
-                        if (prop.collapsed !== undefined && prop.collapsed != def.collapsedByDefault) {
-                            collapsed = prop.collapsed;
-                        }
-
-                        if (Object.keys(filtered).length > 0) {
-                            result[key] = { ...prop, collapsed, children: filtered };
-                        }
-
-
-                    } else if ('value' in prop && 'default' in def) {
-                        const canDisable = !!def.canDisable;
-                        const isDisabled = prop.enabled === false || prop.enabled === undefined && canDisable;
-                        const isDefault = prop.value === def.default;
-                        if (!(canDisable && isDisabled && isDefault)) {
-                            result[key] = { ...prop };
-                        }
+            if ('children' in node) {
+                const containerDef = def as PropertyContainerDefinition;
+                if (!containerDef.children) return undefined;
+                const childrenSnapshot: any = {};
+                for (const childKey of Object.keys(containerDef.children)) {
+                    const childSnap = snapshotNode(node.children[childKey], containerDef.children[childKey]);
+                    if (childSnap !== undefined) {
+                        childrenSnapshot[childKey] = childSnap;
                     }
                 }
+
+                const collapsedByDefault = containerDef.collapsedByDefault ?? false;
+                const collapsed = node.collapsed !== undefined && node.collapsed !== collapsedByDefault
+                    ? node.collapsed
+                    : undefined;
+
+                if (Object.keys(childrenSnapshot).length === 0 && collapsed === undefined) return undefined;
+                return { collapsed, children: childrenSnapshot };
             }
-            return result;
+
+            // leaf
+            const leaf = node as Property;
+            const singleDef = def as PropertySingleDefinition;
+            const canDisable = !!singleDef.canDisable;
+            const isDisabled = leaf.enabled === false || (leaf.enabled === undefined && canDisable);
+            const isDefault = !isPropValueOverriden(leaf, singleDef);
+
+            if (canDisable && isDisabled && isDefault) return undefined;
+
+            const out: any = {
+                value: $state.snapshot(leaf.value)
+            };
+            if (leaf.enabled !== undefined) out.enabled = leaf.enabled;
+            if (leaf.mode !== undefined) out.mode = leaf.mode;
+            if (leaf.expression !== undefined) out.expression = leaf.expression;
+            return out;
+        };
+
+        const propsSnapshot: any = {};
+        for (const key of Object.keys(definitions)) {
+            const snap = snapshotNode(this.props[key], definitions[key]);
+            if (snap !== undefined) propsSnapshot[key] = snap;
         }
-        snapshot = filterProps(snapshot, definitions);
 
         return {
             id: includeID ? this.id : undefined,
-            props: snapshot
+            props: propsSnapshot
         };
     }
 
@@ -296,13 +397,14 @@ export class InspectableWithProps {
         if (newID !== this.id) {
             this.setID(newID);
         }
-        let initProps = getPropsFromDefinitions(this.getPropertyDefinitions() || {});
+        const defs = this.getPropertyDefinitions() || {};
+        let initProps = getPropsFromDefinitions(defs, this);
 
         // Recursively copy values from snapshot.props into initProps, only for keys that exist in initProps
 
 
         if (snapshot.props && typeof snapshot.props === 'object') {
-            this.applySnapshotToProps(initProps, snapshot.props);
+            this.applySnapshotToProps(initProps, snapshot.props, defs);
         }
 
         this.props = initProps;
@@ -313,19 +415,38 @@ export class InspectableWithProps {
     }
 
     applySnapshotToProps(
-        target: { [key: string]: PropertyData | PropertyContainerData },
-        source: { [key: string]: PropertyData | PropertyContainerData }
+        target: { [key: string]: PropertyNode },
+        source: any,
+        defs: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {}
     ) {
-        for (const key in target) {
-            if (Object.prototype.hasOwnProperty.call(source, key)) {
-                const targetProp = target[key];
-                const sourceProp = source[key];
-                if ('children' in targetProp && sourceProp && typeof sourceProp === 'object' && 'children' in sourceProp) {
-                    targetProp.collapsed = sourceProp.collapsed ?? targetProp.collapsed;
-                    this.applySnapshotToProps(targetProp.children, sourceProp.children);
-                } else if ('value' in targetProp && sourceProp && typeof sourceProp === 'object' && 'value' in sourceProp) {
-                    Object.assign(targetProp, sourceProp);
+        for (const key of Object.keys(target)) {
+            if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+
+            const targetNode = target[key];
+            const sourceNode = source[key];
+            const def = defs[key];
+
+            if (!targetNode || !def || !sourceNode || typeof sourceNode !== 'object') continue;
+
+            if ('children' in targetNode) {
+                const containerDef = def as PropertyContainerDefinition;
+                if (containerDef.children && sourceNode.children) {
+                    targetNode.collapsed = sourceNode.collapsed ?? targetNode.collapsed;
+                    this.applySnapshotToProps(targetNode.children, sourceNode.children, containerDef.children);
                 }
+                continue;
+            }
+
+            const leaf = targetNode as Property;
+            const singleDef = def as PropertySingleDefinition;
+
+            if ('enabled' in sourceNode) leaf.enabled = sourceNode.enabled;
+            if ('mode' in sourceNode) leaf.mode = sourceNode.mode;
+            if ('expression' in sourceNode) leaf.expression = sourceNode.expression;
+
+            if ('value' in sourceNode) {
+                const raw = singleDef.filterFunction ? singleDef.filterFunction(sourceNode.value) : sourceNode.value;
+                leaf.value = convertType(raw, singleDef.type);
             }
         }
     }
@@ -393,17 +514,7 @@ export type PropertySingleDefinition = {
     filterFunction?: (value: any) => any; // Function to filter/validate the value
 };
 
-export type PropertyContainerData = {
-    children: { [key: string]: (PropertyData | PropertyContainerData) };
-    collapsed?: boolean;
-};
-
-export type PropertyData = {
-    value: PropertyValueType;
-    enabled?: boolean;
-    mode?: PropertyMode;
-    expression?: string;
-};
+// NOTE: Property nodes are now classes: `Property` and `PropertyContainer`.
 
 // The resolved structure your  consumes (Runtime)
 export type ResolvedProperty<T> = {
@@ -415,18 +526,27 @@ export type ResolvedProperty<T> = {
 
 
 
-export const getPropsFromDefinitions = function (defProps: { [key: string]: (PropertyDefinition | PropertyContainerDefinition) }): { [key: string]: (PropertyData | PropertyContainerData) } {
-    let props: { [key: string]: (PropertyData | PropertyContainerData) } = {};
+export const getPropsFromDefinitions = function (
+    defProps: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) },
+    owner?: InspectableWithProps,
+    basePath: string = ''
+): { [key: string]: PropertyNode } {
+    let props: { [key: string]: PropertyNode } = {};
 
     for (let propKey in defProps) {
         let propDef = defProps[propKey];
+        const keyPath = basePath ? `${basePath}.${propKey}` : propKey;
         let propChildren = (propDef as PropertyContainerDefinition).children;
         if (propChildren !== undefined) {
-            let childrenProps = getPropsFromDefinitions(propChildren);
-            props[propKey] = { name: propDef.name, children: childrenProps } as PropertyContainerData;
+            let childrenProps = getPropsFromDefinitions(propChildren, owner, keyPath);
+            props[propKey] = new PropertyContainer(
+                childrenProps,
+                owner,
+                keyPath,
+                (propDef as PropertyContainerDefinition).collapsedByDefault
+            );
         } else {
-            props[propKey] = { value: (propDef as PropertySingleDefinition).default } as PropertyData;
-
+            props[propKey] = new Property(propDef as PropertySingleDefinition, owner, keyPath);
         }
     }
 
