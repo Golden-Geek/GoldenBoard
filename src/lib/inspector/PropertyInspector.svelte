@@ -5,7 +5,6 @@
 	import PropertyContainer from './PropertyContainer.svelte';
 	import { saveData } from '$lib/engine/engine.svelte';
 	import { fade } from 'svelte/transition';
-	import Button from '../../stories/Button.svelte';
 
 	let { targets, property = $bindable(), definition, level } = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);

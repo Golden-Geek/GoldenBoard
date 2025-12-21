@@ -1,7 +1,7 @@
 import { Menu } from '../inspector/inspector.svelte.ts';
 import { mainState, menuContext, MenuContextType, saveData, type ContextMenuItem } from '../engine/engine.svelte.ts';
 import type { PropertyContainerDefinition, PropertySingleDefinition, PropertyContainerData, PropertyData } from '../property/property.svelte.ts';
-import { InspectableWithProps, PropertyType } from '../property/property.svelte.ts';
+import { InspectableWithProps, PropertyType, sanitizeUserID } from '../property/property.svelte.ts';
 
 //WIDGET
 type WidgetDefinition = {
@@ -27,7 +27,16 @@ export class Widget extends InspectableWithProps {
     isSelected: boolean = $state(false);
 
     //derived properties
-    label = $derived(this.getPropValue("label.text", "Widget").current);
+    label = $derived(this.getPropValue("label.text").current) as string;
+
+    defaultUIDDestroy = $effect.root(() => {
+        $effect(() => {
+            this.defaultUserID = sanitizeUserID(this.label);
+        });
+
+        return () => {
+        }
+    });
 
     constructor(type: string, isContainer?: boolean, id?: string) {
         super('widget', id);
@@ -43,7 +52,8 @@ export class Widget extends InspectableWithProps {
     }
 
     cleanup() {
-
+        this.defaultUIDDestroy();
+        super.cleanup();
         selectedWidgets.splice(selectedWidgets.indexOf(this), 1);
         unregisterWidget(this.id);
 
@@ -69,13 +79,17 @@ export class Widget extends InspectableWithProps {
 
     static createRootWidgetContainer(): Widget {
         let w = Widget.createFromDefinition(widgetContainerDefinitions[0]);
-        w.setPropRawValue('label.text', 'Root');
+        let p = w.getProp('label.text') as PropertyData;
+        if (p) {
+            p.value = 'Root';
+            p.enabled = true;
+        }
         return w;
     }
 
 
     getPropertyDefinitions(): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition); } | null {
-        return getWidgetDefinitionForType(this.type)?.props || null;
+        return { ...super.getPropertyDefinitions(), ...getWidgetDefinitionForType(this.type)?.props || null };
     }
 
     toSnapshot(includeID: boolean = true): any {
@@ -315,7 +329,7 @@ function getGlobalWidgetProperties(name: string): { [key: string]: (PropertySing
                 showLabel: { name: 'Show Label', type: PropertyType.BOOLEAN, default: true, description: 'Whether to show the label', canDisable: true },
                 text: { name: 'Text', type: PropertyType.STRING, default: name, canDisable: true },
                 fontSize: { name: 'Font Size', type: PropertyType.CSSSIZE, default: '10px', canDisable: true },
-                color: { name: 'Color', type: PropertyType.COLOR, default: '', canDisable: true },
+                color: { name: 'Color', type: PropertyType.COLOR, default: '#cccccc', canDisable: true },
                 labelPlacement: { name: 'Label Placement', type: PropertyType.ENUM, default: 'inside', options: { 'top': 'Top', 'bottom': 'Bottom', 'left': 'Left', 'right': 'Right', 'inside': 'Inside' }, canDisable: true },
             }
         },
@@ -358,7 +372,7 @@ export const widgetDefinitions: WidgetDefinition[] = [
     {
         name: 'ColorPicker', icon: '🎨', type: 'color-picker', description: 'A widget for selecting colors', props: {
             ...getGlobalWidgetProperties('ColorPicker'),
-            value: { name: 'Value', type: PropertyType.COLOR, default: '#ffffffff' }
+            value: { name: 'Value', type: PropertyType.COLOR, default: '#ffffff' }
         }
     },
     {

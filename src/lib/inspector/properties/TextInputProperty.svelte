@@ -15,12 +15,19 @@
 	type="text"
 	class="text-property"
 	disabled={definition.readOnly}
-	bind:value={property.value}
+	value={property.value}
+	onchange={(e) => {
+		let newValue = (e.target as HTMLInputElement).value;
+		// Apply filter function if defined
+		if (definition.filterFunction) {
+			newValue = definition.filterFunction(newValue);
+		}
+		property.value = newValue;
+	}}
 	onfocus={() => onStartEdit && onStartEdit(initValue)}
 	onblur={() => onUpdate && onUpdate()}
 	onkeydown={(e) => {
-		if (e.key === 'Enter')
-		{
+		if (e.key === 'Enter') {
 			onUpdate && onUpdate();
 			(e.target as HTMLInputElement).blur();
 		}

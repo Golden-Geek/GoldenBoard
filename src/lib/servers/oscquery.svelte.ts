@@ -1,5 +1,5 @@
 import { mainState, saveData } from '$lib/engine/engine.svelte.js';
-import { InspectableWithProps, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from '$lib/property/property.svelte.js';
+import { InspectableWithProps, PropertyType, sanitizeUserID, type PropertyContainerDefinition, type PropertySingleDefinition } from '$lib/property/property.svelte.js';
 import type { OscPacket } from './osc.js';
 import { decodeOscPacket, encodeOscPacket } from './osc.js';
 
@@ -36,6 +36,15 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	pendingMessages: string[] = [];
 
+	defaultUIDDestroy = $effect.root(() => {
+		$effect(() => {
+			this.defaultUserID = sanitizeUserID(this.name.split(' - ')[0]);
+		});
+
+		return () => {
+		}
+	});
+
 	constructor() {
 		super("server");
 		this.setupProps();
@@ -44,12 +53,13 @@ export class OSCQueryClient extends InspectableWithProps {
 	}
 
 	cleanup() {
+		super.cleanup();
 		this.disconnect();
 		this.ws = null;
 	}
 
 	getPropertyDefinitions(): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition); } | null {
-		return serverPropertyDefinitions;
+		return { ...super.getPropertyDefinitions(), ...serverPropertyDefinitions };
 	}
 
 	//WS Connection 

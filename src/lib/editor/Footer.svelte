@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { history, redo, undo } from '$lib/engine/engine.svelte';
+	import { activeUserIDs } from '$lib/property/property.svelte';
 	import { selectedWidgets, widgetsMap } from '$lib/widget/widgets.svelte';
 </script>
 
@@ -9,7 +10,10 @@
 		{#if history.present != null}
 			{#each history.past as h, index (index)}
 				{#if index >= history.past.length - 3}
-					<button class="button history-item undo" onclick={() => undo(history.past.length - index)}>
+					<button
+						class="button history-item undo"
+						onclick={() => undo(history.past.length - index)}
+					>
 						{h.label || 'Unnamed Action'}</button
 					>
 				{/if}
@@ -34,6 +38,10 @@
 
 	<div class="widget-info">
 		{Object.keys(widgetsMap).length} widgets loaded - {selectedWidgets.length} selected
+	</div>
+	/
+	<div class="userid-info">
+		{Object.keys(activeUserIDs).length} active user IDs
 	</div>
 </div>
 
@@ -76,8 +84,9 @@
 		color: #4793d1;
 	}
 
-	.widget-info {
+	.widget-info, .userid-info {
 		font-size: 0.7rem;
 		color: rgba(from var(--text-color) r g b / 50%);
+		padding: 0 0.5rem;
 	}
 </style>

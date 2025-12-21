@@ -1,6 +1,6 @@
 import { Widget } from "../widget/widgets.svelte.ts";
 import { mainState, saveData } from "../engine/engine.svelte.ts";
-import { InspectableWithProps, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from "../property/property.svelte.ts";
+import { InspectableWithProps, PropertyType, sanitizeUserID, type PropertyContainerDefinition, type PropertySingleDefinition } from "../property/property.svelte.ts";
 
 
 let boards = $derived(mainState.boards);
@@ -11,13 +11,21 @@ export class Board extends InspectableWithProps {
     rootWidget: Widget = Widget.createRootWidgetContainer();
     isSelected: boolean = $derived(mainState.selectedBoard === this);
 
-    name = $derived(this.getPropValue("name").current!);
-    description = $derived(this.getPropValue("description.text").current!);
-    showDescription = $derived(this.getPropValue("description.showDescription").current!);
-    descriptionPlacement = $derived(this.getPropValue("description.descriptionPlacement").current!);
-    icon = $derived(this.getPropValue("button.icon").current!);
-    color = $derived(this.getPropValue("button.color").current!)
+    name = $derived(this.getPropValue("name").current) as string;
+    description = $derived(this.getPropValue("description.text").current) as string;
+    showDescription = $derived(this.getPropValue("description.showDescription").current) as boolean;
+    descriptionPlacement = $derived(this.getPropValue("description.descriptionPlacement").current) as string;
+    icon = $derived(this.getPropValue("button.icon").current) as string;
+    color = $derived(this.getPropValue("button.color").current) as string | null;
 
+    defaultUIDDestroy = $effect.root(() => {
+        $effect(() => {
+            this.defaultUserID = sanitizeUserID(this.name);
+        });
+
+        return () => {
+        }
+    });
 
     constructor() {
         super("board");
@@ -25,11 +33,14 @@ export class Board extends InspectableWithProps {
     }
 
     cleanup() {
+        super.cleanup();
         this.rootWidget.cleanup();
+        this.defaultUIDDestroy();
     }
 
+
     getPropertyDefinitions(): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition); } | null {
-        return boardPropertyDefinitions;
+        return { ...super.getPropertyDefinitions(), ...boardPropertyDefinitions };
     }
 
     toSnapshot(includeID: boolean = true): any {
@@ -136,7 +147,7 @@ const boardPropertyDefinitions: { [key: string]: PropertySingleDefinition | Prop
         }
     },
     description: {
-        name: "Description", color:"#459234ff", children: {
+        name: "Description", color: "#459234", children: {
             text: { name: "Text", type: PropertyType.STRING, default: "", canDisable: true },
             showDescription: { name: "Show Description", type: PropertyType.BOOLEAN, default: true, canDisable: true },
             descriptionPlacement: { name: "Description Placement", type: PropertyType.ENUM, canDisable: true, default: "button", options: { "button": "Button", "bar": "Bar", "tooltip": "Tooltip" } },

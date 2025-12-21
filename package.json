@@ -13,9 +13,7 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"test:e2e": "playwright test",
-		"test": "npm run test:e2e",
-		"storybook": "storybook dev -p 6006",
-		"build-storybook": "storybook build"
+		"test": "npm run test:e2e"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",
@@ -32,7 +30,6 @@
 		"@vitest/coverage-v8": "^4.0.15",
 		"eslint": "^9.39.1",
 		"eslint-config-prettier": "^10.1.8",
-		"eslint-plugin-storybook": "^10.1.9",
 		"eslint-plugin-svelte": "^3.13.1",
 		"globals": "^16.5.0",
 		"playwright": "^1.57.0",

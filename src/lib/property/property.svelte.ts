@@ -2,21 +2,72 @@ export class InspectableWithProps {
     id: string = $state('');
     iType: string = $state('');
     props: { [key: string]: (PropertyData | PropertyContainerData) } = $state({});
-    definitions = $derived(this.getPropertyDefinitions());;
+    definitions = $derived(this.getPropertyDefinitions());
+
+    private _registeredUserID = '';
+
+    defaultUserID: string = $state('');
+    userID: string = $derived(this.getPropValue('userID', '').current as string);
+
+    userIDEffectDestroy = $effect.root(() => {
+        $effect(() => {
+            // this.defaultUserID; //to trigger with this as well
+            const nextUserID = this.userID;
+            if (nextUserID === this._registeredUserID) return;
+
+            if (this._registeredUserID !== '') {
+                unregisterActiveUserID(this._registeredUserID);
+            }
+
+            if (nextUserID !== '') {
+                registerActiveUserID(nextUserID, this);
+            }
+
+            this._registeredUserID = nextUserID;
+        });
+
+        return () => {
+        };
+    });
+
 
     constructor(iType: string, id?: string) {
         this.iType = iType;
         this.id = id ?? (iType + '-' + crypto.randomUUID());
 
+
     }
 
     setupProps() {
-
         this.props = getPropsFromDefinitions(this.definitions || {});
     }
 
+    cleanup() {
+        this.userIDEffectDestroy();
+        if (this._registeredUserID !== '') {
+            unregisterActiveUserID(this._registeredUserID);
+            this._registeredUserID = '';
+        }
+    }
+
+    getUserIDDefinition(): PropertySingleDefinition {
+        return {
+            name: 'User ID',
+            type: PropertyType.STRING,
+            default: sanitizeUserID(this.defaultUserID),
+            canDisable: true,
+            filterFunction: (value: any) => {
+                return sanitizeUserID(value as string);
+            }
+        }
+    }
+
+    setUserID(newUserID: string) {
+        this.setPropRawValue('userID', sanitizeUserID(newUserID));
+    }
+
     getPropertyDefinitions(): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } | null {
-        return null;
+        return { userID: this.getUserIDDefinition() };
     }
 
     getDefinitionForProp(propKey: string): PropertySingleDefinition | null {
@@ -65,21 +116,25 @@ export class InspectableWithProps {
         return null;
     }
 
-    getPropValue<T>(propKey: string, defaultValue = null as T | null): ResolvedProperty<T> {
+    getPropValue<T>(propKey: string, defaultValue = null as T): ResolvedProperty<T> {
         let prop = this.getProp(propKey) as PropertyData;
 
         if (prop === null) {
-            return { current: defaultValue, raw: defaultValue };
+            return { current: defaultValue!, raw: defaultValue! };
         }
 
         let enabled = prop.enabled;
+
         if (enabled == undefined || enabled == false) {
             let def = this.getDefinitionForProp(propKey);
 
+            let fallback = defaultValue !== null ? defaultValue : def?.default as T;
+            if(propKey === 'userID' && fallback === '') {
+            }
             let canDisable = (def && 'canDisable' in def) ? def.canDisable : false;
             if (enabled == undefined) enabled = !canDisable; //default to enabled if canDisable is false
             if (!enabled) {
-                return { current: def!.default as T, raw: def!.default as T };
+                return { current: fallback, raw: fallback };
             }
         }
 
@@ -98,11 +153,13 @@ export class InspectableWithProps {
 
     setPropRawValue(propKey: string, value: number | string | boolean | number[]) {
         let prop = this.getProp(propKey) as PropertyData;
+
         if (prop !== null) {
             prop.value = value;
         } else {
             console.warn(`Property ${propKey} not found on InspectableWithProps ${this.id}`, this);
         }
+
     }
 
     toSnapshot(includeID: boolean = true): any {
@@ -119,18 +176,18 @@ export class InspectableWithProps {
                 const def = defs[key];
                 if (prop && def) {
                     if ('children' in prop && def.children) {
-                        
+
                         const filtered = filterProps(prop.children, def.children);
 
                         let collapsed = undefined
-                        if(prop.collapsed !== undefined && prop.collapsed != def.collapsedByDefault) {
+                        if (prop.collapsed !== undefined && prop.collapsed != def.collapsedByDefault) {
                             collapsed = prop.collapsed;
                         }
 
                         if (Object.keys(filtered).length > 0) {
                             result[key] = { ...prop, collapsed, children: filtered };
                         }
-                        
+
 
                     } else if ('value' in prop && 'default' in def) {
                         const canDisable = !!def.canDisable;
@@ -193,7 +250,26 @@ export class InspectableWithProps {
             }
         }
     }
+};
+
+
+export const activeUserIDs: { [key: string]: InspectableWithProps } = $state({});
+
+export function sanitizeUserID(userID: string): string {
+    if (userID == null) return '';
+    return userID.trim().toLocaleLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_\-]/g, '');
 }
+
+function registerActiveUserID(userID: string, obj: InspectableWithProps) {
+    if (userID == '') return;
+    activeUserIDs[userID] = obj;
+}
+
+function unregisterActiveUserID(userID: string) {
+    if (userID == '') return;
+    delete activeUserIDs[userID];
+}
+
 
 export enum PropertyType {
     BOOLEAN = 'boolean',
@@ -232,6 +308,7 @@ export type PropertySingleDefinition = {
     min?: number; // For RANGE type
     max?: number; // For RANGE type
     step?: number; // For STEPPER type
+    filterFunction?: (value: any) => any; // Function to filter/validate the value
 };
 
 export type PropertyContainerData = {
@@ -252,6 +329,8 @@ export type ResolvedProperty<T> = {
     raw: T | null; // The raw value (before calculations)
     error?: string; // If parsing failed
 };
+
+
 
 export const getPropsFromDefinitions = function (defProps: { [key: string]: (PropertyDefinition | PropertyContainerDefinition) }): { [key: string]: (PropertyData | PropertyContainerData) } {
     let props: { [key: string]: (PropertyData | PropertyContainerData) } = {};
