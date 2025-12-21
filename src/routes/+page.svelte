@@ -133,13 +133,13 @@
 		// Outliner height: first row
 		const outlinerHeight = rows[0];
 
-		editorLayout = {
+		mainState.editor.layout = {
 			inspectorWidth,
 			leftPaneWidth,
 			outlinerHeight
 		};
 
-		saveData('Change Layout');
+		saveData('Change Layout', { coalesceID: 'editor-layout-change' });
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
