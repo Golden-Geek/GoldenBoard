@@ -11,7 +11,6 @@
 			return ((valueA as any)?.children ? 1 : 0) - ((valueB as any)?.children ? 1 : 0);
 		})
 	);
-
 </script>
 
 <div class="property-drawer">

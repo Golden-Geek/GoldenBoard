@@ -73,6 +73,7 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
+		
 	}
 
 	.menu-bar {
@@ -111,7 +112,8 @@
 	.inspector-content {
 		height: 100%;
 		overflow-x: hidden;
-		overflow-y: visible;
+		overflow: -moz-scrollbars-vertical;
+		overflow-y: scroll;
 	}
 
 	.data-inspector {

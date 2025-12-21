@@ -32,11 +32,9 @@ export class InspectableWithProps {
         };
     });
 
-
     constructor(iType: string, id?: string) {
         this.iType = iType;
         this.id = id ?? (iType + '-' + crypto.randomUUID());
-
 
     }
 
@@ -219,7 +217,6 @@ export class InspectableWithProps {
                 return target.getPropValue<U>(tKey, fallback as U).current as U;
             };
 
-
             const fn = new Function('Math', 'prop', `return (${js});`) as (m: Math, p: typeof prop) => unknown;
 
             const computed = fn(Math, prop);
@@ -230,9 +227,6 @@ export class InspectableWithProps {
                 if (filtered === undefined || filtered === null) {
                     throw new Error('Filtered expression value is undefined or null.');
                 }
-
-                //check compatibility with expected type T
-
 
                 filtered = convertType(filtered, def!.type);
                 result.current = filtered as T;
