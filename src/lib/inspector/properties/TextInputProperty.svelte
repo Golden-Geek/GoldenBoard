@@ -10,11 +10,14 @@
 		onUpdate = null
 	} = $props();
 
-	let target = $derived(targets.length > 0 ? targets[0] : null);
+	let target = $derived(targets.length > 0 ? targets[0] : null) as InspectableWithProps;
 	let expressionMode = $derived(property.mode == PropertyMode.EXPRESSION);
-	let resolvedValue = $derived((target as InspectableWithProps)?.getPropValue(propKey));
-	let shownValue = $derived(resolvedValue?.error ?? resolvedValue?.current ?? '');
+
+	let resolvedValue = $derived(expressionMode ? target?.getPropValue(propKey) : null);
 	let expressionHasError = $derived(resolvedValue?.error != null);
+	let shownValue = $derived(
+		expressionMode ? (resolvedValue?.error ?? resolvedValue?.current!) : property.value
+	);
 
 	let initValue = $derived(property.value);
 </script>
