@@ -1,3 +1,5 @@
+import type { Color } from "./Color.svelte";
+
 export class InspectableWithProps {
     id: string = $state('');
     iType: string = $state('');
@@ -143,7 +145,7 @@ export class InspectableWithProps {
         return this.parseExpression(prop.expression || '', prop.value, propKey);
     }
 
-    getPropRawValue(propKey: string, defaultValue: any = null): number | string | boolean | number[] | null {
+    getPropRawValue(propKey: string, defaultValue: any = null): PropertyValueType | null {
         let prop = this.getProp(propKey) as PropertyData;
         if ((prop?.enabled ?? true) === false) {
             return defaultValue;
@@ -151,7 +153,7 @@ export class InspectableWithProps {
         return prop?.value || defaultValue;
     }
 
-    setPropRawValue(propKey: string, value: number | string | boolean | number[]) {
+    setPropRawValue(propKey: string, value: PropertyValueType) {
         let prop = this.getProp(propKey) as PropertyData;
 
         if (prop !== null) {
@@ -325,7 +327,7 @@ export class InspectableWithProps {
 export const activeUserIDs: { [key: string]: InspectableWithProps } = $state({});
 
 export function sanitizeUserID(userID: string): string {
-    if (userID == null) return '';
+    if (userID == null || userID === '' || userID === undefined) return '';
     return userID.trim().toLocaleLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_\-]/g, '');
 }
 
@@ -365,12 +367,14 @@ export type PropertyContainerDefinition = {
     collapsedByDefault?: boolean;
 }
 
+export type PropertyValueType = number | string | boolean | number[] | Color;
+
 export type PropertySingleDefinition = {
     name: string;
     type: PropertyType;
     canDisable?: boolean;
     readOnly?: boolean;
-    default: number | string | boolean | number[];
+    default: PropertyValueType;
     description?: string;
     options?: { [key: string]: string }; // For ENUM type
     min?: number; // For RANGE type
@@ -385,7 +389,7 @@ export type PropertyContainerData = {
 };
 
 export type PropertyData = {
-    value: number | string | boolean | number[];
+    value: PropertyValueType;
     enabled?: boolean;
     mode?: PropertyMode;
     expression?: string;

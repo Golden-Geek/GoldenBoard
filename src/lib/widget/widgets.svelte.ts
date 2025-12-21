@@ -2,6 +2,7 @@ import { Menu } from '../inspector/inspector.svelte.ts';
 import { mainState, menuContext, MenuContextType, saveData, type ContextMenuItem } from '../engine/engine.svelte.ts';
 import type { PropertyContainerDefinition, PropertySingleDefinition, PropertyContainerData, PropertyData } from '../property/property.svelte.ts';
 import { InspectableWithProps, PropertyType, sanitizeUserID } from '../property/property.svelte.ts';
+import { ColorUtil, type Color } from '$lib/property/Color.svelte';
 
 //WIDGET
 type WidgetDefinition = {
@@ -28,10 +29,11 @@ export class Widget extends InspectableWithProps {
 
     //derived properties
     label = $derived(this.getPropValue("label.text").current) as string;
+    labelColor = $derived(this.getPropValue("label.color").current) as Color | null;
 
     defaultUIDDestroy = $effect.root(() => {
         $effect(() => {
-            this.defaultUserID = sanitizeUserID(this.label? this.label : 'widget');
+            this.defaultUserID = sanitizeUserID(this.label ? this.label : 'widget');
         });
 
         return () => {
@@ -329,7 +331,7 @@ function getGlobalWidgetProperties(name: string): { [key: string]: (PropertySing
                 showLabel: { name: 'Show Label', type: PropertyType.BOOLEAN, default: true, description: 'Whether to show the label', canDisable: true },
                 text: { name: 'Text', type: PropertyType.STRING, default: name, canDisable: true },
                 fontSize: { name: 'Font Size', type: PropertyType.CSSSIZE, default: '10px', canDisable: true },
-                color: { name: 'Color', type: PropertyType.COLOR, default: '#cccccc', canDisable: true },
+                color: { name: 'Color', type: PropertyType.COLOR, default: ColorUtil.fromHex("#ffffffff"), canDisable: true },
                 labelPlacement: { name: 'Label Placement', type: PropertyType.ENUM, default: 'inside', options: { 'top': 'Top', 'bottom': 'Bottom', 'left': 'Left', 'right': 'Right', 'inside': 'Inside' }, canDisable: true },
             }
         },
@@ -372,7 +374,7 @@ export const widgetDefinitions: WidgetDefinition[] = [
     {
         name: 'ColorPicker', icon: '🎨', type: 'color-picker', description: 'A widget for selecting colors', props: {
             ...getGlobalWidgetProperties('ColorPicker'),
-            value: { name: 'Value', type: PropertyType.COLOR, default: '#ffffff' }
+            value: { name: 'Value', type: PropertyType.COLOR, default: ColorUtil.fromHex("#ffffffff") }
         }
     },
     {

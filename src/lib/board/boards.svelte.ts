@@ -1,6 +1,7 @@
 import { Widget } from "../widget/widgets.svelte.ts";
 import { mainState, saveData } from "../engine/engine.svelte.ts";
 import { InspectableWithProps, PropertyType, sanitizeUserID, type PropertyContainerDefinition, type PropertySingleDefinition } from "../property/property.svelte.ts";
+import { type Color, ColorUtil } from "$lib/property/Color.svelte";
 
 
 let boards = $derived(mainState.boards);
@@ -16,7 +17,7 @@ export class Board extends InspectableWithProps {
     showDescription = $derived(this.getPropValue("description.showDescription").current) as boolean;
     descriptionPlacement = $derived(this.getPropValue("description.descriptionPlacement").current) as string;
     icon = $derived(this.getPropValue("button.icon").current) as string;
-    color = $derived(this.getPropValue("button.color").current) as string | null;
+    color = $derived(this.getPropValue("button.color").current) as Color;
 
     defaultUIDDestroy = $effect.root(() => {
         $effect(() => {
@@ -143,7 +144,7 @@ const boardPropertyDefinitions: { [key: string]: PropertySingleDefinition | Prop
     button: {
         name: "Button", children: {
             icon: { name: "Icon", type: PropertyType.ICON, default: "" },
-            color: { name: "Color", type: PropertyType.COLOR, default: "#1481a1", canDisable: true },
+            color: { name: "Color", type: PropertyType.COLOR, default: ColorUtil.fromHex("#0b5b98ff"), canDisable: true },
         }
     },
     description: {

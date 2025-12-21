@@ -1,4 +1,4 @@
-import { Menu } from "$lib/inspector/inspector.svelte.ts";
+import { Menu } from "$lib/inspector/inspector.svelte";
 import { Board, applyBoardsSnapshot, toBoardsSnaphot, getBoardByID } from "../board/boards.svelte.ts";
 import { applyServersSnapshot, getServerByID, toServersSnapshot, type OSCQueryClient } from "../servers/oscquery.svelte.ts";
 import { getWidgetContextMenuItems, widgetsMap } from "../widget/widgets.svelte.ts";

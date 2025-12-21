@@ -5,6 +5,7 @@
 	import { addBoard, Board, removeBoard } from './boards.svelte';
 	import { mainState, saveData, EditMode, MenuContextType } from '$lib/engine/engine.svelte';
 	import { Menu } from '../inspector/inspector.svelte.ts';
+	import { ColorUtil } from '../property/Color.svelte';
 
 	let selectedBoard = $derived(mainState.selectedBoard);
 	let boards = $derived(mainState.boards);
@@ -47,7 +48,7 @@
 				onRemove={() => {
 					removeBoard(board);
 				}}
-				color={board.color as string}
+				color={ColorUtil.toHex(board.color)}
 			></EditableButton>
 		{/each}
 
