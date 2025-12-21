@@ -23,6 +23,9 @@ export class Expression {
     private _compiledFn: ((m: Math, p: (key: string, fallback?: unknown) => unknown) => unknown) | null =
         null;
 
+    private _setupFor: string | null = null;
+    private _setupError: string | null = null;
+
     constructor() {
         this.mode = $state(undefined);
         this.text = $state(undefined);
@@ -33,6 +36,65 @@ export class Expression {
         this.text = undefined;
         this._compiledFor = null;
         this._compiledFn = null;
+
+        this._setupFor = null;
+        this._setupError = null;
+    }
+
+    /**
+     * Compiles the current expression (if in expression mode) and caches the compiled function.
+     * Call this when switching into expression mode or when the expression text changes.
+     */
+    setup() {
+        if (this.mode !== 'expression') {
+            this._setupFor = null;
+            this._setupError = null;
+            return;
+        }
+
+        const expr = (this.text ?? '').trim();
+        if (expr === '') {
+            this._setupFor = null;
+            this._setupError = null;
+            return;
+        }
+
+        const js = expr.startsWith('=') ? expr.slice(1).trim() : expr;
+        if (this._setupFor === js) return;
+
+        this._setupFor = js;
+        this._setupError = null;
+
+        const forbidden = [
+            'function',
+            '=>',
+            'new ',
+            'this',
+            'window',
+            'document',
+            'globalThis',
+            'import',
+            'eval',
+            'constructor',
+            '__proto__'
+        ];
+
+        if (forbidden.some((t) => js.includes(t))) {
+            this._setupError = 'Expression contains forbidden syntax.';
+            return;
+        }
+
+        try {
+            if (this._compiledFor !== js) {
+                this._compiledFn = new Function('Math', 'prop', `return (${js});`) as any;
+                this._compiledFor = js;
+            }
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            this._setupError = msg;
+            this._compiledFor = null;
+            this._compiledFn = null;
+        }
     }
 
     /**
@@ -84,22 +146,10 @@ export class Expression {
 
         const js = expr.startsWith('=') ? expr.slice(1).trim() : expr;
 
-        const forbidden = [
-            'function',
-            '=>',
-            'new ',
-            'this',
-            'window',
-            'document',
-            'globalThis',
-            'import',
-            'eval',
-            'constructor',
-            '__proto__'
-        ];
-
-        if (forbidden.some((t) => js.includes(t))) {
-            result.error = 'Expression contains forbidden syntax.';
+        this.setup();
+        if (this._setupFor === js && this._setupError) {
+            result.error = this._setupError;
+            result.current = args.fallbackValue;
             return result;
         }
 
@@ -141,12 +191,16 @@ export class Expression {
                 return node.getResolved(fallback as any).current;
             };
 
-            if (this._compiledFor !== js) {
-                this._compiledFn = new Function('Math', 'prop', `return (${js});`) as any;
-                this._compiledFor = js;
+            if (this._compiledFor !== js || !this._compiledFn) {
+                // Defensive fallback: should have been compiled in setup()
+                this.setup();
             }
 
-            const computed = this._compiledFn!(Math, prop);
+            if (!this._compiledFn) {
+                throw new Error('Expression is not compiled.');
+            }
+
+            const computed = this._compiledFn(Math, prop);
 
             if (computed !== undefined && computed !== null) {
                 let filtered: unknown = args.filter ? args.filter(computed) : computed;
@@ -161,8 +215,11 @@ export class Expression {
         } catch (e: unknown) {
             result.error = e instanceof Error ? e.message : String(e);
             result.current = args.fallbackValue;
-            // invalidate compiled function if it threw at compile-time
+
+            // If we get a syntax error, force re-setup next time.
             if (result.error?.includes('Unexpected') || result.error?.includes('SyntaxError')) {
+                this._setupFor = null;
+                this._setupError = null;
                 this._compiledFor = null;
                 this._compiledFn = null;
             }

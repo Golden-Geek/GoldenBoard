@@ -111,6 +111,9 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
 
     set mode(value: PropertyMode | undefined) {
         this.expr.mode = value as ExpressionMode | undefined;
+		if (value === PropertyMode.EXPRESSION) {
+			this.expr.setup();
+		}
     }
 
     get expression(): string | undefined {
@@ -119,6 +122,9 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
 
     set expression(value: string | undefined) {
         this.expr.text = value;
+		if (this.mode === PropertyMode.EXPRESSION) {
+			this.expr.setup();
+		}
     }
 
     get<T>(defaultValue = null as T): T | null {
@@ -199,6 +205,9 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
 
         if ('enabled' in snapshot) this.enabled = snapshot.enabled;
 		this.expr.applySnapshot(snapshot);
+		if (this.mode === PropertyMode.EXPRESSION) {
+			this.expr.setup();
+		}
 
         if ('value' in snapshot) {
             const raw = this.definition.filterFunction
