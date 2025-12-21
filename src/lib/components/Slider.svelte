@@ -10,7 +10,10 @@
 		orientation = 'horizontal',
 		disabled = false,
 		onStartEdit = null,
-		onEndEdit = null
+		onEndEdit = null,
+		onValueChange = null,
+		bgColor = 'var(--slider-bg)',
+		fgColor = 'var(--slider-fg)'
 	} = $props();
 
 	let sliderDiv = $state(null as HTMLDivElement | null);
@@ -52,6 +55,8 @@
 		}
 
 		valueAtDown = value;
+
+		onValueChange && onValueChange(value);
 	}
 
 	function stopDrag(e: MouseEvent) {
@@ -65,7 +70,12 @@
 	}
 </script>
 
-<div class="slider" bind:this={sliderDiv} onmousedown={startDrag}>
+<div
+	class="slider"
+	bind:this={sliderDiv}
+	onmousedown={startDrag}
+	style="--bg-color: {bgColor}; --fg-color: {fgColor}"
+>
 	<div class="slider-foreground" style="--value: {(value - min) / (max - min)}"></div>
 </div>
 
@@ -77,7 +87,7 @@
 		user-select: none;
 		border-radius: 0.5rem;
 		overflow: hidden;
-		background: var(--slider-bg);
+		background: var(--bg-color);
 	}
 
 	.slider-foreground {
@@ -86,7 +96,7 @@
 		top: 0;
 		height: 100%;
 		border-radius: 12px 0 0 12px;
-		background: var(--slider-fg);
+		background: var(--fg-color);
 		width: calc(var(--value) * 100%);
 		pointer-events: none;
 	}

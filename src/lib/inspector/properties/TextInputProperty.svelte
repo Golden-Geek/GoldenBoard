@@ -2,30 +2,21 @@
 	import { InspectableWithProps, PropertyMode } from '$lib/property/property.svelte';
 
 	let {
-		targets,
 		property = $bindable(),
 		definition,
-		propKey,
+		expressionMode = false,
+		expressionHasError = false,
+		shownValue = '',
 		onStartEdit = null,
 		onUpdate = null
 	} = $props();
 
-	let target = $derived(targets.length > 0 ? targets[0] : null) as InspectableWithProps;
-	let expressionMode = $derived(property.mode == PropertyMode.EXPRESSION);
 
-	let resolvedValue = $derived(expressionMode ? target?.getPropValue(propKey) : null);
-	let expressionHasError = $derived(resolvedValue?.error != null);
-	let shownValue = $derived(
-		expressionMode ? (resolvedValue?.error ?? resolvedValue?.current!) : property.value
-	);
-
-	let initValue = $derived(property.value);
 </script>
 
 <input
 	type="text"
 	class="text-property {expressionMode ? 'expression' : ''} {expressionHasError ? 'error' : ''}"
-	disabled={definition.readOnly || expressionMode}
 	value={shownValue}
 	onchange={(e) => {
 		if (expressionMode) return;
@@ -36,7 +27,7 @@
 		}
 		property.value = newValue;
 	}}
-	onfocus={() => (expressionMode ? null : onStartEdit && onStartEdit(initValue))}
+	onfocus={() => (expressionMode ? null : onStartEdit && onStartEdit($state.snapshot(property.value)))}
 	onblur={() => (expressionMode ? null : onUpdate && onUpdate())}
 	onkeydown={(e) => {
 		if (expressionMode) return;

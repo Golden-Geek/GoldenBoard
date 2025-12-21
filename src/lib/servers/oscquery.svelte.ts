@@ -36,6 +36,8 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	pendingMessages: string[] = [];
 
+	propertyWatcherMap: { [key: string]: string[] } = {};
+
 	defaultUIDDestroy = $effect.root(() => {
 		$effect(() => {
 			this.defaultUserID = sanitizeUserID(this.name.split(' - ')[0]);
@@ -470,6 +472,22 @@ export class OSCQueryClient extends InspectableWithProps {
 	//Helpers
 	hasData() {
 		return Object.entries(this.data).length > 0;
+	}
+
+	registerPropertyWatcher(watcherID: string, propertyKey: string) {
+		if (!this.propertyWatcherMap[watcherID]) {
+			this.propertyWatcherMap[watcherID] = [];
+		}
+		if (this.propertyWatcherMap[watcherID].includes(propertyKey)) {
+			return;
+		}
+		this.propertyWatcherMap[watcherID].push(propertyKey);
+	}
+
+	unregisterPropertyWatcher(watcherID: string) {
+		if (this.propertyWatcherMap[watcherID]) {
+			delete this.propertyWatcherMap[watcherID];
+		}
 	}
 }
 

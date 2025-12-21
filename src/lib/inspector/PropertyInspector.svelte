@@ -14,6 +14,14 @@
 	let canDisable = $derived(definition.canDisable ?? false);
 	let enabled = $derived(canDisable ? (property.enabled ?? false) : true);
 
+	//Expression
+	let expressionMode = $derived(property.mode == PropertyMode.EXPRESSION);
+	let resolvedValue = $derived(expressionMode ? target?.getPropValue(propKey) : null);
+	let expressionHasError = $derived(resolvedValue?.error != null);
+	let shownValue = $derived(
+		expressionMode ? (resolvedValue?.error ?? resolvedValue?.current!) : property.value
+	);
+
 	let Property: any = $derived(
 		propertiesInspectorClass[propertyType as keyof typeof propertiesInspectorClass]
 	);
@@ -41,7 +49,7 @@
 		<PropertyContainer {targets} bind:property {propKey} {definition} {level} />
 	{:else if target != null && property != null}
 		<div class="firstline">
-			<div class="property-label">
+			<div class="property-label {expressionHasError ? 'error' : ''}">
 				{#if canDisable}
 					<button
 						class="enable-property"
@@ -70,14 +78,19 @@
 			</div>
 
 			<div class="spacer"></div>
-			<Property
-				{targets}
-				bind:property
-				onStartEdit={(value: any) => (valueOnFocus = value)}
-				onUpdate={() => checkAndSaveProperty()}
-				{definition}
-				{propKey}
-			/>
+			<div class="property-wrapper {expressionMode ? 'expression-mode' : ''}">
+				<Property
+					{targets}
+					bind:property
+					onStartEdit={(value: any) => (valueOnFocus = value)}
+					onUpdate={() => checkAndSaveProperty()}
+					{definition}
+					{propKey}
+					{expressionMode}
+					{expressionHasError}
+					{shownValue}
+				/>
+			</div>
 			<button
 				class="expression-toggle {property.mode ?? PropertyMode.VALUE}"
 				onclick={() => {
@@ -92,8 +105,12 @@
 
 		{#if property.mode == PropertyMode.EXPRESSION}
 			<div class="property-expression" transition:slide={{ duration: 200 }}>
-				<ExpressionEditor {targets} bind:property {definition}
+				<ExpressionEditor
+					{targets}
+					bind:property
+					{definition}
 					onUpdate={() => checkAndSaveProperty(true)}
+					{propKey}
 				></ExpressionEditor>
 			</div>
 		{/if}
@@ -127,6 +144,13 @@
 		flex-grow: 1;
 	}
 
+	.property-wrapper.expression-mode {
+		opacity: 0.5;
+		user-select: none;
+		touch-action: none;
+		pointer-events: none;
+	}
+
 	.property-inspector.disabled {
 		opacity: 0.5;
 		pointer-events: none;
@@ -141,6 +165,11 @@
 	.property-label {
 		display: flex;
 		align-items: center;
+	}
+
+	.property-label.error {
+		color: var(--error-color);
+		font-weight: bold;
 	}
 
 	.enable-property {

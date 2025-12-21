@@ -7,7 +7,10 @@
 		property = $bindable(),
 		definition,
 		onStartEdit = null,
-		onUpdate = null
+		onUpdate = null,
+		expressionMode = false,
+		expressionHasError = false,
+		shownValue
 	} = $props();
 
 	let target = $derived(targets.length > 0 ? targets[0] : null);
@@ -19,6 +22,8 @@
 	let numberInput = $state(null as HTMLInputElement | null);
 
 	function setValueFromField() {
+		if (expressionMode) return;
+
 		const newValue = parseFloat(numberInput!.value);
 		if (!isNaN(newValue)) {
 			property.value = hasRange
@@ -32,23 +37,36 @@
 <div class="number-property-container">
 	{#if hasRange}
 		<Slider
-			bind:value={property.value}
+			value={expressionMode ? shownValue : property.value}
 			min={definition.min}
 			max={definition.max}
 			step={definition.step || 0}
 			disabled={definition.readOnly}
+			onValueChange={(value: number) => {
+				if (expressionMode) return;
+				property.value = value;
+			}}
 			onStartEdit={() => onStartEdit && onStartEdit(property.value)}
 			onEndEdit={() => onUpdate && onUpdate()}
+			fgColor={expressionMode
+				? expressionHasError
+					? 'var(--error-color)'
+					: 'var(--expression-color)'
+				: undefined}
 		/>
 	{/if}
 
 	<input
 		bind:this={numberInput}
-		type="number"
+		type={expressionMode ? "text" : "number"}
 		step="0.01"
-		class="number-field {hasRange ? 'with-slider' : 'no-slider'}"
+		class="number-field {hasRange ? 'with-slider' : 'no-slider'} {expressionMode ? 'expression' : ''} {expressionHasError ? 'error' : ''}"
 		disabled={definition.readOnly}
-		value={property.value.toFixed(isInteger ? 0 : 3)}
+		value={expressionMode
+			? expressionHasError
+				? 'error'
+				: shownValue?.toFixed(isInteger ? 0 : 3)
+			: property.value?.toFixed(isInteger ? 0 : 3)}
 		onfocus={() => onStartEdit && onStartEdit(property.value)}
 		onblur={setValueFromField}
 		onkeydown={(e) => {
@@ -68,6 +86,15 @@
 		display: flex;
 		align-items: center;
 		gap: 0.25rem;
+	}
+
+	.expression {
+		font-style: italic;
+		color: var(--expression-color);
+	}
+
+	.expression.error {
+		color: var(--error-color);
 	}
 
 	.number-field {
