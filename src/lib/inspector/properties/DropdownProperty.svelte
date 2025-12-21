@@ -13,6 +13,3 @@
 	{/each}
 </select>
 
-<style>
-	
-</style>
