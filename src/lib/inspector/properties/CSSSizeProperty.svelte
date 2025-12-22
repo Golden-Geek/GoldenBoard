@@ -1,26 +1,25 @@
 <script lang="ts">
 	let {
 		targets,
+		expressionMode,
+		expressionHasError,
 		property = $bindable(),
+		shownValue,
 		definition,
 		onStartEdit = null,
 		onUpdate = null
 	} = $props();
 
-	let initValue = $derived(property.value);
+	let initValue = $derived(shownValue);
 
-	let numberValue = $derived(
-		parseFloat(/^(-?\d*\.?\d+)(.*)$/.exec(property.value)?.toString() || '0')
-	);
+	let numberValue = $derived(parseFloat(/^(-?\d*\.?\d+)(.*)$/.exec(shownValue)?.toString() || '0'));
 
 	let unitValue = $derived(
-		/^(-?\d*\.?\d+)(.*)$/.exec(property.value)?.[2] ||
+		/^(-?\d*\.?\d+)(.*)$/.exec(shownValue)?.[2] ||
 			(definition.units ? (definition.units as string[])[0] : 'px')
 	);
 
-	let units = $derived(
-		(definition.units as string[]) || ['px', 'em', 'rem', '%', 'vh', 'vw']
-	);
+	let units = $derived((definition.units as string[]) || ['px', 'em', 'rem', '%', 'vh', 'vw']);
 
 	function compute() {
 		//if user entered unit in the number field, extract it
@@ -37,11 +36,14 @@
 	}
 </script>
 
-<div class="css-size-property">
+<div
+	class="css-size-property {expressionMode ? 'expression-mode' : ''} {expressionHasError
+		? 'error'
+		: ''}"
+>
 	<input
 		type="text"
 		class="value-property"
-		disabled={definition.readOnly}
 		bind:value={numberValue}
 		onfocus={() => onStartEdit && onStartEdit(initValue)}
 		onblur={compute}
@@ -53,12 +55,7 @@
 		}}
 	/>
 
-	<select
-		class="unit-property"
-		bind:value={unitValue}
-		onchange={compute}
-		disabled={definition.readOnly}
-	>
+	<select class="unit-property" bind:value={unitValue} onchange={compute}>
 		{#each units as unit}
 			<option value={unit}>{unit}</option>
 		{/each}
@@ -76,5 +73,19 @@
 	.value-property:disabled {
 		background-color: var(--inspector-input-disabled-bg);
 		color: rgba(from var(--text-color) r g b / 50%);
+	}
+
+	.expression-mode {
+		.value-property,
+		.unit-property {
+			color: var(--expression-color);
+		}
+	}
+
+	.error {
+		.value-property,
+		.unit-property {
+			color: var(--error-color);
+		}
 	}
 </style>
