@@ -14,7 +14,7 @@ function unregisterActiveUserID(userID: string) {
 
 export function sanitizeUserID(userID: string): string {
     if (userID == null || userID === '' || userID === undefined) return '';
-    return userID.trim().toLocaleLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_\-]/g, '');
+    return userID.trim().toLocaleLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '_');
 }
 
 
@@ -25,7 +25,7 @@ export class InspectableWithProps {
     definitions = $derived(this.getPropertyDefinitions());
     userID = $derived((this.getSingleProp('userID').get() as string));
 
-	autoID = $derived(this.userID || this.getAutoID());
+    autoID = $derived(this.userID || this.getAutoID());
 
     private _activeUserIDKey = '';
 
@@ -64,7 +64,7 @@ export class InspectableWithProps {
         return '';
     }
 
-    
+
 
     private unloadPropsTree(props: { [key: string]: PropertyNode } | undefined = this.props) {
         if (!props) return;

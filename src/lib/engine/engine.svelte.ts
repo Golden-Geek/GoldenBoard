@@ -248,6 +248,11 @@ export function loadData() {
     }
 }
 
+export function getAllWidgets()
+{
+    return Object.values(widgetsMap);
+}
+
 
 
 loadData(); //only called here

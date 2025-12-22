@@ -1,7 +1,7 @@
 import { Menu } from '../inspector/inspector.svelte.ts';
 import { mainState, menuContext, MenuContextType, saveData, type ContextMenuItem } from '../engine/engine.svelte.ts';
 import type { PropertyContainer, PropertyContainerDefinition, PropertySingleDefinition } from '../property/property.svelte.ts';
-import { Property, PropertyType } from '../property/property.svelte.ts';
+import { Property, PropertyMode, PropertyType } from '../property/property.svelte.ts';
 import { ColorUtil, type Color } from '$lib/property/Color.svelte';
 import { InspectableWithProps, sanitizeUserID } from "../property/inspectable.svelte.ts";
 import { Board } from "$lib/board/boards.svelte.js";
@@ -32,7 +32,14 @@ export class Widget extends InspectableWithProps {
 
     //derived properties
     name = $derived(this.getSingleProp('label.text').get() as string);
-    sanitizedIdentifier = $derived(this.userID || sanitizeUserID(this.name));
+    sanitizedIdentifier = $derived.by(() => {
+        if (this.userID != '') return this.userID;
+
+        const p = this.getSingleProp('label.text');
+        if (p.mode === PropertyMode.EXPRESSION) return p.getRaw(); //safety to avoid circular calls
+        return sanitizeUserID(this.name);
+    });
+
     labelColor = $derived(this.getSingleProp('label.color').get() as Color);
 
     constructor(type: string, isContainer?: boolean, id?: string) {
@@ -71,10 +78,10 @@ export class Widget extends InspectableWithProps {
     }
 
     getFullPath(): string {
-        let path = '';
-        let p: Widget | null = this;
+        let path = this.sanitizedIdentifier;
+        let p: Widget | null = this.parent;
         while (p) {
-            path = p.sanitizedIdentifier + '/' + path;
+            path = p.sanitizedIdentifier + '.' + path;
             p = p.parent;
         }
 

@@ -1,7 +1,6 @@
-import { mainState } from '$lib/engine/engine.svelte';
-import { ColorUtil, type Color } from './Color.svelte';
+import { mainState, getAllWidgets } from '$lib/engine/engine.svelte';
 import { activeUserIDs, sanitizeUserID, type InspectableWithProps } from './inspectable.svelte';
-import { Property, PropertyType } from './property.svelte';
+import { PropertyType } from './property.svelte';
 
 export type ExpressionMode = 'value' | 'expression';
 
@@ -128,12 +127,12 @@ export class Expression {
         this.bindingMode = false;
     }
 
-	private setDesiredOscTag(map: Map<string, 'osc' | 'binding'>, key: string, tag: 'osc' | 'binding') {
-		const existing = map.get(key);
-		// binding wins if both are requested
-		if (existing === 'binding') return;
-		map.set(key, tag);
-	}
+    private setDesiredOscTag(map: Map<string, 'osc' | 'binding'>, key: string, tag: 'osc' | 'binding') {
+        const existing = map.get(key);
+        // binding wins if both are requested
+        if (existing === 'binding') return;
+        map.set(key, tag);
+    }
 
     private createOscSolver(args: {
         desiredOscTags: Map<string, 'osc' | 'binding'>;
@@ -420,8 +419,21 @@ export class Expression {
                 tKey = keySplit[1];
             }
 
+
             if (!target) {
-                throw new Error(`Target '${keySplit[0]}' not found for prop('${key}').`);
+
+                const allWidgets = getAllWidgets();
+                for (const w of allWidgets) {
+                    console.log(`Checking widget ${w.autoID} against targetId ${keySplit[0]}`);
+                    if (w?.autoID === keySplit[0]) {
+                        target = w;
+                        break;
+                    }
+                }
+
+                if (!target) {
+                    throw new Error(`Target '${keySplit[0]}' not found for prop('${key}').`);
+                }
             }
 
             // prevent obvious circular references
