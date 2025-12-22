@@ -1,6 +1,5 @@
 <script>
 	import TreeViewItem from '$lib/components/TreeViewItem.svelte';
-	import { onMount } from 'svelte';
 
 	let {
 		showRoot,
@@ -8,6 +7,7 @@
 		getChildren,
 		getIcon = null,
 		getTitle,
+		getStyle = null,
 		isContainer = null,
 		highlightColor = '',
 		onSelect = null,
@@ -25,6 +25,7 @@
 			{getChildren}
 			{getIcon}
 			{getTitle}
+			{getStyle}
 			{isContainer}
 			{highlightColor}
 			{onSelect}

@@ -8,6 +8,7 @@
 		getChildren,
 		getIcon = null,
 		getTitle,
+		getStyle = null,
 		isContainer = null,
 		highlightColor = '',
 		onSelect = null,
@@ -23,7 +24,9 @@
 
 <div
 	class="treeview-item {isExpanded ? 'expanded' : 'collapsed'} "
-	style={highlightColor != '' ? `--highlight-color: ${highlightColor}` : ''}
+	style="{highlightColor != '' ? `--highlight-color: ${highlightColor}` : ''}; {getStyle
+		? getStyle(node)
+		: ''}"
 >
 	{#if level > 0 || showRoot}
 		<p
@@ -75,6 +78,7 @@
 					{getChildren}
 					{getIcon}
 					{getTitle}
+					{getStyle}
 					{isContainer}
 					{highlightColor}
 					{onSelect}
@@ -102,11 +106,11 @@
 		border-radius: 0.3rem;
 		border: 1px solid transparent;
 		transition: background-color 0.1s ease;
+		color: rgba(from var(--text-color) r g b);
 	}
 
 	.treeview-item .title.container {
 		font-weight: bold;
-		color: rgba(from var(--text-color) r g b / 60%);
 	}
 
 	.treeview-item .title.level-1 {
