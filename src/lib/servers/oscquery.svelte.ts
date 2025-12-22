@@ -88,20 +88,20 @@ export class OSCQueryClient extends InspectableWithProps {
 				this.flushOutboundBundle();
 			};
 			this.ws.onclose = (e: any) => {
-				this.setStatus(ConnectionStatus.Disconnected);
-			};
-			this.ws.onerror = (e: any) => {
-				if (this.ws && this.status == ConnectionStatus.Connecting &&
-					this.ws.readyState !== WebSocket.OPEN && this.ws.readyState !== WebSocket.CONNECTING) {
-					this.setStatus(ConnectionStatus.Disconnected);
-
+				if (!e.wasClean) {
 					console.log("Reconnecting to: " + this.ip + ":" + this.port + " in 1 second...");
+					this.setStatus(ConnectionStatus.Disconnected);
 					this.reconnectTimeout = setTimeout(() => {
 						if (this.status === ConnectionStatus.Disconnected) {
 							this.connect();
 						}
 					}, 1000);
 				}
+			};
+			this.ws.onerror = (e: any) => {
+				// if (this.ws && this.status == ConnectionStatus.Connecting &&
+				// 	this.ws.readyState !== WebSocket.OPEN && this.ws.readyState !== WebSocket.CONNECTING) {
+				// }
 
 			};
 			this.ws.onmessage = (e: MessageEvent) => this.wsMessageReceived(e);
