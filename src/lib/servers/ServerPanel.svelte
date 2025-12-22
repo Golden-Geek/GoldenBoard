@@ -41,7 +41,7 @@
 						removeServer(server);
 					}}
 					warning={server.status != ConnectionStatus.Connected ? 'Server Disconnected' : ''}
-					color={'var(--server-color)'}
+					color={server.status == ConnectionStatus.Connected ? 'var(--server-color)' : 'var(--error-color)'}
 				></EditableButton>
 			{/each}
 		</div>
