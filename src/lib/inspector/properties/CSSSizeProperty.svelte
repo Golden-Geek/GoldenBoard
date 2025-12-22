@@ -1,8 +1,7 @@
 <script lang="ts">
 	let {
-		targets,
 		expressionMode,
-		expressionHasError,
+		expressionResultTag,
 		property = $bindable(),
 		definition,
 		onStartEdit = null,
@@ -35,11 +34,7 @@
 	}
 </script>
 
-<div
-	class="css-size-property {expressionMode ? 'expression-mode' : ''} {expressionHasError
-		? 'error'
-		: ''}"
->
+<div class="css-size-property {expressionMode} {expressionResultTag}">
 	<input
 		type="text"
 		class="value-property"

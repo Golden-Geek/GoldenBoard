@@ -2,19 +2,19 @@
 	let {
 		property = $bindable(),
 		definition,
-		expressionMode = false,
-		expressionHasError = false,
+		expressionMode,
+		expressionResultTag,
 		onStartEdit = null,
 		onUpdate = null
 	} = $props();
+
 </script>
 
 <input
 	type="text"
-	class="text-property {expressionMode ? 'expression' : ''} {expressionHasError ? 'error' : ''}"
+	class="text-property {expressionMode} {expressionResultTag}"
 	value={property.get()}
 	onchange={(e) => {
-		if (expressionMode) return;
 		let newValue = (e.target as HTMLInputElement).value;
 		// Apply filter function if defined
 		if (definition.filterFunction) {
@@ -25,7 +25,6 @@
 	onfocus={() => (expressionMode ? null : onStartEdit && onStartEdit())}
 	onblur={() => (expressionMode ? null : onUpdate && onUpdate())}
 	onkeydown={(e) => {
-		if (expressionMode) return;
 		if (e.key === 'Enter') {
 			onUpdate && onUpdate();
 			(e.target as HTMLInputElement).blur();
@@ -43,6 +42,10 @@
 	.text-property.expression {
 		font-style: italic;
 		color: rgba(from var(--expression-color) r g b) !important;
+	}
+
+	.text-property.binding {
+		color: rgba(from var(--binding-color) r g b) !important;
 	}
 
 	.text-property.expression.error {

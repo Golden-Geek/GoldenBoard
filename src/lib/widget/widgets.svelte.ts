@@ -32,14 +32,6 @@ export class Widget extends InspectableWithProps {
     label = $derived(this.getSingleProp('label.text').get() as string);
     labelColor = $derived(this.getSingleProp('label.color').get() as Color);
 
-    defaultUIDDestroy = $effect.root(() => {
-        $effect(() => {
-            this.defaultUserID = sanitizeUserID(this.label ? this.label : 'widget');
-        });
-
-        return () => {
-        }
-    });
 
     constructor(type: string, isContainer?: boolean, id?: string) {
         super('widget', id);
@@ -55,7 +47,6 @@ export class Widget extends InspectableWithProps {
     }
 
     cleanup() {
-        this.defaultUIDDestroy();
         super.cleanup();
         selectedWidgets.splice(selectedWidgets.indexOf(this), 1);
         unregisterWidget(this.id);

@@ -2,7 +2,7 @@
 	let {
 		targets,
 		expressionMode,
-		expressionHasError,
+		expressionResultTag,
 		property = $bindable(),
 		definition,
 		onStartEdit = null,
@@ -12,12 +12,9 @@
 </script>
 
 <textarea
-	class="text-editor-property {expressionMode ? 'expression-mode' : ''} {expressionHasError
-		? 'error'
-		: ''}"
+	class="text-editor-property {expressionMode} {expressionResultTag}"
 	disabled={definition.readOnly}
 	onchange={(e) => {
-		if (expressionMode) return;
 		let newValue = (e.target as HTMLTextAreaElement).value;
 		// Apply filter function if defined
 		if (definition.filterFunction) {

@@ -11,7 +11,6 @@ export class GlobalSettings extends InspectableWithProps {
 
     constructor() {
         super('global-settings', 'Global Settings');
-        this.defaultUserID = 'global';
         this.setupProps();
     }
 

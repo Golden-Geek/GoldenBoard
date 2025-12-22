@@ -20,9 +20,20 @@
 	let enabled = $derived(canDisable ? (property.enabled ?? false) : true);
 
 	//Expression
-	let expressionMode = $derived(property.mode == PropertyMode.EXPRESSION);
-	let resolvedValue = $derived(expressionMode ? (property as Property).getResolved() : null);
-	let expressionHasError = $derived(resolvedValue?.error != null);
+	let usingExpression = $derived(property.mode == PropertyMode.EXPRESSION);
+
+	let resolvedValue = $derived(usingExpression ? (property as Property).getResolved() : null);
+	let expressionResultTag = $derived(
+		resolvedValue?.error ? 'error' : resolvedValue?.warning ? 'warning' : ''
+	);
+
+	let expressionMode = $derived(
+		usingExpression ? (property.bindingMode ? 'binding' : 'expression') : undefined
+	);
+
+	let canManuallyEdit = $derived(
+		!property.readOnly || !usingExpression || expressionMode === 'binding'
+	);
 
 	let PropertyClass: any = $derived(
 		propertiesInspectorClass[propertyType as keyof typeof propertiesInspectorClass]
@@ -52,7 +63,7 @@
 		<PropertyContainerInspector {targets} bind:property {propKey} {definition} {level} />
 	{:else if target != null && property != null}
 		<div class="firstline">
-			<div class="property-label {expressionHasError ? 'error' : ''}">
+			<div class="property-label {expressionResultTag}">
 				{#if canDisable}
 					<button
 						class="enable-property"
@@ -65,7 +76,7 @@
 					</button>
 				{/if}
 				{definition.name}
-				{#if !definition.readOnly && property.isValueOverridden()}
+				{#if canManuallyEdit && property.isValueOverridden()}
 					<button
 						class="reset-property"
 						aria-label="Reset Property"
@@ -83,7 +94,7 @@
 			</div>
 
 			<div class="spacer"></div>
-			<div class="property-wrapper {expressionMode ? 'expression-mode' : ''}">
+			<div class="property-wrapper {expressionMode} {canManuallyEdit ? '' : 'readonly'}">
 				<PropertyClass
 					{targets}
 					bind:property
@@ -92,11 +103,13 @@
 					{definition}
 					{propKey}
 					{expressionMode}
-					{expressionHasError}
+					{expressionResultTag}
 				/>
 			</div>
+
 			<button
-				class="expression-toggle {property.mode ?? PropertyMode.VALUE}"
+				class="expression-toggle {expressionMode}"
+				disabled={definition.readOnly}
 				onclick={() => {
 					property.mode =
 						property.mode == PropertyMode.EXPRESSION ? undefined : PropertyMode.EXPRESSION;
@@ -114,7 +127,6 @@
 					bind:property
 					{definition}
 					onUpdate={() => checkAndSaveProperty(true)}
-					{propKey}
 				></ExpressionEditor>
 			</div>
 		{/if}
@@ -156,11 +168,9 @@
 		flex-grow: 1;
 	}
 
-	.property-wrapper.expression-mode {
-		opacity: 0.5;
-		user-select: none;
-		touch-action: none;
+	.property-wrapper.readonly {
 		pointer-events: none;
+		touch-action: none;
 	}
 
 	.property-inspector.single {
@@ -214,6 +224,7 @@
 		transition: opacity 0.1s;
 	}
 
+
 	.expression-toggle:hover {
 		opacity: 1;
 	}
@@ -221,6 +232,12 @@
 	.expression-toggle.expression {
 		opacity: 0.9;
 		color: var(--expression-color);
+		font-weight: bold;
+	}
+
+	.expression-toggle.binding {
+		opacity: 0.9;
+		color: var(--binding-color);
 		font-weight: bold;
 	}
 

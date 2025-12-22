@@ -8,8 +8,8 @@
 		definition,
 		onStartEdit = null,
 		onUpdate = null,
-		expressionMode = false,
-		expressionHasError = false
+		expressionMode,
+		expressionResultTag
 	} = $props();
 
 	let target = $derived(targets.length > 0 ? targets[0] : null);
@@ -20,9 +20,15 @@
 
 	let numberInput = $state(null as HTMLInputElement | null);
 
-	function setValueFromField() {
-		if (expressionMode) return;
+	let sliderColor = $derived(
+		expressionMode == 'expression'
+			? `var(--${expressionMode}-color)`
+			: expressionMode == 'binding'
+				? `var(--binding-color)`
+				: undefined
+	);
 
+	function setValueFromField() {
 		const newValue = parseFloat(numberInput!.value);
 		if (!isNaN(newValue)) {
 			property.set(
@@ -42,16 +48,11 @@
 			step={definition.step || 0}
 			disabled={definition.readOnly}
 			onValueChange={(value: number) => {
-				if (expressionMode) return;
 				property.set(value);
 			}}
 			onStartEdit={() => onStartEdit && onStartEdit()}
 			onEndEdit={() => onUpdate && onUpdate()}
-			fgColor={expressionMode
-				? expressionHasError
-					? 'var(--error-color)'
-					: 'var(--expression-color)'
-				: undefined}
+			fgColor={sliderColor}
 		/>
 	{/if}
 
@@ -59,9 +60,9 @@
 		bind:this={numberInput}
 		type={expressionMode ? 'text' : 'number'}
 		step="0.01"
-		class="number-field {hasRange ? 'with-slider' : 'no-slider'} {expressionMode
-			? 'expression'
-			: ''} {expressionHasError ? 'error' : ''}"
+		class="number-field {hasRange
+			? 'with-slider'
+			: 'no-slider'} {expressionMode} {expressionResultTag}"
 		disabled={definition.readOnly}
 		value={property.get()?.toFixed(isInteger ? 0 : 3)}
 		onfocus={() => onStartEdit && onStartEdit()}

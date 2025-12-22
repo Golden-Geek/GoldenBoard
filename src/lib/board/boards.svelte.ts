@@ -19,15 +19,6 @@ export class Board extends InspectableWithProps {
     icon = $derived(this.getSingleProp('button.icon').get() as string);
     color = $derived(this.getSingleProp('button.color').get() as Color);
 
-    defaultUIDDestroy = $effect.root(() => {
-        $effect(() => {
-            this.defaultUserID = sanitizeUserID(this.name);
-        });
-
-        return () => {
-        }
-    });
-
     constructor() {
         super("board");
         this.setupProps();
@@ -36,7 +27,6 @@ export class Board extends InspectableWithProps {
     cleanup() {
         super.cleanup();
         this.rootWidget.cleanup();
-        this.defaultUIDDestroy();
     }
 
 

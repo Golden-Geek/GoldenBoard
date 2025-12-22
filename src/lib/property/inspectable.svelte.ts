@@ -23,31 +23,33 @@ export class InspectableWithProps {
     iType: string = $state('');
     props: { [key: string]: PropertyNode } = $state({});
     definitions = $derived(this.getPropertyDefinitions());
+    userID = $derived((this.getSingleProp('userID').get() as string));
 
-    private _registeredUserID = '';
+    private _activeUserIDKey = '';
 
-    defaultUserID: string = $state('');
-    userID: string = $derived((this.getProp('userID') as Property | null)?.get<string>('') ?? '');
-
-    userIDEffectDestroy = $effect.root(() => {
+    userIDDestroy = $effect.root(() => {
         $effect(() => {
-            // this.defaultUserID; //to trigger with this as well
-            const nextUserID = this.userID;
-            if (nextUserID === this._registeredUserID) return;
+            if (this.userID === this._activeUserIDKey) return;
 
-            if (this._registeredUserID !== '') {
-                unregisterActiveUserID(this._registeredUserID);
+            if (this._activeUserIDKey !== '') {
+                unregisterActiveUserID(this._activeUserIDKey);
+                this._activeUserIDKey = '';
             }
 
-            if (nextUserID !== '') {
-                registerActiveUserID(nextUserID, this);
+            if (this.userID !== '') {
+                registerActiveUserID(this.userID, this);
+                this._activeUserIDKey = this.userID;
             }
 
-            this._registeredUserID = nextUserID;
+
         });
 
         return () => {
-        };
+            if (this._activeUserIDKey !== '') {
+                unregisterActiveUserID(this._activeUserIDKey);
+                this._activeUserIDKey = '';
+            };
+        }
     });
 
     constructor(iType: string, id?: string) {
@@ -55,6 +57,8 @@ export class InspectableWithProps {
         this.id = id ?? (iType + '-' + crypto.randomUUID());
 
     }
+
+
 
     private unloadPropsTree(props: { [key: string]: PropertyNode } | undefined = this.props) {
         if (!props) return;
@@ -160,10 +164,9 @@ export class InspectableWithProps {
     }
 
     cleanup() {
-        this.userIDEffectDestroy();
-        if (this._registeredUserID !== '') {
-            unregisterActiveUserID(this._registeredUserID);
-            this._registeredUserID = '';
+        if (this._activeUserIDKey !== '') {
+            unregisterActiveUserID(this._activeUserIDKey);
+            this._activeUserIDKey = '';
         }
 
         this.unloadPropsTree(this.props);
@@ -173,7 +176,7 @@ export class InspectableWithProps {
         return {
             name: 'User ID',
             type: PropertyType.STRING,
-            default: this.defaultUserID,
+            default: '',
             canDisable: true,
             filterFunction: (value: any) => {
                 return sanitizeUserID(value as string);

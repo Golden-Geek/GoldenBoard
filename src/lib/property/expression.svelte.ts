@@ -1,5 +1,7 @@
 import { mainState } from '$lib/engine/engine.svelte';
+import { ColorUtil, type Color } from './Color.svelte';
 import { activeUserIDs, sanitizeUserID, type InspectableWithProps } from './inspectable.svelte';
+import { Property, PropertyType } from './property.svelte';
 
 export type ExpressionMode = 'value' | 'expression';
 
@@ -8,6 +10,7 @@ export type ExpressionResult<T> = {
     raw: T | null;
     error?: string;
     warning?: string;
+    binding?: boolean;
 };
 
 /**
@@ -17,22 +20,25 @@ export type ExpressionResult<T> = {
  * It evaluates using an `InspectableWithProps` owner + `getProp()` duck-typing.
  */
 export class Expression {
-    mode: ExpressionMode | undefined;
-    text: string | undefined;
+    mode: ExpressionMode | undefined = $state(undefined);
+    text: string | undefined = $state(undefined);
+
+    bindingMode: boolean = $state(false);
 
     private _compiledFor: string | null = null;
     private _compiledFn:
         | ((
             m: Math,
             p: (key?: string, fallback?: unknown) => unknown,
-            o: (path: string, fallback?: unknown) => unknown
+            o: (path: string, fallback?: unknown) => unknown,
+            b: (path: string) => unknown
         ) => unknown)
         | null = null;
 
     private _setupFor: string | null = null;
     private _setupError: string | null = null;
 
-    private _oscDesiredKeys: Set<string> = new Set();
+    private _oscDesiredTags: Map<string, 'osc' | 'binding'> = new Map();
     private _oscActive: Map<
         string,
         {
@@ -41,12 +47,19 @@ export class Expression {
             address: string;
             server: any;
             callback: (e: any) => void;
+            tag: 'osc' | 'binding';
         }
     > = new Map();
 
+    private _bindingRuntime: {
+        setRawFromBinding?: ((value: unknown) => void) | undefined;
+        filter?: ((value: unknown) => unknown) | undefined;
+        coerce?: ((value: unknown) => unknown) | undefined;
+    } | null = null;
+
+    private _oscSyncToken = 0;
+
     constructor() {
-        this.mode = $state(undefined);
-        this.text = $state(undefined);
     }
 
     cleanup() {
@@ -58,10 +71,10 @@ export class Expression {
         this._setupFor = null;
         this._setupError = null;
 
+        this.clearOscListeners();
     }
 
-    disable()
-    {
+    disable() {
         this.clearOscListeners();
     }
 
@@ -107,15 +120,63 @@ export class Expression {
             }
         }
         this._oscActive.clear();
-        this._oscDesiredKeys.clear();
+        this._oscDesiredTags.clear();
+        this.bindingMode = false;
     }
 
-    private tryActivateOscListener(dep: { selector: 'default' | 'user'; userID: string | null; address: string }) {
+    private oscArgsToScalarOrArray(value: any): unknown {
+        // OSCQuery stores VALUE as args array.
+        if (Array.isArray(value)) {
+            if (value.length === 0) return undefined;
+            if (value.length === 1) return value[0];
+            return value;
+        }
+        return value;
+    }
+
+    private applyIncomingBindingValue(raw: unknown) {
+        if (!this._bindingRuntime?.setRawFromBinding) return;
+
+        let next: unknown = raw;
+        if (this._bindingRuntime.filter) {
+            try {
+                next = this._bindingRuntime.filter(next);
+            } catch {
+                // ignore filter errors
+            }
+        }
+
+        if (next == null) return;
+        if (this._bindingRuntime.coerce) {
+            try {
+                next = this._bindingRuntime.coerce(next);
+            } catch {
+                // ignore coerce errors
+            }
+        }
+
+        this._bindingRuntime.setRawFromBinding(next);
+    }
+
+    private tryActivateOscListener(dep: { selector: 'default' | 'user'; userID: string | null; address: string }, tag: 'osc' | 'binding') {
         const key = this.oscKey(dep);
-        if (!this._oscDesiredKeys.has(key)) return;
+        const desiredTag = this._oscDesiredTags.get(key);
+        if (!desiredTag) return;
+
+        // If desired tag differs from requested activation type, ignore.
+        if (desiredTag !== tag) return;
+
         if (this._oscActive.has(key)) {
             // If default server changed, rebind.
             const current = this._oscActive.get(key)!;
+            if (current.tag !== tag) {
+                try {
+                    current.server?.removeNodeListener?.(current.address, current.callback);
+                } catch {
+                    // ignore
+                }
+                this._oscActive.delete(key);
+            }
             if (dep.selector === 'default') {
                 const nextServer = this.resolveOscServer(dep);
                 if (nextServer && nextServer !== current.server) {
@@ -137,18 +198,24 @@ export class Expression {
         // If setup happens before structure is ready, osc() runtime will retry later.
         if (!server.addressMap || !server.addressMap[dep.address]) return;
 
-        const cb = (_e: any) => {
-            // no-op: listener exists to request LISTEN from server
+        const cb = (e: any) => {
+            if (tag !== 'binding') return;
+            if (!e || e.event !== 'valueChanged') return;
+            const scalarOrArray = this.oscArgsToScalarOrArray(e.value);
+            if (scalarOrArray === undefined) return;
+            this.applyIncomingBindingValue(scalarOrArray);
         };
 
         server.addNodeListener?.(dep.address, cb);
-        this._oscActive.set(key, { selector: dep.selector, userID: dep.userID, address: dep.address, server, callback: cb });
+        this._oscActive.set(key, { selector: dep.selector, userID: dep.userID, address: dep.address, server, callback: cb, tag });
     }
 
-    private syncOscListeners(desiredKeys: Set<string>) {
+    /* returns if binding should be active or not, to avoid setting the state inside a $derived */
+    private syncOscListeners(desiredTags: Map<string, 'osc' | 'binding'>) {
         // Remove listeners that are no longer referenced
         for (const [key, entry] of this._oscActive) {
-            if (!desiredKeys.has(key)) {
+            const desired = desiredTags.get(key);
+            if (!desired || desired !== entry.tag) {
                 try {
                     entry.server?.removeNodeListener?.(entry.address, entry.callback);
                 } catch {
@@ -158,20 +225,21 @@ export class Expression {
             }
         }
 
-        this._oscDesiredKeys = desiredKeys;
+        this._oscDesiredTags = desiredTags;
+        this.bindingMode = Array.from(desiredTags.values()).some((t) => t === 'binding');
 
         // Add newly referenced listeners (best-effort; may retry later)
-        for (const key of desiredKeys) {
+        for (const [key, tag] of desiredTags) {
             if (this._oscActive.has(key)) continue;
             const [left, address] = key.split('|');
             if (!address) continue;
             if (left === 'default') {
-                this.tryActivateOscListener({ selector: 'default', userID: null, address });
+                this.tryActivateOscListener({ selector: 'default', userID: null, address }, tag);
                 continue;
             }
             if (left.startsWith('user:')) {
                 const userID = left.slice('user:'.length);
-                this.tryActivateOscListener({ selector: 'user', userID, address });
+                this.tryActivateOscListener({ selector: 'user', userID, address }, tag);
             }
         }
     }
@@ -225,7 +293,7 @@ export class Expression {
 
         try {
             if (this._compiledFor !== js) {
-                this._compiledFn = new Function('Math', 'prop', 'osc', `return (${js});`) as any;
+                this._compiledFn = new Function('Math', 'prop', 'osc', 'bind', `return (${js});`) as any;
                 this._compiledFor = js;
             }
         } catch (e: unknown) {
@@ -271,7 +339,9 @@ export class Expression {
             const dep = this.parseOscPath(path);
             const key = this.oscKey(dep);
             // Mark dependency for this evaluation. Actual add/remove happens after evaluation.
-            this._oscDesiredKeys.add(key);
+            if (!this._oscDesiredTags.has(key)) {
+                this._oscDesiredTags.set(key, 'osc');
+            }
 
             const server = this.resolveOscServer(dep);
             if (!server) {
@@ -288,7 +358,7 @@ export class Expression {
             if (!ready) return fallback;
 
             // If setup ran before the node existed, activate once it's available.
-            this.tryActivateOscListener(dep);
+            // Listener activation is deferred; see requestOscListenerSync().
 
             const node = server.getNode?.(dep.address);
             if (!node) {
@@ -307,6 +377,19 @@ export class Expression {
             if (value === undefined) return fallback;
             return value;
         };
+    }
+
+    private requestOscListenerSync(desiredTags: Map<string, 'osc' | 'binding'>) {
+        // Expression.evaluate() is frequently called from templates / $derived.
+        // OSCQueryClient.addNodeListener/removeNodeListener mutates $state (listeners arrays)
+        // which is forbidden during derived/template evaluation (state_unsafe_mutation).
+        // Defer add/remove operations to a microtask.
+        const snapshot = new Map(desiredTags);
+        const token = ++this._oscSyncToken;
+        queueMicrotask(() => {
+            if (token !== this._oscSyncToken) return;
+            this.syncOscListeners(snapshot);
+        });
     }
 
     private createPropResolver(args: {
@@ -363,6 +446,7 @@ export class Expression {
         fallbackValue: T;
         coerce: (value: unknown) => T;
         filter?: ((value: unknown) => unknown) | undefined;
+        setRawFromBinding?: ((value: T) => void) | undefined;
     }): ExpressionResult<T> {
         const result: ExpressionResult<T> = {
             current: args.rawValue,
@@ -386,10 +470,44 @@ export class Expression {
         const visited = new Set<string>();
         // Collect runtime OSC dependencies for this evaluation.
         // We sync listeners after evaluation (diff-based), which also supports dynamic addresses.
-        const desiredOscKeys = new Set<string>();
-        this._oscDesiredKeys = desiredOscKeys;
+        const desiredOscTags = new Map<string, 'osc' | 'binding'>();
+        this._oscDesiredTags = desiredOscTags;
+
+        // Update runtime hooks used by binding callbacks.
+        this._bindingRuntime = {
+            setRawFromBinding: args.setRawFromBinding ? (v: unknown) => args.setRawFromBinding!(v as T) : undefined,
+            filter: args.filter,
+            coerce: args.coerce
+        };
 
         const osc = this.createOscResolver();
+
+        let bindingUsed = false;
+        const bind = (path: string): unknown => {
+            if (typeof path !== 'string') {
+                throw new Error(`bind(path) expects a string path.`);
+            }
+
+            const dep = this.parseOscPath(path);
+            const key = this.oscKey(dep);
+            desiredOscTags.set(key, 'binding');
+            bindingUsed = true;
+
+            const server = this.resolveOscServer(dep);
+            if (server) {
+                // Depend on lifecycle so we retry when structure is ready / node appears.
+                const ready = !!server.structureReady;
+                const exists = ready ? !!server.addressMap?.[dep.address] : false;
+                
+                if(!ready || !exists) {
+                    throw new Error(`OSC node '${dep.address}' not found for bind('${path}').`);
+                }
+            }else{
+                throw new Error(`No OSC server available for bind('${path}').`);
+            }
+
+            return args.rawValue;
+        };
 
         try {
             const prop = this.createPropResolver({
@@ -408,20 +526,27 @@ export class Expression {
                 throw new Error('Expression is not compiled.');
             }
 
-            const computed = this._compiledFn(Math, prop, osc);
+            const computed = this._compiledFn(Math, prop, osc, bind);
 
-            if (computed !== undefined && computed !== null) {
-                let filtered: unknown = args.filter ? args.filter(computed) : computed;
-                if (filtered === undefined || filtered === null) {
-                    throw new Error('Filtered expression value is undefined or null.');
-                }
-
-                result.current = args.coerce(filtered);
+            const bindingActive = bindingUsed || Array.from(desiredOscTags.values()).some((t) => t === 'binding');
+            if (bindingActive) {
+                // Binding mode: return the property's raw value, and treat bind() purely as wiring.
+                result.current = args.rawValue;
             } else {
-                result.current = args.fallbackValue;
+                if (computed !== undefined && computed !== null) {
+                    let filtered: unknown = args.filter ? args.filter(computed) : computed;
+                    if (filtered === undefined || filtered === null) {
+                        throw new Error('Filtered expression value is undefined or null.');
+                    }
+
+                    result.current = args.coerce(filtered);
+                } else {
+                    result.current = args.fallbackValue;
+                }
             }
 
-            this.syncOscListeners(desiredOscKeys);
+            this.requestOscListenerSync(desiredOscTags);
+
         } catch (e: unknown) {
             result.error = e instanceof Error ? e.message : String(e);
             result.current = args.fallbackValue;
@@ -435,9 +560,31 @@ export class Expression {
             }
 
             // Even on error, keep listeners in sync with whatever was referenced.
-            this.syncOscListeners(desiredOscKeys);
+            this.requestOscListenerSync(desiredOscTags);
         }
 
         return result;
+    }
+
+    /**
+     * Called by Property when its raw value changes.
+     * In binding mode, pushes raw value to all bound OSC nodes (unless change originated from OSC).
+     */
+    onRawValueChanged(rawValue: unknown, type: PropertyType, source: 'local' | 'binding' = 'local') {
+        if (this.mode !== 'expression') return;
+        if (!this.bindingMode) return;
+        if (source === 'binding') return;
+
+        for (const entry of this._oscActive.values()) {
+            if (entry.tag !== 'binding') continue;
+
+            const server = entry.server;
+            if (!server) continue;
+            if (!server.structureReady) continue;
+            const nMap = server.addressMap?.[entry.address];
+            if (!nMap) continue;
+
+            server.sendNodeValue(nMap, rawValue);
+        }
     }
 }

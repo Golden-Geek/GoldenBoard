@@ -82,50 +82,64 @@ export abstract class PropertyNodeBase<TDefinition extends PropertySingleDefinit
 
 
 export class Property extends PropertyNodeBase<PropertySingleDefinition> {
-    value: PropertyValueType;
-    enabled: boolean | undefined;
-    expr: Expression;
+    _value: PropertyValueType;
+    enabled: boolean | undefined = $state(undefined);
+    expression: Expression = new Expression()
+    bindingMode = $derived(this.expression.bindingMode);
+
+    private _destroy: (() => void) | null = null;
 
     constructor(definition: PropertySingleDefinition, owner?: InspectableWithProps, keyPath?: string) {
         super(definition, owner, keyPath);
-        this.value = $state(this.coerce(definition.default));
-        this.enabled = $state(undefined);
+        this._value = $state(this.coerce(definition.default));
 
-		this.expr = new Expression();
+        // Keep expression evaluation (and therefore bind()/osc() listener tracking) alive
+        // even if the UI isn't currently reading getResolved().
+        this._destroy = $effect.root(() => {
+            $effect(() => {
+                if (this.mode !== PropertyMode.EXPRESSION) return;
+                if (!this.owner || !this.keyPath) return;
+                // Touch resolved value to establish reactive deps.
+                void this.getResolved<any>(this.definition.default as any);
+            });
+            return () => { };
+        });
     }
 
     override cleanup() {
         super.cleanup();
-        this.expr.cleanup();
+        this.expression.cleanup();
+        this._destroy?.();
+        this._destroy = null;
     }
-    
+
 
     getDefinition(): PropertySingleDefinition {
         return this.definition;
     }
 
     get mode(): PropertyMode | undefined {
-        return this.expr.mode as PropertyMode | undefined;
+        return this.expression.mode as PropertyMode | undefined;
     }
 
     set mode(value: PropertyMode | undefined) {
-        this.expr.mode = value as ExpressionMode | undefined;
-		if (value === PropertyMode.EXPRESSION) {
-			this.expr.setup();
-		}else {
-           this.expr.disable();
+        this.expression.mode = value as ExpressionMode | undefined;
+        if (value === PropertyMode.EXPRESSION) {
+            this.expression.setup();
+        } else {
+            this.expression.disable();
         }
     }
 
-    get expression(): string | undefined {
-        return this.expr.text;
+    get expressionValue(): string | undefined {
+        return this.expression.text;
     }
 
-    set expression(value: string | undefined) {
-        this.expr.text = value;
-		if (this.mode === PropertyMode.EXPRESSION) {
-			this.expr.setup();
-		}
+    set expressionValue(value: string | undefined) {
+        this.expression.text = value;
+        if (this.mode === PropertyMode.EXPRESSION) {
+            this.expression.setup();
+        }
     }
 
     get<T>(defaultValue = null as T): T | null {
@@ -140,10 +154,10 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         if (enabled === undefined) enabled = !canDisable;
         if (!enabled) return defaultValue;
 
-        return (this.value as PropertyValueType) ?? defaultValue;
+        return (this._value as PropertyValueType) ?? defaultValue;
     }
 
-      getResolved<T>(defaultValue = null as T): ResolvedProperty<T> {
+    getResolved<T>(defaultValue = null as T): ResolvedProperty<T> {
         const def = this.definition;
         const canDisable = !!def.canDisable;
 
@@ -155,7 +169,7 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
             return { current: fallback, raw: fallback };
         }
 
-        const raw = this.value as T;
+        const raw = this._value as T;
 
         if (this.mode !== PropertyMode.EXPRESSION) {
             return { current: raw, raw };
@@ -165,18 +179,24 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
             return { current: raw, raw };
         }
 
-        return this.expr.evaluate<T>({
+        return this.expression.evaluate<T>({
             owner: this.owner,
             selfKeyPath: this.keyPath,
             rawValue: raw,
             fallbackValue: fallback,
             filter: def.filterFunction,
-            coerce: (v) => this.coerceToType(v, def.type) as T
+            coerce: (v) => this.coerceToType(v, def.type) as T,
+            setRawFromBinding: (v) => {
+                this.setRaw(v as any, 'binding');
+            }
         });
     }
 
-    setRaw(value: PropertyValueType) {
-        this.value = value;
+    setRaw(value: PropertyValueType, source: 'local' | 'binding' = 'local') {
+        this._value = value;
+        if (this.mode === PropertyMode.EXPRESSION) {
+            this.expression.onRawValueChanged(this._value, this.definition.type);
+        }
     }
 
     set(value: PropertyValueType) {
@@ -192,12 +212,12 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         if (canDisable && isDisabled && isDefault) return undefined;
 
         const out: any = {
-            value: $state.snapshot(this.value)
+            value: $state.snapshot(this._value)
         };
         if (this.enabled !== undefined) out.enabled = this.enabled;
-		const exprSnap = this.expr.toSnapshot();
-		if (exprSnap.mode !== undefined) out.mode = exprSnap.mode;
-		if (exprSnap.expression !== undefined) out.expression = exprSnap.expression;
+        const exprSnap = this.expression.toSnapshot();
+        if (exprSnap.mode !== undefined) out.mode = exprSnap.mode;
+        if (exprSnap.expression !== undefined) out.expression = exprSnap.expression;
         return out;
     }
 
@@ -205,47 +225,47 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         if (!snapshot || typeof snapshot !== 'object') return;
 
         if ('enabled' in snapshot) this.enabled = snapshot.enabled;
-		this.expr.applySnapshot(snapshot);
-		if (this.mode === PropertyMode.EXPRESSION) {
-			this.expr.setup();
-		}
+        this.expression.applySnapshot(snapshot);
+        if (this.mode === PropertyMode.EXPRESSION) {
+            this.expression.setup();
+        }
 
         if ('value' in snapshot) {
             const raw = this.definition.filterFunction
                 ? this.definition.filterFunction(snapshot.value)
                 : snapshot.value;
-            this.value = this.coerce(raw);
+            this._value = this.coerce(raw);
         }
     }
 
     resetToDefault() {
-        this.value = this.coerce(this.definition.default);
+        this._value = this.coerce(this.definition.default);
         this.enabled = undefined;
-		this.expr.cleanup();
+        this.expression.cleanup();
     }
 
-    isValueOverridden(trueIfHasExpression:boolean = true): boolean {
+    isValueOverridden(trueIfHasExpression: boolean = true): boolean {
         // special types
-		if (trueIfHasExpression && this.expr.isOverridden()) return true;
+        if (trueIfHasExpression && this.expression.isOverridden()) return true;
 
         switch (this.definition.type) {
             case PropertyType.COLOR:
-                return ColorUtil.notEquals(this.value as Color, this.definition.default as Color);
+                return ColorUtil.notEquals(this._value as Color, this.definition.default as Color);
             default:
                 break;
         }
 
         // array types
-        if (Array.isArray(this.value) && Array.isArray(this.definition.default)) {
-            if (this.value.length !== this.definition.default.length) return true;
-            for (let i = 0; i < this.value.length; i++) {
-                if (this.value[i] !== this.definition.default[i]) return true;
+        if (Array.isArray(this._value) && Array.isArray(this.definition.default)) {
+            if (this._value.length !== this.definition.default.length) return true;
+            for (let i = 0; i < this._value.length; i++) {
+                if (this._value[i] !== this.definition.default[i]) return true;
             }
             return false;
         }
 
         // primitive types
-        return this.value !== this.definition.default;
+        return this._value !== this.definition.default;
     }
 
     private coerce(value: any): PropertyValueType {

@@ -4,33 +4,30 @@
 	let {
 		targets,
 		property = $bindable(),
-		propKey,
 		definition,
 		onStartEdit = null,
 		onUpdate = null
 	} = $props();
 
-	let target = $derived(targets.length > 0 ? targets[0] : null);
-	let initExpression = $derived(property.expression);
+	let initExpression = $derived(property.expressionValue);
 	let propValue = $derived(property ? property.getResolved() : { current: null, raw: null });
 	let errorMessage = $derived(propValue.error);
 	let warningMessage = $derived(propValue.warning);
-
 </script>
 
 <div class="expression-editor-property">
 	<input
 		type="text"
-		class="text-property"
+		class="text-property {property.bindingMode ? 'binding' : ''}"
 		disabled={definition.readOnly}
-		value={property.expression}
+		value={property.expressionValue}
 		onchange={(e) => {
 			let newValue = (e.target as HTMLInputElement).value;
 			// Apply filter function if defined
 			if (definition.filterFunction) {
 				newValue = definition.filterFunction(newValue);
 			}
-			property.expression = newValue == '' ? undefined : newValue;
+			property.expressionValue = newValue == '' ? undefined : newValue;
 		}}
 		onfocus={() => onStartEdit && onStartEdit(initExpression)}
 		onblur={() => onUpdate && onUpdate()}
@@ -68,6 +65,10 @@
 		font-size: 0.75rem;
 		width: 100%;
 		color: var(--expression-color);
+	}
+
+	.text-property.binding {
+		color: var(--binding-color);
 	}
 
 	.text-property:disabled {

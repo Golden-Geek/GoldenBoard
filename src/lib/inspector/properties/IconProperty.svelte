@@ -4,7 +4,7 @@
 	let {
 		targets,
 		expressionMode,
-		expressionHasError,
+		expressionResultTag,
 		property = $bindable(),
 		definition,
 		onUpdate = null
@@ -30,15 +30,13 @@
 <div class="emoji-picker-container">
 	<button
 		onclick={() => (showPicker = !showPicker)}
-		class="icon-property {expressionMode ? 'expression-mode' : ''} {expressionHasError
-			? 'error'
-			: ''}"
+		class="icon-property {expressionMode} {expressionResultTag}"
 		disabled={definition.readOnly}
 	>
 		{property.get()}
 	</button>
 
-	{#if !expressionMode && !definition.readOnly}
+	{#if expressionMode != 'expression' && !definition.readOnly}
 		<button
 			onclick={() => {
 				property.set('');

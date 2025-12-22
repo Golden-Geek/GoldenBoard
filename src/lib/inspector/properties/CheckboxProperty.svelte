@@ -1,20 +1,16 @@
 <script lang="ts">
 	let {
-		targets,
 		expressionMode,
-		expressionHasError,
+		expressionResultTag,
 		property = $bindable(),
 		definition,
 		onUpdate
 	} = $props();
-	let target = $derived(targets.length > 0 ? targets[0] : null);
 </script>
 
 <input
 	type="checkbox"
-	class="editor-checkbox {expressionMode ? 'expression-mode' : ''} {expressionHasError
-		? 'error'
-		: ''}"
+	class="editor-checkbox {expressionMode} {expressionResultTag}"
 	disabled={definition.readOnly}
 	checked={property.get()}
 	onchange={(e) => {

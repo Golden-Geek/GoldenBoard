@@ -3,6 +3,7 @@ export type OscTypeTag =
 	| 'f'
 	| 's'
 	| 'b'
+	| 'r'
 	| 'T'
 	| 'F'
 	| 'N'
@@ -12,6 +13,8 @@ export type OscTypeTag =
 	| 't';
 
 export type OscArgMeta = { type: OscTypeTag; value?: unknown };
+
+export type OscRgba = { r: number; g: number; b: number; a: number };
 export type OscArg =
 	| number
 	| string
@@ -21,6 +24,7 @@ export type OscArg =
 	| bigint
 	| Uint8Array
 	| ArrayBuffer
+	| OscRgba
 	| OscArgMeta;
 
 export type OscMessage = {
@@ -170,6 +174,23 @@ function toMeta(arg: OscArg): OscArgMeta {
 		return arg as OscArgMeta;
 	}
 
+	// OSC 1.1 RGBA color typetag 'r'
+	// We accept an object shaped like { r, g, b, a }.
+	if (
+		arg &&
+		typeof arg === 'object' &&
+		'r' in (arg as any) &&
+		'g' in (arg as any) &&
+		'b' in (arg as any) &&
+		'a' in (arg as any) &&
+		typeof (arg as any).r === 'number' &&
+		typeof (arg as any).g === 'number' &&
+		typeof (arg as any).b === 'number' &&
+		typeof (arg as any).a === 'number'
+	) {
+		return { type: 'r', value: arg };
+	}
+
 	if (arg === true) return { type: 'T', value: true };
 	if (arg === false) return { type: 'F', value: false };
 	if (arg === null || arg === undefined) return { type: 'N', value: null };
@@ -181,7 +202,41 @@ function toMeta(arg: OscArg): OscArgMeta {
 	if (typeof arg === 'bigint') return { type: 'h', value: arg };
 	if (arg instanceof Uint8Array) return { type: 'b', value: arg };
 	if (arg instanceof ArrayBuffer) return { type: 'b', value: new Uint8Array(arg) };
+	
 	return { type: 's', value: JSON.stringify(arg) };
+}
+
+function clamp01(n: number): number {
+	if (!Number.isFinite(n)) return 0;
+	return Math.min(1, Math.max(0, n));
+}
+
+function rgbaToUint32(value: any): number {
+	// Accept either:
+	// - uint32 already (0xRRGGBBAA)
+	// - {r,g,b,a} where channels are either 0..1 floats or 0..255 bytes
+	if (typeof value === 'number' && Number.isFinite(value)) {
+		return (Math.trunc(value) >>> 0) as number;
+	}
+
+	const rIn = Number(value?.r ?? 0);
+	const gIn = Number(value?.g ?? 0);
+	const bIn = Number(value?.b ?? 0);
+	const aIn = Number(value?.a ?? 1);
+
+	const toByte = (c: number, defaultByte: number) => {
+		if (!Number.isFinite(c)) return defaultByte;
+		// Heuristic: treat <=1 as float, otherwise as byte.
+		const v = c <= 1 ? clamp01(c) * 255 : c;
+		return Math.min(255, Math.max(0, Math.round(v)));
+	};
+
+	const r = toByte(rIn, 0);
+	const g = toByte(gIn, 0);
+	const b = toByte(bIn, 0);
+	const a = toByte(aIn, 255);
+
+	return (((r & 0xff) << 24) | ((g & 0xff) << 16) | ((b & 0xff) << 8) | (a & 0xff)) >>> 0;
 }
 
 function concat(parts: Uint8Array[]) {
@@ -234,6 +289,12 @@ export function encodeOscMessage(message: OscMessage, options: OscCodecOptions =
 			case 'b': {
 				const u8 = m.value instanceof Uint8Array ? m.value : new Uint8Array(m.value as any);
 				parts.push(writeOscBlob(u8));
+				break;
+			}
+			case 'r': {
+				const b = new Uint8Array(4);
+				writeUint32(new DataView(b.buffer), 0, rgbaToUint32(m.value));
+				parts.push(b);
 				break;
 			}
 			case 'h': {
@@ -350,6 +411,18 @@ export function decodeOscPacket(data: ArrayBuffer | Uint8Array, options: OscCode
 				const b = readOscBlob(bytes, o);
 				o = b.next;
 				args.push(metadata ? ({ type: 'b', value: b.value } satisfies OscArgMeta) : b.value);
+				break;
+			}
+			case 'r': {
+				const v = readUint32(dv, o);
+				o += 4;
+				const color = {
+					r: ((v >>> 24) & 0xff) / 255,
+					g: ((v >>> 16) & 0xff) / 255,
+					b: ((v >>> 8) & 0xff) / 255,
+					a: (v & 0xff) / 255
+				} satisfies OscRgba;
+				args.push(metadata ? ({ type: 'r', value: color } satisfies OscArgMeta) : color);
 				break;
 			}
 			case 'h': {

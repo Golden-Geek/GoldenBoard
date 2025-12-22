@@ -3,6 +3,7 @@ import { InspectableWithProps, sanitizeUserID } from "../property/inspectable.sv
 import { Property, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from '$lib/property/property.svelte.js';
 import type { OscPacket } from './osc.js';
 import { decodeOscPacket, encodeOscPacket } from './osc.js';
+import { ColorUtil } from '$lib/property/Color.svelte.ts';
 
 export enum ConnectionStatus {
 	Disconnected = "disconnected",
@@ -12,10 +13,10 @@ export enum ConnectionStatus {
 
 export class OSCQueryClient extends InspectableWithProps {
 
-	name = $derived((this.getSingleProp('name').getRaw() as string));
+	name = $derived((this.getSingleProp('name').get() as string));
 	ip = $derived((this.getSingleProp('ip').get() as string));
 	port = $derived((this.getSingleProp('port').get() as number));
-
+	serverName = $derived(() => this.name.split(' - ')[0]);
 	useFixedRateSending = $derived(
 		(this.getProp('advanced.useFixedRateSending') as Property | null)?.get() as boolean
 	);
@@ -43,15 +44,6 @@ export class OSCQueryClient extends InspectableWithProps {
 	private outboundTimer: number | null = null;
 
 	pendingMessages: string[] = [];
-
-	defaultUIDDestroy = $effect.root(() => {
-		$effect(() => {
-			this.defaultUserID = sanitizeUserID(this.name.split(' - ')[0]);
-		});
-
-		return () => {
-		}
-	});
 
 	constructor() {
 		super("server");
@@ -176,19 +168,9 @@ export class OSCQueryClient extends InspectableWithProps {
 		this.connect();
 	}
 
-	toSnapshot() {
-		return {
-			id: this.id,
-			ip: this.ip,
-			port: this.port,
-			name: this.name
-		}
-	}
-
 	applySnapshot(data: any) {
-		this.id = data.id;
-		this.getSingleProp('name').set(data.name);
-		this.setIPAndPort(data.ip, data.port, false);
+		super.applySnapshot(data);
+		this.connect();
 	}
 
 	//OSCQuery structure
@@ -217,6 +199,23 @@ export class OSCQueryClient extends InspectableWithProps {
 			.catch((err) => {
 				console.warn("Error fetching host info: ", err);
 			});
+	}
+
+	sendNodeValue(nMap: any, rawValue: any) {
+		const address = nMap.node.FULL_PATH;
+		const typeTag = nMap.node.TYPE;
+		let args: any[] = [];
+		if (typeTag === 'T') {
+			args = [true];
+		} else if (typeTag === 'F') {
+			args = [false];
+		} else if (Array.isArray(rawValue)) {
+			args = rawValue;
+		} else if (typeTag == 'r') {
+			args = [ColorUtil.toHex(ColorUtil.fromAny(rawValue))];
+		} else {
+			args = [rawValue];
+		}
 	}
 
 	sendOSCPacket(address: string, args: any[]) {

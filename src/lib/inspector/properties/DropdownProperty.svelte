@@ -1,8 +1,7 @@
 <script lang="ts">
 	let {
-		targets,
 		expressionMode,
-		expressionHasError,
+		expressionResultTag,
 		property = $bindable(),
 		definition,
 		onUpdate = null
@@ -10,12 +9,9 @@
 </script>
 
 <select
-	class="dropdown-property {expressionMode ? 'expression-mode' : ''} {expressionHasError
-		? 'error'
-		: ''}"
+	class="dropdown-property {expressionMode} {expressionResultTag}"
 	value={property.get()}
 	onchange={(event) => {
-		if (expressionMode) return;
 		let newValue = (event.target as HTMLSelectElement).value;
 		// Apply filter function if defined
 		if (definition.filterFunction) {

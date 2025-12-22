@@ -2,21 +2,19 @@
 	import ColorPicker from '$lib/components/ColorPicker.svelte';
 
 	let {
-		targets,
 		property = $bindable(),
 		definition,
 		onStartEdit = null,
 		onUpdate = null,
-		expressionMode,
-		expressionHasError
+		expressionMode
 	} = $props();
+
 </script>
 
 <ColorPicker
 	previewIsSwitch={!expressionMode && !definition.readOnly}
 	color={property.get()}
 	onchange={(value: any) => {
-		if (expressionMode) return;
 		property.set(value);
 	}}
 	onStartEdit={() => onStartEdit && onStartEdit()}
