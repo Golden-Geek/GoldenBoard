@@ -22,4 +22,4 @@ This repository uses **Svelte 5 (runes)** and **SvelteKit 2**.
 - Styling uses Tailwind (see `tailwindcss` dependency); don’t introduce new design tokens or hard-coded colors.
 - Build target is static (adapter-static, `build/` output). Avoid solutions requiring server-side runtime features.
 - All CSS sizes should use relative units (rem, em, %, vw, vh); avoid px unless absolutely necessary.
-
+- You don't need to run check every time. Only run it when the user is asking for it.

@@ -11,15 +11,14 @@
 		data={selectedBoard!.rootWidget}
 		showRoot={true}
 		getChildren={(node: any) => node.children || []}
-		getTitle={(node: any) =>
-			node.label || 'Widget'}
+		getTitle={(node: any) => node.sanitizedIdentifier}
 		getIcon={(node: any) => (node as Widget).icon}
 		highlightColor={'var(--widget-color)'}
 		onSelect={(node: any, e: MouseEvent) => {
 			if (e.ctrlKey || e.metaKey) {
 				(node as Widget).toggleSelect();
 			} else if (e.shiftKey) {
-				(node as Widget).selectToThis()
+				(node as Widget).selectToThis();
 			} else {
 				(node as Widget).select(true);
 			}

@@ -12,26 +12,38 @@
 	} = $props();
 
 	let isSwitch = $derived(previewIsSwitch);
-	let previewOnly = $state(true);
-
-	$effect(() => {
-		if (forceExpanded) previewOnly = true;
-		else if (!isSwitch && !previewOnly) previewOnly = true;
-	});
+	let userPreviewOnly = $state(true);
+	let previewOnly = $derived(forceExpanded ? true : isSwitch ? userPreviewOnly : true);
 
 	// --- State ---
 	// Interaction Mode: 0 = Sat/Val (Standard), 1 = Hue/Val, 2 = Hue/Sat
 	let mode = $state(0);
 	let showInputs = $state(true);
 	let dragging = $state(false);
+	let dragTarget = $state(null as 'area' | 'slider' | 'alpha' | null);
+	let dragAreaX = $state(0);
+	let dragAreaY = $state(0);
+	let dragSliderVal = $state(0);
 	let animTime = 200;
 
 	// --- Derived State for UI (single source of truth: `color`) ---
 	let current = $derived(ColorUtil.fromAny(color));
 	let hsv = $derived(ColorUtil.toHSV(current));
-	let h = $derived(hue01(hsv.h));
-	let s = $derived(clamp01(hsv.s));
-	let v = $derived(clamp01(hsv.v));
+
+	// In HSV, hue is undefined when the color is achromatic (black/grey/white).
+	// `ColorUtil.toHSV()` returns h=0 in those cases, which makes the cursor/slider jump.
+	// Preserve the last meaningful hue (and preserve saturation while value is ~0) so the UI stays stable.
+	const HSV_EPS = 0.0001;
+	let lastHue = $state(0);
+	let lastSat = $state(0);
+
+	let rawHue = $derived(hue01(hsv.h));
+	let rawS = $derived(clamp01(hsv.s));
+	let rawV = $derived(clamp01(hsv.v));
+
+	let h = $derived(rawS > HSV_EPS && rawV > HSV_EPS ? rawHue : lastHue);
+	let s = $derived(rawS);
+	let v = $derived(rawV);
 	let a = $derived(clamp01(current.a));
 	let solid = $derived({ ...current, a: 1 } as Color);
 	let hex = $derived(ColorUtil.toHex(solid, false));
@@ -62,10 +74,10 @@
 
 	function normalizeColor(c: Color): Color {
 		return {
-			r: Number(clamp01(c.r).toFixed(3)),
-			g: Number(clamp01(c.g).toFixed(3)),
-			b: Number(clamp01(c.b).toFixed(3)),
-			a: Number(clamp01(c.a).toFixed(3))
+			r: Number(clamp01(c.r).toFixed(4)),
+			g: Number(clamp01(c.g).toFixed(4)),
+			b: Number(clamp01(c.b).toFixed(4)),
+			a: Number(clamp01(c.a).toFixed(4))
 		};
 	}
 
@@ -75,6 +87,14 @@
 		if (colorsCloseEnough(prev, normalized)) {
 			return;
 		}
+
+		const nextHSV = ColorUtil.toHSV(normalized);
+		const nextHue = hue01(nextHSV.h);
+		const nextS = clamp01(nextHSV.s);
+		const nextV = clamp01(nextHSV.v);
+		if (nextS > HSV_EPS && nextV > HSV_EPS) lastHue = nextHue;
+		if (nextV > HSV_EPS) lastSat = nextS;
+
 		if(onchange === undefined) {
 			color = normalized;
 			return;
@@ -129,20 +149,23 @@
 
 	// Position calculations based on Mode
 	let cursorX = $derived.by(() => {
-		if (mode === 0) return s * 100;
+		if (dragTarget === 'area') return dragAreaX * 100;
+		if (mode === 0) return (rawV <= HSV_EPS ? lastSat : s) * 100;
 		if (mode === 1) return h * 100;
 		if (mode === 2) return h * 100;
 		return 0;
 	});
 
 	let cursorY = $derived.by(() => {
+		if (dragTarget === 'area') return dragAreaY * 100;
 		if (mode === 0) return (1 - v) * 100;
 		if (mode === 1) return (1 - v) * 100;
-		if (mode === 2) return s * 100;
+		if (mode === 2) return (rawV <= HSV_EPS ? lastSat : s) * 100;
 		return 0;
 	});
 
 	let sliderPos = $derived.by(() => {
+		if (dragTarget === 'slider') return dragSliderVal * 100;
 		if (mode === 0) return h * 100;
 		if (mode === 1) return s * 100;
 		if (mode === 2) return v * 100;
@@ -157,9 +180,19 @@
 		const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
 		const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
 
-		if (mode === 0) setColor(ColorUtil.fromHSV(h, x, 1 - y, a));
-		else if (mode === 1) setColor(ColorUtil.fromHSV(x, s, 1 - y, a));
-		else if (mode === 2) setColor(ColorUtil.fromHSV(x, y, v, a));
+		dragAreaX = x;
+		dragAreaY = y;
+
+		if (mode === 0) {
+			setColor(ColorUtil.fromHSV(h, x, 1 - y, a));
+		} else if (mode === 1) {
+			lastHue = x;
+			setColor(ColorUtil.fromHSV(x, s, 1 - y, a));
+		} else if (mode === 2) {
+			lastHue = x;
+			lastSat = y;
+			setColor(ColorUtil.fromHSV(x, y, v, a));
+		}
 	}
 
 	function handleSlider(e: PointerEvent, isDown = false) {
@@ -167,7 +200,12 @@
 		const rect = sliderRef!.getBoundingClientRect();
 		const val = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
 
-		if (mode === 0) setColor(ColorUtil.fromHSV(val, s, v, a));
+		dragSliderVal = val;
+
+		if (mode === 0) {
+			lastHue = val;
+			setColor(ColorUtil.fromHSV(val, s, v, a));
+		}
 		else if (mode === 1) setColor(ColorUtil.fromHSV(h, val, v, a));
 		else if (mode === 2) setColor(ColorUtil.fromHSV(h, s, val, a));
 	}
@@ -220,7 +258,7 @@
 			--alpha: {a}; 
 			--checker-color: rgba(220,220,220, {1 - a});"
 			onclick={() => {
-				if (previewIsSwitch) previewOnly = !previewOnly;
+				if (previewIsSwitch) userPreviewOnly = !userPreviewOnly;
 			}}
 			title={previewOnly ? 'Switch to Full Picker' : 'Switch to Preview Only'}
 		></button>
@@ -234,6 +272,7 @@
 				style="background-color: {areaBackground};"
 				onpointerdown={(e: PointerEvent) => {
 					(e.target as HTMLElement).setPointerCapture(e.pointerId);
+					dragTarget = 'area';
 					handleArea(e, true);
 					notifyStartEdit();
 					dragging = true;
@@ -241,6 +280,7 @@
 				onpointermove={(e: PointerEvent) => handleArea(e)}
 				onpointerup={() => {
 					dragging = false;
+					dragTarget = null;
 					notifyEndEdit();
 				}}
 			>
@@ -261,11 +301,13 @@
 					style="background: {sliderBackground}"
 					onpointerdown={(e: PointerEvent) => {
 						(e.target as HTMLElement).setPointerCapture(e.pointerId);
+						dragTarget = 'slider';
 						handleSlider(e, true);
 						notifyStartEdit();
 					}}
 					onpointermove={(e) => handleSlider(e)}
 					onpointerup={() => {
+					dragTarget = null;
 						notifyEndEdit();
 					}}
 				>
@@ -277,11 +319,13 @@
 					class="cp-slider-track alpha-track"
 					onpointerdown={(e: PointerEvent) => {
 						(e.target as HTMLElement).setPointerCapture(e.pointerId);
+						dragTarget = 'alpha';
 						handleAlpha(e, true);
 						notifyStartEdit();
 					}}
 					onpointermove={(e: PointerEvent) => handleAlpha(e)}
 					onpointerup={() => {
+						dragTarget = null;
 						notifyEndEdit();
 					}}
 				>

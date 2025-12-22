@@ -22,7 +22,6 @@ export class Widget extends InspectableWithProps {
 
     type: string = $state('');
     parent: Widget | null = $state(null);
-    board: Board | null = $state(null);
     children: Widget[] | null = $state(null);
 
     icon?: string = $state('');
@@ -30,8 +29,10 @@ export class Widget extends InspectableWithProps {
     isContainer: boolean = $state(false);
     isSelected: boolean = $state(false);
 
+
     //derived properties
-    label = $derived(this.getSingleProp('label.text').get() as string);
+    name = $derived(this.getSingleProp('label.text').get() as string);
+    sanitizedIdentifier = $derived(this.userID || sanitizeUserID(this.name));
     labelColor = $derived(this.getSingleProp('label.color').get() as Color);
 
     constructor(type: string, isContainer?: boolean, id?: string) {
@@ -73,13 +74,10 @@ export class Widget extends InspectableWithProps {
         let path = '';
         let p: Widget | null = this;
         while (p) {
-            path = sanitizeUserID(p.userID && p.getName()) + '/' + path;
+            path = p.sanitizedIdentifier + '/' + path;
             p = p.parent;
         }
 
-        if (this.board) {
-            path = sanitizeUserID(this.board!.userID && this.board!.autoID) + '/' + path;
-        }
         return path;
     }
 
@@ -153,7 +151,7 @@ export class Widget extends InspectableWithProps {
         if (options?.select ?? true) {
             widget.select(true);
         }
-        if (options?.save ?? true) saveData("Duplicate Widget " + this.getName());
+        if (options?.save ?? true) saveData("Duplicate Widget " + this.name);
         return widget;
     }
 
@@ -197,7 +195,7 @@ export class Widget extends InspectableWithProps {
         }
 
         if (save) {
-            saveData("Add Widget " + child.getName());
+            saveData("Add Widget " + child.name);
         }
 
         return child;
@@ -222,7 +220,7 @@ export class Widget extends InspectableWithProps {
         this.parent = null;
         this.cleanup();
         if (save) {
-            saveData("Remove Widget " + this.getName());
+            saveData("Remove Widget " + this.name);
         }
     }
 
@@ -291,12 +289,8 @@ export class Widget extends InspectableWithProps {
         }
     }
 
-    getName(): string {
-        return ((this.props['label'] as PropertyContainer)?.children?.text as Property)?.value as string || this.type;
-    }
-
     toString(): string {
-        return `Widget(${this.getName()}, type=${this.type}, id=${this.id})`;
+        return `Widget(${this.name}, type=${this.type}, id=${this.id})`;
     }
 };
 
