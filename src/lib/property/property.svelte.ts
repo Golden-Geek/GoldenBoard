@@ -86,8 +86,19 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
     enabled: boolean | undefined = $state(undefined);
     expression: Expression = new Expression()
     bindingMode = $derived(this.expression.bindingMode);
-
+    
     private _destroy: (() => void) | null = null;
+
+    enableDestroy = $effect.root(() => {
+        $effect(() => {
+            if(!this.enabled) {
+                this.expression.disable();
+            }
+        });
+        return () => {
+          
+        };
+    });
 
     constructor(definition: PropertySingleDefinition, owner?: InspectableWithProps, keyPath?: string) {
         super(definition, owner, keyPath);
@@ -111,6 +122,7 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         this.expression.cleanup();
         this._destroy?.();
         this._destroy = null;
+        this.enableDestroy();
     }
 
 

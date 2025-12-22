@@ -120,7 +120,7 @@
 			>
 		</div>
 
-		{#if property.mode == PropertyMode.EXPRESSION}
+		{#if property.mode == PropertyMode.EXPRESSION && property.enabled}
 			<div class="property-expression" transition:slide={{ duration: 200 }}>
 				<ExpressionEditor
 					{targets}

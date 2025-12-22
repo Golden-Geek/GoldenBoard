@@ -14,7 +14,6 @@
 	disabled={definition.readOnly}
 	checked={property.get()}
 	onchange={(e) => {
-		if (expressionMode) return;
 		let newValue = (e.target as HTMLInputElement).checked;
 		if (definition.filterFunction) {
 			newValue = definition.filterFunction(newValue) as boolean;
