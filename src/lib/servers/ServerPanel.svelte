@@ -4,7 +4,6 @@
 	import TreeView from '$lib/components/TreeView.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EditableButton from '$lib/components/EditableButton.svelte';
-	import { onMount } from 'svelte';
 	import { Menu } from '../inspector/inspector.svelte.ts';
 
 	let servers = $derived(mainState.servers);
@@ -83,7 +82,7 @@
 		</div>
 
 		<TreeView
-			data={selectedServer!.data}
+			data={selectedServer!.data.structure}
 			showRoot={false}
 			getChildren={(node: any) => (node.CONTENTS ? Object.values(node.CONTENTS) || [] : [])}
 			isContainer={(node: any) => node.CONTENTS}

@@ -48,7 +48,8 @@
 <div
 	class="property-inspector {isContainer ? 'container' : 'single'} {'level-' + level} {enabled
 		? ''
-		: 'disabled'}"
+		: 'disabled'}
+		{definition.readOnly ? 'readonly' : ''}"
 >
 	{#if isContainer}
 		<PropertyContainerInspector {targets} bind:property {propKey} {definition} {level} />
@@ -147,6 +148,14 @@
 		justify-content: space-between;
 	}
 
+	.property-inspector.disabled,
+	.property-inspector.readonly {
+		opacity: 0.5;
+		user-select: none;
+		touch-action: none;
+		pointer-events: none;
+	}
+
 	.spacer {
 		flex-grow: 1;
 	}
@@ -155,11 +164,6 @@
 		opacity: 0.5;
 		user-select: none;
 		touch-action: none;
-		pointer-events: none;
-	}
-
-	.property-inspector.disabled {
-		opacity: 0.5;
 		pointer-events: none;
 	}
 

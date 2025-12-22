@@ -196,11 +196,23 @@ export class Expression {
                 }
             }
 
+            // Tie reactivity to server lifecycle + updates.
+            // - structureReady flips when addressMap is built
+            // - nodeRevisions[address] increments when that node updates
+            // - structureRevision increments only when structure is rebuilt/changed
+            const ready = !!server.structureReady;
+            if (!ready) return fallback;
+
             const node = server.getNode?.(address);
             if (!node) {
+                // Depend on structure changes so we can re-evaluate when the node appears.
+                void server.structureRevision;
                 if (fallback !== undefined) return fallback;
                 throw new Error(`OSC node '${address}' not found for osc('${path}').`);
             }
+
+            // Depend on the specific node updates only.
+            void server.nodeRevisions?.[address];
 
             const value = (node as any).VALUE;
             if (Array.isArray(value)) {

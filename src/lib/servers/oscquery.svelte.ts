@@ -32,10 +32,9 @@ export class OSCQueryClient extends InspectableWithProps {
 	reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	//Data
-	hostInfo: any = $state({});
 	structureReady: boolean = $state(false);
 	data: any = $state({});
-	addressMap: any = {};
+	addressMap: any = $state({});
 
 	private outboundConflater: Map<string, { address: string; args: any[] }> = new Map();
 	private outboundTimer: number | null = null;
@@ -131,7 +130,6 @@ export class OSCQueryClient extends InspectableWithProps {
 	setStatus(status: ConnectionStatus): void {
 		if (this.status === status) return;
 
-		// console.log(`[${this.name}] Status changed: ${this.status} -> ${status}`);
 		this.status = status;
 		switch (this.status) {
 
@@ -146,7 +144,7 @@ export class OSCQueryClient extends InspectableWithProps {
 
 			case ConnectionStatus.Disconnected:
 				this.stopOutboundPump();
-				(this.getProp('name') as Property | null)?.setRaw(this.ip + ' - ' + this.port);
+				this.getSingleProp('name').set(this.ip + ' - ' + this.port);
 				break;
 		}
 	}
@@ -169,8 +167,8 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	setIPAndPort(ip: string, port: number, save: boolean = true): void {
 		if (this.ip === ip && this.port === port) return;
-		(this.getProp('ip') as Property | null)?.setRaw(ip);
-		(this.getProp('port') as Property | null)?.setRaw(port);
+		this.getSingleProp('ip').set(ip);
+		this.getSingleProp('port').set(port);
 		if (save) {
 			saveData("Update Server " + this.name);
 		}
@@ -188,7 +186,7 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	applySnapshot(data: any) {
 		this.id = data.id;
-		(this.getProp('name') as Property | null)?.setRaw(data.name);
+		this.getSingleProp('name').set(data.name);
 		this.setIPAndPort(data.ip, data.port, false);
 	}
 
@@ -284,20 +282,20 @@ export class OSCQueryClient extends InspectableWithProps {
 	}
 
 	parseStructure(json: any): void {
-		this.data = json;
+		this.data.structure = json;
 		this.buildAddressMap();
 		this.structureReady = true;
 	}
 
 	parseHostInfo(json: any): void {
-		this.hostInfo = json;
-		(this.getProp('name') as Property | null)?.setRaw(this.hostInfo.NAME);
+		this.data.hostInfo = json;
+		this.getSingleProp('name').set(this.data.hostInfo.NAME);
 
 	}
 
 	buildAddressMap(node?: any): void {
 		if (!node) {
-			node = this.data;
+			node = this.getRoot();
 			this.addressMap = {};
 		}
 
@@ -445,7 +443,7 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	//Structure methods
 	getRoot() {
-		return this.data;
+		return this.data.structure
 	}
 
 	getNode(address: string): any {
@@ -476,7 +474,7 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	//Helpers
 	hasData() {
-		return Object.entries(this.data).length > 0;
+		return Object.entries(this.getRoot()).length > 0;
 	}
 
 	registerPropertyWatcher(watcherID: string, propertyKey: string) {
