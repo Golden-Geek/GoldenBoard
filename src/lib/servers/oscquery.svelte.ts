@@ -34,14 +34,15 @@ export class OSCQueryClient extends InspectableWithProps {
 	//Data
 	structureReady: boolean = $state(false);
 	data: any = $state({});
-	addressMap: any = $state({});
+	addressMap: any = $state({} as { [key: string]: { node: any; listeners: any[] } });
+	activeListenedNodes = $derived(
+		Object.values(this.addressMap).filter((nodeInfo) => (nodeInfo as any).listeners.length > 0)
+	);
 
-	private outboundConflater: Map<string, { address: string; args: any[] }> = new Map();
+	private outboundConflater: Map<string, { address: string, args: any[] }> = new Map();
 	private outboundTimer: number | null = null;
 
 	pendingMessages: string[] = [];
-
-	propertyWatcherMap: { [key: string]: string[] } = {};
 
 	defaultUIDDestroy = $effect.root(() => {
 		$effect(() => {
@@ -475,22 +476,6 @@ export class OSCQueryClient extends InspectableWithProps {
 	//Helpers
 	hasData() {
 		return Object.entries(this.getRoot()).length > 0;
-	}
-
-	registerPropertyWatcher(watcherID: string, propertyKey: string) {
-		if (!this.propertyWatcherMap[watcherID]) {
-			this.propertyWatcherMap[watcherID] = [];
-		}
-		if (this.propertyWatcherMap[watcherID].includes(propertyKey)) {
-			return;
-		}
-		this.propertyWatcherMap[watcherID].push(propertyKey);
-	}
-
-	unregisterPropertyWatcher(watcherID: string) {
-		if (this.propertyWatcherMap[watcherID]) {
-			delete this.propertyWatcherMap[watcherID];
-		}
 	}
 }
 

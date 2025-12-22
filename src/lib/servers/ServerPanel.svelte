@@ -30,7 +30,7 @@
 					onSelect={() => {
 						mainState.selectedServer = server;
 						mainState.editor.inspectorMenu = Menu.Server;
-						saveData('Select Server', {coalesceID: 'select-server'});
+						saveData('Select Server', { coalesceID: 'select-server' });
 					}}
 					hasRemoveButton={servers.length > 1}
 					selected={server.isSelected}
@@ -90,6 +90,10 @@
 			getTitle={(node: any) => node.DESCRIPTION || node.NAME || '/'}
 			highlightColor={'var(--server-color)'}
 		></TreeView>
+
+		<div class="server-extra">
+			{selectedServer.activeListenedNodes.length} active listening nodes
+		</div>
 	{/if}
 </div>
 
@@ -139,5 +143,14 @@
 	.server-info .icon {
 		min-width: 20px;
 		min-height: 20px;
+	}
+
+	.server-extra {
+		text-align: center;
+		border-top: solid 1px rgba(from var(--border-color) r g b / 20%);
+		padding-top: 0.25rem;
+		font-size: 0.7rem;
+		color: var(--text-color);
+		opacity: 0.7;
 	}
 </style>

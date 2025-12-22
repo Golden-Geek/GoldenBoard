@@ -96,14 +96,13 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
 
     override cleanup() {
         super.cleanup();
+        this.expr.cleanup();
     }
     
 
     getDefinition(): PropertySingleDefinition {
         return this.definition;
     }
-
-  
 
     get mode(): PropertyMode | undefined {
         return this.expr.mode as PropertyMode | undefined;
@@ -113,7 +112,9 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         this.expr.mode = value as ExpressionMode | undefined;
 		if (value === PropertyMode.EXPRESSION) {
 			this.expr.setup();
-		}
+		}else {
+           this.expr.disable();
+        }
     }
 
     get expression(): string | undefined {
@@ -220,7 +221,7 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
     resetToDefault() {
         this.value = this.coerce(this.definition.default);
         this.enabled = undefined;
-		this.expr.reset();
+		this.expr.cleanup();
     }
 
     isValueOverridden(trueIfHasExpression:boolean = true): boolean {
