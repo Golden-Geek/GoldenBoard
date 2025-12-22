@@ -107,8 +107,8 @@ export class Expression {
         if (dep.selector === 'user') {
             if (!dep.userID) return null;
             let server = (activeUserIDs as any)[dep.userID];
-            if(!server){
-                server = mainState.servers.find((s: any) => s.serverDefaultUID === dep.userID) ?? null;
+            if (!server) {
+                server = mainState.servers.find((s: any) => s.autoID === dep.userID) ?? null;
             }
             return server;
         }
@@ -126,6 +126,58 @@ export class Expression {
         this._oscActive.clear();
         this._oscDesiredTags.clear();
         this.bindingMode = false;
+    }
+
+	private setDesiredOscTag(map: Map<string, 'osc' | 'binding'>, key: string, tag: 'osc' | 'binding') {
+		const existing = map.get(key);
+		// binding wins if both are requested
+		if (existing === 'binding') return;
+		map.set(key, tag);
+	}
+
+    private createOscSolver(args: {
+        desiredOscTags: Map<string, 'osc' | 'binding'>;
+        tag: 'osc' | 'binding';
+        rawValue: unknown;
+    }): (path: string, fallback?: unknown) => unknown {
+        return (path: string, fallback?: unknown) => {
+            if (typeof path !== 'string') {
+                throw new Error(`${args.tag}(path) expects a string path.`);
+            }
+
+            const dep = this.parseOscPath(path);
+            const key = this.oscKey(dep);
+            this.setDesiredOscTag(args.desiredOscTags, key, args.tag);
+
+            const server = this.resolveOscServer(dep);
+            if (!server) {
+                if (fallback !== undefined) return fallback;
+                if (dep.selector === 'user') {
+                    throw new Error(`OSC server '${dep.userID}' not found for ${args.tag}('${path}').`);
+                }
+                throw new Error(`No OSC server available for ${args.tag}('${path}').`);
+            }
+
+            const ready = !!server.structureReady;
+            if (!ready) {
+                if (fallback !== undefined) return fallback;
+                throw new Error(`OSC structure not ready for ${args.tag}('${path}').`);
+            }
+
+            // This reads addressMap internally (deeply reactive in your model).
+            const node = server.getNode?.(dep.address);
+            if (!node) {
+                if (fallback !== undefined) return fallback;
+                throw new Error(`OSC node '${dep.address}' not found for ${args.tag}('${path}').`);
+            }
+
+            // In binding mode, bind() is purely wiring; expression returns the property's raw value.
+            if (args.tag === 'binding') return args.rawValue;
+
+            const scalarOrArray = this.oscArgsToScalarOrArray((node as any).VALUE);
+            if (scalarOrArray === undefined) return fallback;
+            return scalarOrArray;
+        };
     }
 
     private oscArgsToScalarOrArray(value: any): unknown {
@@ -203,8 +255,8 @@ export class Expression {
         if (!server.addressMap || !server.addressMap[dep.address]) return;
 
         const cb = (e: any) => {
-            if (tag !== 'binding') return;
             if (!e || e.event !== 'valueChanged') return;
+            if (tag !== 'binding') return;
             const scalarOrArray = this.oscArgsToScalarOrArray(e.value);
             if (scalarOrArray === undefined) return;
             this.applyIncomingBindingValue(scalarOrArray);
@@ -334,55 +386,6 @@ export class Expression {
         return this.mode === 'expression' || this.text !== undefined;
     }
 
-    private createOscResolver(): (path: string, fallback?: unknown) => unknown {
-        return (path: string, fallback?: unknown) => {
-            if (typeof path !== 'string') {
-                throw new Error(`osc(path) expects a string path.`);
-            }
-
-            const dep = this.parseOscPath(path);
-            const key = this.oscKey(dep);
-            // Mark dependency for this evaluation. Actual add/remove happens after evaluation.
-            if (!this._oscDesiredTags.has(key)) {
-                this._oscDesiredTags.set(key, 'osc');
-            }
-
-            const server = this.resolveOscServer(dep);
-            if (!server) {
-                if (fallback !== undefined) return fallback;
-                if (dep.selector === 'user') {
-                    throw new Error(`OSC server '${dep.userID}' not found for osc('${path}').`);
-                }
-                throw new Error(`No OSC server available for osc('${path}').`);
-            }
-
-            // Tie reactivity to server lifecycle + updates.
-            // - structureReady flips when addressMap is built
-            const ready = !!server.structureReady;
-            if (!ready) return fallback;
-
-            // If setup ran before the node existed, activate once it's available.
-            // Listener activation is deferred; see requestOscListenerSync().
-
-            const node = server.getNode?.(dep.address);
-            if (!node) {
-                // Depend on structure changes so we can re-evaluate when the node appears.
-                if (fallback !== undefined) return fallback;
-                throw new Error(`OSC node '${dep.address}' not found for osc('${path}').`);
-            }
-
-            const value = (node as any).VALUE;
-            if (Array.isArray(value)) {
-                if (value.length === 0) return fallback;
-                if (value.length === 1) return value[0];
-                return value;
-            }
-
-            if (value === undefined) return fallback;
-            return value;
-        };
-    }
-
     private requestOscListenerSync(desiredTags: Map<string, 'osc' | 'binding'>) {
         // Expression.evaluate() is frequently called from templates / $derived.
         // OSCQueryClient.addNodeListener/removeNodeListener mutates $state (listeners arrays)
@@ -484,33 +487,12 @@ export class Expression {
             coerce: args.coerce
         };
 
-        const osc = this.createOscResolver();
-
+        const osc = this.createOscSolver({ desiredOscTags, tag: 'osc', rawValue: args.rawValue });
+        const bind = this.createOscSolver({ desiredOscTags, tag: 'binding', rawValue: args.rawValue });
         let bindingUsed = false;
-        const bind = (path: string): unknown => {
-            if (typeof path !== 'string') {
-                throw new Error(`bind(path) expects a string path.`);
-            }
-
-            const dep = this.parseOscPath(path);
-            const key = this.oscKey(dep);
-            desiredOscTags.set(key, 'binding');
+        const bindWrapped = (path: string, fallback?: unknown): unknown => {
             bindingUsed = true;
-
-            const server = this.resolveOscServer(dep);
-            if (server) {
-                // Depend on lifecycle so we retry when structure is ready / node appears.
-                const ready = !!server.structureReady;
-                const exists = ready ? !!server.addressMap?.[dep.address] : false;
-                
-                if(!ready || !exists) {
-                    throw new Error(`OSC node '${dep.address}' not found for bind('${path}').`);
-                }
-            }else{
-                throw new Error(`No OSC server available for bind('${path}').`);
-            }
-
-            return args.rawValue;
+            return bind(path, fallback);
         };
 
         try {
@@ -530,7 +512,7 @@ export class Expression {
                 throw new Error('Expression is not compiled.');
             }
 
-            const computed = this._compiledFn(Math, prop, osc, bind);
+            const computed = this._compiledFn(Math, prop, osc, bindWrapped);
 
             const bindingActive = bindingUsed || Array.from(desiredOscTags.values()).some((t) => t === 'binding');
             if (bindingActive) {

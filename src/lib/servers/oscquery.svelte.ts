@@ -3,7 +3,7 @@ import { InspectableWithProps, sanitizeUserID } from "../property/inspectable.sv
 import { Property, PropertyType, type PropertyContainerDefinition, type PropertySingleDefinition } from '$lib/property/property.svelte.js';
 import type { OscPacket } from './osc.js';
 import { decodeOscPacket, encodeOscPacket } from './osc.js';
-import { ColorUtil } from '$lib/property/Color.svelte.ts';
+import { ColorUtil } from '../property/Color.svelte.ts';
 
 export enum ConnectionStatus {
 	Disconnected = "disconnected",
@@ -48,13 +48,15 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	pendingMessages: string[] = [];
 
-	constructor() {
+	constructor(autoConnect: boolean = true) {
 		super("server");
 		this.setupProps();
 		this.ws = null;
-		this.connect();
+		if (autoConnect) {
+			this.connect();
+		}
 	}
-	
+
 
 	cleanup() {
 		super.cleanup();
@@ -93,6 +95,7 @@ export class OSCQueryClient extends InspectableWithProps {
 					this.ws.readyState !== WebSocket.OPEN && this.ws.readyState !== WebSocket.CONNECTING) {
 					this.setStatus(ConnectionStatus.Disconnected);
 
+					console.log("Reconnecting to: " + this.ip + ":" + this.port + " in 1 second...");
 					this.reconnectTimeout = setTimeout(() => {
 						if (this.status === ConnectionStatus.Disconnected) {
 							this.connect();
@@ -220,10 +223,12 @@ export class OSCQueryClient extends InspectableWithProps {
 		} else if (Array.isArray(rawValue)) {
 			args = rawValue;
 		} else if (typeTag == 'r') {
-			args = [ColorUtil.toHex(ColorUtil.fromAny(rawValue))];
+			args = [{ type: 'r', value: rawValue }];
 		} else {
 			args = [rawValue];
 		}
+
+		this.sendOSCPacket(address, args);
 	}
 
 	sendOSCPacket(address: string, args: any[]) {
@@ -235,6 +240,20 @@ export class OSCQueryClient extends InspectableWithProps {
 		const packet = { address, args };
 		const buf = encodeOscPacket(packet as any);
 		this.ws.send(buf);
+	}
+
+	sendListenCommand(address: string) {
+		this.sendOSCQueryWebsocketCommand({
+			COMMAND: 'LISTEN',
+			DATA: { address: address, sendFeedback: true }
+		});
+	}
+
+	sendIgnoreCommand(address: string) {
+		this.sendOSCQueryWebsocketCommand({
+			COMMAND: 'IGNORE',
+			DATA: address
+		});
 	}
 
 	sendWebsocketMessage(msg: string) {
@@ -374,10 +393,7 @@ export class OSCQueryClient extends InspectableWithProps {
 		}
 		if (this.addressMap[address].listeners.length == 0) {
 			console.log("First listener, sending LISTEN for " + address);
-			this.sendOSCQueryWebsocketCommand({
-				COMMAND: 'LISTEN',
-				DATA: address
-			});
+			this.sendListenCommand(address);
 		}
 		this.addressMap[address].listeners.push(callback);
 	}
@@ -397,10 +413,7 @@ export class OSCQueryClient extends InspectableWithProps {
 
 		if (this.addressMap[address].listeners.length == 0) {
 			console.log("No more listeners, sending IGNORE for " + address);
-			this.sendOSCQueryWebsocketCommand({
-				COMMAND: 'IGNORE',
-				DATA: address
-			});
+			this.sendIgnoreCommand(address);
 		}
 	}
 
@@ -547,7 +560,7 @@ export function applyServersSnapshot(data: any[]) {
 	mainState.servers = data.map((sData: any) => {
 		let server = servers.find(s => s.id === sData.id);
 		if (!server) {
-			server = new OSCQueryClient();
+			server = new OSCQueryClient(false);
 		}
 
 
