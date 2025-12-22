@@ -5,14 +5,13 @@
 		property = $bindable(),
 		definition,
 		onStartEdit = null,
-		onUpdate = null,
-		expressionMode
+		onUpdate = null
 	} = $props();
 
 </script>
 
 <ColorPicker
-	previewIsSwitch={!expressionMode && !definition.readOnly}
+	previewIsSwitch={property.enabled && !definition.readOnly}
 	color={property.get()}
 	onchange={(value: any) => {
 		property.set(value);

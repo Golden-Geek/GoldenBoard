@@ -106,7 +106,11 @@ export class Expression {
     private resolveOscServer(dep: { selector: 'default' | 'user'; userID: string | null }): any | null {
         if (dep.selector === 'user') {
             if (!dep.userID) return null;
-            return (activeUserIDs as any)[dep.userID] ?? null;
+            let server = (activeUserIDs as any)[dep.userID];
+            if(!server){
+                server = mainState.servers.find((s: any) => s.serverDefaultUID === dep.userID) ?? null;
+            }
+            return server;
         }
         return mainState.servers.at(0) ?? null;
     }

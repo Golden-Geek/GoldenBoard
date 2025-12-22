@@ -25,6 +25,8 @@ export class InspectableWithProps {
     definitions = $derived(this.getPropertyDefinitions());
     userID = $derived((this.getSingleProp('userID').get() as string));
 
+	autoID = $derived(this.userID || this.getAutoID());
+
     private _activeUserIDKey = '';
 
     userIDDestroy = $effect.root(() => {
@@ -58,7 +60,11 @@ export class InspectableWithProps {
 
     }
 
+    getAutoID(): string {
+        return '';
+    }
 
+    
 
     private unloadPropsTree(props: { [key: string]: PropertyNode } | undefined = this.props) {
         if (!props) return;

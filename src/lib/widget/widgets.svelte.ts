@@ -4,6 +4,7 @@ import type { PropertyContainer, PropertyContainerDefinition, PropertySingleDefi
 import { Property, PropertyType } from '../property/property.svelte.ts';
 import { ColorUtil, type Color } from '$lib/property/Color.svelte';
 import { InspectableWithProps, sanitizeUserID } from "../property/inspectable.svelte.ts";
+import { Board } from "$lib/board/boards.svelte.js";
 
 //WIDGET
 type WidgetDefinition = {
@@ -21,6 +22,7 @@ export class Widget extends InspectableWithProps {
 
     type: string = $state('');
     parent: Widget | null = $state(null);
+    board: Board | null = $state(null);
     children: Widget[] | null = $state(null);
 
     icon?: string = $state('');
@@ -31,7 +33,6 @@ export class Widget extends InspectableWithProps {
     //derived properties
     label = $derived(this.getSingleProp('label.text').get() as string);
     labelColor = $derived(this.getSingleProp('label.color').get() as Color);
-
 
     constructor(type: string, isContainer?: boolean, id?: string) {
         super('widget', id);
@@ -62,6 +63,24 @@ export class Widget extends InspectableWithProps {
         unregisterWidget(this.id);
         this.id = newID;
         registerWidget(this);
+    }
+
+    getAutoID(): string {
+        return this.getFullPath();
+    }
+
+    getFullPath(): string {
+        let path = '';
+        let p: Widget | null = this;
+        while (p) {
+            path = sanitizeUserID(p.userID && p.getName()) + '/' + path;
+            p = p.parent;
+        }
+
+        if (this.board) {
+            path = sanitizeUserID(this.board!.userID && this.board!.autoID) + '/' + path;
+        }
+        return path;
     }
 
     static createFromDefinition(def: WidgetDefinition): Widget {

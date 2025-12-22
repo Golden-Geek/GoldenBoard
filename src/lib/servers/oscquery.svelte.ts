@@ -14,9 +14,12 @@ export enum ConnectionStatus {
 export class OSCQueryClient extends InspectableWithProps {
 
 	name = $derived((this.getSingleProp('name').get() as string));
+
+
 	ip = $derived((this.getSingleProp('ip').get() as string));
 	port = $derived((this.getSingleProp('port').get() as number));
-	serverName = $derived(() => this.name.split(' - ')[0]);
+
+
 	useFixedRateSending = $derived(
 		(this.getProp('advanced.useFixedRateSending') as Property | null)?.get() as boolean
 	);
@@ -51,6 +54,7 @@ export class OSCQueryClient extends InspectableWithProps {
 		this.ws = null;
 		this.connect();
 	}
+	
 
 	cleanup() {
 		super.cleanup();
@@ -60,6 +64,10 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	getPropertyDefinitions(): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition); } | null {
 		return { ...super.getPropertyDefinitions(), ...serverPropertyDefinitions };
+	}
+
+	override getAutoID(): string {
+		return sanitizeUserID(this.name.split(' - ')[0]) as string
 	}
 
 	//WS Connection 

@@ -138,7 +138,7 @@
 	let cursorY = $derived.by(() => {
 		if (mode === 0) return (1 - v) * 100;
 		if (mode === 1) return (1 - v) * 100;
-		if (mode === 2) return (1 - s) * 100;
+		if (mode === 2) return s * 100;
 		return 0;
 	});
 
@@ -159,7 +159,7 @@
 
 		if (mode === 0) setColor(ColorUtil.fromHSV(h, x, 1 - y, a));
 		else if (mode === 1) setColor(ColorUtil.fromHSV(x, s, 1 - y, a));
-		else if (mode === 2) setColor(ColorUtil.fromHSV(x, 1 - y, v, a));
+		else if (mode === 2) setColor(ColorUtil.fromHSV(x, y, v, a));
 	}
 
 	function handleSlider(e: PointerEvent, isDown = false) {
