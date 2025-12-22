@@ -20,7 +20,7 @@
 		if (expressionMode) return;
 		property.set(value);
 	}}
-	onStartEdit={() => onStartEdit && onStartEdit(property.value)}
+	onStartEdit={() => onStartEdit && onStartEdit()}
 	onEndEdit={() => onUpdate && onUpdate()}
 ></ColorPicker>
 

@@ -1,7 +1,15 @@
 <script lang="ts">
 	import 'emoji-picker-element';
 	import { tick } from 'svelte';
-	let { targets, property = $bindable(), definition, onUpdate = null } = $props();
+	let {
+		targets,
+		expressionMode,
+		expressionHasError,
+		property = $bindable(),
+		shownValue,
+		definition,
+		onUpdate = null
+	} = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 
 	let showPicker = $state(false);
@@ -23,13 +31,15 @@
 <div class="emoji-picker-container">
 	<button
 		onclick={() => (showPicker = !showPicker)}
-		class="icon-property"
+		class="icon-property {expressionMode ? 'expression-mode' : ''} {expressionHasError
+			? 'error'
+			: ''}"
 		disabled={definition.readOnly}
 	>
-		{property.value != '' ? property.value : 'Choose'}
+		{shownValue != '' ? shownValue : expressionMode ? '' : 'Choose'}
 	</button>
 
-	{#if !definition.readOnly}
+	{#if !expressionMode && !definition.readOnly}
 		<button
 			onclick={() => {
 				property.set('');

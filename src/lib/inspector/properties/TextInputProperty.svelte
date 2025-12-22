@@ -25,7 +25,7 @@
 		property.set(newValue);
 	}}
 	onfocus={() =>
-		expressionMode ? null : onStartEdit && onStartEdit($state.snapshot(property.value))}
+		expressionMode ? null : onStartEdit && onStartEdit()}
 	onblur={() => (expressionMode ? null : onUpdate && onUpdate())}
 	onkeydown={(e) => {
 		if (expressionMode) return;

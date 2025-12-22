@@ -27,7 +27,7 @@
 		property.set(newValue);
 		onUpdate && onUpdate();
 	}}
-	onfocus={() => onStartEdit && onStartEdit(property.value)}
+	onfocus={() => onStartEdit && onStartEdit()}
 	onblur={() => onUpdate && onUpdate()}>{shownValue}</textarea
 >
 

@@ -1,5 +1,10 @@
 <script lang="ts">
-	import { PropertyMode, PropertyType, type Property } from '$lib/property/property.svelte';
+	import {
+		PropertyMode,
+		PropertyType,
+		type Property,
+		type PropertyValueType
+	} from '$lib/property/property.svelte';
 	import { propertiesInspectorClass } from './inspector.svelte.ts';
 	import { saveData } from '$lib/engine/engine.svelte';
 	import { fade, slide } from 'svelte/transition';
@@ -19,17 +24,17 @@
 	let resolvedValue = $derived(expressionMode ? (property as Property).getResolved() : null);
 	let expressionHasError = $derived(resolvedValue?.error != null);
 	let shownValue = $derived(
-		expressionMode ? (resolvedValue?.error ?? resolvedValue?.current!) : property.value
+		expressionMode ? (resolvedValue?.error ?? resolvedValue?.current!) : property.getRaw()
 	);
 
 	let PropertyClass: any = $derived(
 		propertiesInspectorClass[propertyType as keyof typeof propertiesInspectorClass]
 	);
 
-	let valueOnFocus = $state.snapshot(property.value);
+	let valueOnFocus = undefined as PropertyValueType | undefined;
 
 	function checkAndSaveProperty(force: boolean = false) {
-		if (property.value === valueOnFocus && !force) {
+		if (property.getRaw() === valueOnFocus && !force) {
 			// console.log('No changes detected, skipping save.');
 			return;
 		}
@@ -84,7 +89,7 @@
 				<PropertyClass
 					{targets}
 					bind:property
-					onStartEdit={(value: any) => (valueOnFocus = value)}
+					onStartEdit={() => (valueOnFocus = property.getRaw())}
 					onUpdate={() => checkAndSaveProperty()}
 					{definition}
 					{propKey}

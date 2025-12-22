@@ -37,7 +37,7 @@
 <div class="number-property-container">
 	{#if hasRange}
 		<Slider
-			value={expressionMode ? shownValue : property.value}
+			value={expressionMode ? shownValue : property.getRaw()}
 			min={definition.min}
 			max={definition.max}
 			step={definition.step || 0}
@@ -46,7 +46,7 @@
 				if (expressionMode) return;
 				property.set(value);
 			}}
-			onStartEdit={() => onStartEdit && onStartEdit(property.value)}
+			onStartEdit={() => onStartEdit && onStartEdit()}
 			onEndEdit={() => onUpdate && onUpdate()}
 			fgColor={expressionMode
 				? expressionHasError
@@ -68,15 +68,15 @@
 			? expressionHasError
 				? 'error'
 				: shownValue?.toFixed(isInteger ? 0 : 3)
-			: property.value?.toFixed(isInteger ? 0 : 3)}
-		onfocus={() => onStartEdit && onStartEdit(property.value)}
+			: property.getRaw()?.toFixed(isInteger ? 0 : 3)}
+		onfocus={() => onStartEdit && onStartEdit()}
 		onblur={setValueFromField}
 		onkeydown={(e) => {
 			if (e.key === 'Enter') {
 				setValueFromField();
 				numberInput!.blur();
 			} else if (e.key === 'Escape') {
-				numberInput!.value = property.value;
+				numberInput!.value = property.getRaw();
 				numberInput!.blur();
 			}
 		}}
