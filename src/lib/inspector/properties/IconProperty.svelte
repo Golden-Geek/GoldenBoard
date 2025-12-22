@@ -6,7 +6,6 @@
 		expressionMode,
 		expressionHasError,
 		property = $bindable(),
-		shownValue,
 		definition,
 		onUpdate = null
 	} = $props();
@@ -36,7 +35,7 @@
 			: ''}"
 		disabled={definition.readOnly}
 	>
-		{shownValue != '' ? shownValue : expressionMode ? '' : 'Choose'}
+		{property.get()}
 	</button>
 
 	{#if !expressionMode && !definition.readOnly}

@@ -4,7 +4,6 @@
 		expressionMode,
 		expressionHasError,
 		property = $bindable(),
-		shownValue,
 		definition,
 		onStartEdit = null,
 		onUpdate = null
@@ -28,18 +27,18 @@
 		onUpdate && onUpdate();
 	}}
 	onfocus={() => onStartEdit && onStartEdit()}
-	onblur={() => onUpdate && onUpdate()}>{shownValue}</textarea
+	onblur={() => onUpdate && onUpdate()}>{property.get()}</textarea
 >
 
 <style>
-	.text-editor-property {
-	}
+	/* .text-editor-property {
+	} */
 
 	.text-editor-property.expression-mode {
-		border-color: var(--expression-color);
+		color: var(--expression-color);
 	}
 
 	.text-editor-property.error {
-		border-color: var(--error-color);
+		color: var(--error-color);
 	}
 </style>

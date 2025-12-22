@@ -4,7 +4,6 @@
 		expressionMode,
 		expressionHasError,
 		property = $bindable(),
-		shownValue,
 		definition,
 		onUpdate = null
 	} = $props();
@@ -14,7 +13,7 @@
 	class="dropdown-property {expressionMode ? 'expression-mode' : ''} {expressionHasError
 		? 'error'
 		: ''}"
-	value={shownValue}
+	value={property.get()}
 	onchange={(event) => {
 		if (expressionMode) return;
 		let newValue = (event.target as HTMLSelectElement).value;

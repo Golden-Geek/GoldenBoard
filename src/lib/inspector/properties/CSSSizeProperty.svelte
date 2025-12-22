@@ -4,18 +4,17 @@
 		expressionMode,
 		expressionHasError,
 		property = $bindable(),
-		shownValue,
 		definition,
 		onStartEdit = null,
 		onUpdate = null
 	} = $props();
 
-	let initValue = $derived(shownValue);
+	let val = $derived(property.get());
 
-	let numberValue = $derived(parseFloat(/^(-?\d*\.?\d+)(.*)$/.exec(shownValue)?.toString() || '0'));
+	let numberValue = $derived(parseFloat(/^(-?\d*\.?\d+)(.*)$/.exec(val)?.toString() || '0'));
 
 	let unitValue = $derived(
-		/^(-?\d*\.?\d+)(.*)$/.exec(shownValue)?.[2] ||
+		/^(-?\d*\.?\d+)(.*)$/.exec(val)?.[2] ||
 			(definition.units ? (definition.units as string[])[0] : 'px')
 	);
 
@@ -45,7 +44,7 @@
 		type="text"
 		class="value-property"
 		bind:value={numberValue}
-		onfocus={() => onStartEdit && onStartEdit(initValue)}
+		onfocus={() => onStartEdit && onStartEdit()}
 		onblur={compute}
 		onkeydown={(e) => {
 			if (e.key === 'Enter') {

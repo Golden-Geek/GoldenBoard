@@ -9,8 +9,7 @@
 		onStartEdit = null,
 		onUpdate = null,
 		expressionMode = false,
-		expressionHasError = false,
-		shownValue
+		expressionHasError = false
 	} = $props();
 
 	let target = $derived(targets.length > 0 ? targets[0] : null);
@@ -37,7 +36,7 @@
 <div class="number-property-container">
 	{#if hasRange}
 		<Slider
-			value={expressionMode ? shownValue : property.getRaw()}
+			value={property.get()}
 			min={definition.min}
 			max={definition.max}
 			step={definition.step || 0}
@@ -64,11 +63,7 @@
 			? 'expression'
 			: ''} {expressionHasError ? 'error' : ''}"
 		disabled={definition.readOnly}
-		value={expressionMode
-			? expressionHasError
-				? 'error'
-				: shownValue?.toFixed(isInteger ? 0 : 3)
-			: property.getRaw()?.toFixed(isInteger ? 0 : 3)}
+		value={property.get()?.toFixed(isInteger ? 0 : 3)}
 		onfocus={() => onStartEdit && onStartEdit()}
 		onblur={setValueFromField}
 		onkeydown={(e) => {

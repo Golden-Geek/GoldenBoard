@@ -23,9 +23,6 @@
 	let expressionMode = $derived(property.mode == PropertyMode.EXPRESSION);
 	let resolvedValue = $derived(expressionMode ? (property as Property).getResolved() : null);
 	let expressionHasError = $derived(resolvedValue?.error != null);
-	let shownValue = $derived(
-		expressionMode ? (resolvedValue?.error ?? resolvedValue?.current!) : property.getRaw()
-	);
 
 	let PropertyClass: any = $derived(
 		propertiesInspectorClass[propertyType as keyof typeof propertiesInspectorClass]
@@ -96,7 +93,6 @@
 					{propKey}
 					{expressionMode}
 					{expressionHasError}
-					{shownValue}
 				/>
 			</div>
 			<button

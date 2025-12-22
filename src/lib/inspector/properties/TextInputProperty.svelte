@@ -1,11 +1,9 @@
 <script lang="ts">
-
 	let {
 		property = $bindable(),
 		definition,
 		expressionMode = false,
 		expressionHasError = false,
-		shownValue = '',
 		onStartEdit = null,
 		onUpdate = null
 	} = $props();
@@ -14,7 +12,7 @@
 <input
 	type="text"
 	class="text-property {expressionMode ? 'expression' : ''} {expressionHasError ? 'error' : ''}"
-	value={shownValue}
+	value={property.get()}
 	onchange={(e) => {
 		if (expressionMode) return;
 		let newValue = (e.target as HTMLInputElement).value;
@@ -24,8 +22,7 @@
 		}
 		property.set(newValue);
 	}}
-	onfocus={() =>
-		expressionMode ? null : onStartEdit && onStartEdit()}
+	onfocus={() => (expressionMode ? null : onStartEdit && onStartEdit())}
 	onblur={() => (expressionMode ? null : onUpdate && onUpdate())}
 	onkeydown={(e) => {
 		if (expressionMode) return;
@@ -45,11 +42,11 @@
 
 	.text-property.expression {
 		font-style: italic;
-		background-color: rgba(from var(--expression-color) r g b / 20%) !important;
+		color: rgba(from var(--expression-color) r g b) !important;
 	}
 
 	.text-property.expression.error {
-		background-color: rgba(from var(--error-color) r g b / 20%) !important;
+		color: rgba(from var(--error-color) r g b) !important;
 	}
 
 	.text-property:disabled {

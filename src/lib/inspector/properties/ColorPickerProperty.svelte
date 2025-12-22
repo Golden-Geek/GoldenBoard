@@ -7,7 +7,6 @@
 		definition,
 		onStartEdit = null,
 		onUpdate = null,
-		shownValue,
 		expressionMode,
 		expressionHasError
 	} = $props();
@@ -15,7 +14,7 @@
 
 <ColorPicker
 	previewIsSwitch={!expressionMode && !definition.readOnly}
-	color={shownValue}
+	color={property.get()}
 	onchange={(value: any) => {
 		if (expressionMode) return;
 		property.set(value);

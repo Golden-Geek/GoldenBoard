@@ -5,8 +5,7 @@
 		expressionHasError,
 		property = $bindable(),
 		definition,
-		onUpdate,
-		shownValue
+		onUpdate
 	} = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 </script>
@@ -17,7 +16,7 @@
 		? 'error'
 		: ''}"
 	disabled={definition.readOnly}
-	checked={shownValue as boolean}
+	checked={property.get()}
 	onchange={(e) => {
 		if (expressionMode) return;
 		let newValue = (e.target as HTMLInputElement).checked;
