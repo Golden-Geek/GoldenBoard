@@ -1,5 +1,3 @@
-/* CSS */
-
 @import 'tailwindcss';
 
 :root {
@@ -43,8 +41,7 @@ body {
     user-select: none;
 }
 
-.slider-hide-cursor *
-{
+.slider-hide-cursor * {
     cursor: none !important;
 }
 
@@ -111,8 +108,7 @@ input[type="checkbox"].editor-checkbox {
 
 input[type="checkbox"].editor-checkbox:hover {
     outline: none;
-    filter: brightness(1.5);
-    box-shadow: 0 0 0 3px rgba(255, 45, 149, 0.12);
+    filter: brightness(1.2);
 }
 
 /* Keep background dark when checked, show pink check mark */
@@ -145,10 +141,10 @@ input[type="checkbox"].editor-checkbox:checked::after {
 
 input[type="checkbox"].editor-checkbox:disabled {
     opacity: 0.3;
-    border-color: #b45c88;
+    border-color: var(--accent-color);
 }
 
-input:focus{
+input:focus {
     outline: none;
     border-color: rgba(from var(--accent-color) r g b / 30%);
 }

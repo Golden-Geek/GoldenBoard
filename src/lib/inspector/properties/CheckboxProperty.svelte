@@ -1,15 +1,44 @@
 <script lang="ts">
-	let { targets, property = $bindable(), definition, onUpdate } = $props();
+	let {
+		targets,
+		expressionMode,
+		expressionHasError,
+		property = $bindable(),
+		definition,
+		onUpdate,
+		shownValue
+	} = $props();
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 </script>
 
 <input
 	type="checkbox"
-	class="editor-checkbox"
+	class="editor-checkbox {expressionMode ? 'expression-mode' : ''} {expressionHasError
+		? 'error'
+		: ''}"
 	disabled={definition.readOnly}
-	bind:checked={property.value}
-	onchange={() => onUpdate && onUpdate()}
+	checked={shownValue as boolean}
+	onchange={(e) => {
+		if (expressionMode) return;
+		let newValue = (e.target as HTMLInputElement).checked;
+		if (definition.filterFunction) {
+			newValue = definition.filterFunction(newValue) as boolean;
+		}
+		property.set(newValue);
+		onUpdate && onUpdate();
+	}}
 />
 
 <style>
+	.editor-checkbox {
+		width: 16px;
+		height: 16px;
+	}
+
+	input[type='checkbox'].editor-checkbox.expression-mode:checked::after {
+		border-color: var(--expression-color);
+	}
+	input[type='checkbox'].editor-checkbox.error:checked::after {
+		border-color: var(--error-color);
+	}
 </style>

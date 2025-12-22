@@ -1,4 +1,5 @@
-import { activeUserIDs, type InspectableWithProps } from './inspectable.svelte';
+import { mainState } from '$lib/engine/engine.svelte';
+import { activeUserIDs, sanitizeUserID, type InspectableWithProps } from './inspectable.svelte';
 
 export type ExpressionMode = 'value' | 'expression';
 
@@ -20,8 +21,13 @@ export class Expression {
     text: string | undefined;
 
     private _compiledFor: string | null = null;
-    private _compiledFn: ((m: Math, p: (key: string, fallback?: unknown) => unknown) => unknown) | null =
-        null;
+    private _compiledFn:
+        | ((
+            m: Math,
+            p: (key: string, fallback?: unknown) => unknown,
+            o: (path: string, fallback?: unknown) => unknown
+        ) => unknown)
+        | null = null;
 
     private _setupFor: string | null = null;
     private _setupError: string | null = null;
@@ -86,7 +92,7 @@ export class Expression {
 
         try {
             if (this._compiledFor !== js) {
-                this._compiledFn = new Function('Math', 'prop', `return (${js});`) as any;
+                this._compiledFn = new Function('Math', 'prop', 'osc', `return (${js});`) as any;
                 this._compiledFor = js;
             }
         } catch (e: unknown) {
@@ -155,6 +161,58 @@ export class Expression {
 
         const visited = new Set<string>();
 
+        const osc = (path: string, fallback?: unknown) => {
+            if (typeof path !== 'string') {
+                throw new Error(`osc(path) expects a string path.`);
+            }
+
+            let serverID = '';
+            let address = path.trim();
+
+            // Support: osc('server:/path/to/node')
+            const match = /^([^:]+):(\/.*)$/.exec(address);
+            if (match) {
+                serverID = sanitizeUserID(match[1]);
+                address = match[2];
+            }
+
+            if (!address.startsWith('/')) {
+                address = '/' + address;
+            }
+
+            let server: any = null;
+
+            if (serverID) {
+                server = (activeUserIDs as any)[serverID] ?? null;
+                if (!server) {
+                    if (fallback !== undefined) return fallback;
+                    throw new Error(`OSC server '${serverID}' not found for osc('${path}').`);
+                }
+            } else {
+                server = mainState.servers.at(0);
+                if (!server) {
+                    if (fallback !== undefined) return fallback;
+                    throw new Error(`No OSC server available for osc('${path}').`);
+                }
+            }
+
+            const node = server.getNode?.(address);
+            if (!node) {
+                if (fallback !== undefined) return fallback;
+                throw new Error(`OSC node '${address}' not found for osc('${path}').`);
+            }
+
+            const value = (node as any).VALUE;
+            if (Array.isArray(value)) {
+                if (value.length === 0) return fallback;
+                if (value.length === 1) return value[0];
+                return value;
+            }
+
+            if (value === undefined) return fallback;
+            return value;
+        };
+
         try {
             const prop = (key: string, fallback?: unknown) => {
                 const keySplit = key.split(':');
@@ -200,7 +258,7 @@ export class Expression {
                 throw new Error('Expression is not compiled.');
             }
 
-            const computed = this._compiledFn(Math, prop);
+            const computed = this._compiledFn(Math, prop, osc);
 
             if (computed !== undefined && computed !== null) {
                 let filtered: unknown = args.filter ? args.filter(computed) : computed;
