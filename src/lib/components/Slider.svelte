@@ -3,8 +3,8 @@
 
 	let {
 		value = $bindable(),
-		min = 0,
-		max = 1,
+		min,
+		max,
 		step = 0,
 		sensitivity = 1,
 		orientation = 'horizontal',
@@ -16,8 +16,9 @@
 		fgColor = 'var(--slider-fg)'
 	} = $props();
 
+	let infiniteMode = $derived(min === undefined || max === undefined);
 	let sliderDiv = $state(null as HTMLDivElement | null);
-	let sliderWidth = $derived(sliderDiv!.getBoundingClientRect().width);
+	let sliderWidth = $derived(infiniteMode ? 100 : sliderDiv!.getBoundingClientRect().width);
 
 	let valueAtDown = $state(0);
 	let mouseAtDown = $state(0);
@@ -49,9 +50,18 @@
 			const pixelsPerStep = sliderWidth / stepCount / sensitivity;
 			const stepsMoved = Math.round(delta / pixelsPerStep);
 			value = Math.min(max, Math.max(min, valueAtDown + stepsMoved * step));
-		} else {
+		} else if (!infiniteMode) {
 			const percentDelta = (delta / sliderWidth) * sensitivity;
 			value = Math.min(max, Math.max(min, valueAtDown + percentDelta * range));
+		} else //infinite mode, no range
+		{
+			let alteredSensitivity = e.altKey
+				? sensitivity / 100
+				: e.shiftKey
+					? sensitivity
+					: sensitivity / 10;
+			const valueDelta = delta * alteredSensitivity;
+			value = valueAtDown + valueDelta;
 		}
 
 		valueAtDown = value;
@@ -70,14 +80,20 @@
 	}
 </script>
 
-<div
-	class="slider"
-	bind:this={sliderDiv}
-	onmousedown={startDrag}
-	style="--bg-color: {bgColor}; --fg-color: {fgColor}"
->
-	<div class="slider-foreground" style="--value: {(value - min) / (max - min)}"></div>
-</div>
+{#if infiniteMode}
+	<button class="button infinite-slider {isDragging ? 'dragging' : ''}" onmousedown={startDrag}>
+		{'⟷'}
+	</button>
+{:else}
+	<div
+		class="slider"
+		bind:this={sliderDiv}
+		onmousedown={startDrag}
+		style="--bg-color: {bgColor}; --fg-color: {fgColor}"
+	>
+		<div class="slider-foreground" style="--value: {(value - min) / (max - min)}"></div>
+	</div>
+{/if}
 
 <style>
 	.slider {
@@ -103,5 +119,16 @@
 	/* Hide cursor globally when dragging */
 	:global(.slider-hide-cursor) {
 		cursor: none !important;
+	}
+
+	.infinite-slider {
+		background:none;
+		border: none;
+		font-size: 0.6rem;
+		cursor: ew-resize;
+	}
+
+	.infinite-slider:hover, .infinite-slider.dragging {
+		background-color: rgba(from var(--panel-bg-color) r g b / 10%);
 	}
 </style>

@@ -13,8 +13,16 @@
 	} = $props();
 
 	let target = $derived(targets.length > 0 ? targets[0] : null);
-	let min = $derived(property.min ? property.min : definition.min);
-	let max = $derived(property.max ? property.max : definition.max);
+	let min = $derived(
+		definition.min instanceof Function ? definition.min(target, property) : definition.min
+	);
+	let max = $derived(
+		definition.max instanceof Function ? definition.max(target, property) : definition.max
+	);
+	let step = $derived(
+		definition.step instanceof Function ? definition.step(target, property) : definition.step || 0
+	);
+
 	let hasRange = $derived(min !== undefined && max !== undefined);
 	let isInteger = $derived(definition.type === PropertyType.INTEGER);
 
@@ -30,39 +38,34 @@
 
 	function setValueFromField() {
 		const newValue = parseFloat(numberInput!.value);
+		console.log('Parsed value:', newValue);
 		if (!isNaN(newValue)) {
-			property.set(
-				hasRange ? Math.min(Math.max(newValue, definition.min), definition.max) : newValue
-			);
+			property.set(hasRange ? Math.min(Math.max(newValue, min), max) : newValue);
 			onUpdate && onUpdate();
 		}
 	}
 </script>
 
 <div class="number-property-container">
-	{#if hasRange}
-		<Slider
-			value={property.get()}
-			min={definition.min}
-			max={definition.max}
-			step={definition.step || 0}
-			disabled={definition.readOnly}
-			onValueChange={(value: number) => {
-				property.set(value);
-			}}
-			onStartEdit={() => onStartEdit && onStartEdit()}
-			onEndEdit={() => onUpdate && onUpdate()}
-			fgColor={sliderColor}
-		/>
-	{/if}
+	<Slider
+		value={property.get()}
+		{min}
+		{max}
+		{step}
+		disabled={definition.readOnly}
+		onValueChange={(value: number) => {
+			property.set(value);
+		}}
+		onStartEdit={() => onStartEdit && onStartEdit()}
+		onEndEdit={() => onUpdate && onUpdate()}
+		fgColor={sliderColor}
+	/>
 
 	<input
 		bind:this={numberInput}
 		type={expressionMode ? 'text' : 'number'}
 		step="0.01"
-		class="number-field {hasRange
-			? 'with-slider'
-			: 'no-slider'} {expressionMode} {expressionResultTag}"
+		class="number-field {expressionMode} {expressionResultTag}"
 		disabled={definition.readOnly}
 		value={property.get()?.toFixed(isInteger ? 0 : 3)}
 		onfocus={() => onStartEdit && onStartEdit()}
@@ -98,10 +101,7 @@
 	.number-field {
 		height: 100%;
 		box-sizing: border-box;
-	}
-
-	.number-field.with-slider {
-		max-width: 3rem;
+		max-width: 4rem;
 		margin-left: 0.25rem;
 	}
 

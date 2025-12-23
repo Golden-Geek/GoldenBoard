@@ -41,9 +41,10 @@ export type PropertySingleDefinition = {
     default: PropertyValueType;
     description?: string;
     options?: { [key: string]: string }; // For ENUM type
-    min?: number; // For RANGE type
-    max?: number; // For RANGE type
-    step?: number; // For STEPPER type
+    visible?: boolean | ((inspectable: any, property: Property) => boolean); // Whether the property is visible in the UI
+    min?: number | ((inspectable: any, property: Property) => number); 
+    max?: number | ((inspectable: any, property: Property) => number); 
+    step?: number | ((inspectable: any, property: Property) => number);
     filterFunction?: (value: any) => any; // Function to filter/validate the value
 };
 
@@ -86,17 +87,17 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
     enabled: boolean | undefined = $state(undefined);
     expression: Expression = new Expression()
     bindingMode = $derived(this.expression.bindingMode);
-    
+
     private _destroy: (() => void) | null = null;
 
     enableDestroy = $effect.root(() => {
         $effect(() => {
-            if(!this.enabled) {
+            if (!this.enabled) {
                 this.expression.disable();
             }
         });
         return () => {
-          
+
         };
     });
 
@@ -156,14 +157,6 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
 
     get<T>(defaultValue = null as T): T | null {
         return this.getResolved<T>(defaultValue).current;
-    }
-
-    get value(): PropertyValueType {
-        return (this.getRaw(this.definition.default) as PropertyValueType) ?? (this.definition.default as any);
-    }
-
-    set value(v: PropertyValueType) {
-        this.setRaw(v);
     }
 
     getRaw(defaultValue: any = null): PropertyValueType | null {

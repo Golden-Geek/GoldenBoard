@@ -36,8 +36,8 @@ export class Widget extends InspectableWithProps {
         if (this.userID != '') return this.userID;
 
         const p = this.getSingleProp('label.text');
-        if (p.mode === PropertyMode.EXPRESSION) return p.getRaw(); //safety to avoid circular calls
-        return sanitizeUserID(this.name);
+        if (p.mode === PropertyMode.EXPRESSION) return p.getRaw() as string; //safety to avoid circular calls
+        return sanitizeUserID(this.name) as string;
     });
 
     labelColor = $derived(this.getSingleProp('label.color').get() as Color);
@@ -382,7 +382,12 @@ export const widgetDefinitions: WidgetDefinition[] = [
     {
         name: 'Slider', icon: '🎚️', type: 'slider', description: 'A slider widget for selecting a value within a range', props: {
             ...getGlobalWidgetProperties('Slider'),
-            value: { name: 'Value', type: PropertyType.FLOAT, default: 0, min: 0, max: 1, step: 0 },
+            value: {
+                name: 'Value', type: PropertyType.FLOAT, default: 0,
+                min: (i, p) => i.getSingleProp('range.min').get(),
+                max: (i, p) => i.getSingleProp('range.max').get(),
+                step: (i, p) => i.getSingleProp('range.step').get()
+            },
             range: rangeContainerDefinition
         }
     },
