@@ -39,7 +39,7 @@
 	);
 
 	let canManuallyEdit = $derived(
-		!property.readOnly || !usingExpression || expressionMode === 'binding'
+		!definition.readOnly && (!usingExpression || expressionMode === 'binding')
 	);
 
 	let PropertyClass: any = $derived(
@@ -58,6 +58,7 @@
 			coalesceID: `${target.id}-property-${level}-${definition.name}`
 		});
 	}
+
 </script>
 
 {#if visible}
@@ -84,7 +85,7 @@
 						</button>
 					{/if}
 					{definition.name}
-					{#if canManuallyEdit && property.isValueOverridden()}
+					{#if !definition.readOnly && property.isValueOverridden()}
 						<button
 							class="reset-property"
 							aria-label="Reset Property"
@@ -178,6 +179,7 @@
 	}
 
 	.property-wrapper.readonly {
+		opacity: 0.6;
 		pointer-events: none;
 		touch-action: none;
 	}

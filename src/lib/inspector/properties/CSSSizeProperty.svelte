@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Slider from "$lib/components/Slider.svelte";
+
 	let {
 		expressionMode,
 		expressionResultTag,
@@ -35,6 +37,16 @@
 </script>
 
 <div class="css-size-property {expressionMode} {expressionResultTag}">
+	<Slider 
+		value={numberValue}
+		disabled={definition.readOnly}
+		onValueChange={(value: number) => {
+			numberValue = value;
+		}}
+		onStartEdit={() => onStartEdit && onStartEdit()}
+		onEndEdit={() => onUpdate && onUpdate()}
+	/>
+
 	<input
 		type="text"
 		class="value-property"
