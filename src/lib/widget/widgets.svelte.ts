@@ -137,7 +137,7 @@ export class Widget extends InspectableWithProps {
                 let child = this.children!.find(c => c.id === dataChild.id);
 
                 if (!child) {
-                    child = this.addWidget(dataChild.type, { save: false, id: dataChild.id });
+                    child = this.addWidget(dataChild.type, { select: false, save: false, id: dataChild.id });
                 }
 
                 child.applySnapshot(dataChild);
@@ -236,7 +236,6 @@ export class Widget extends InspectableWithProps {
     }
 
     select(doSelect: boolean = true, clearSelection: boolean = true, save: boolean = true) {
-
         if (this.isSelected === doSelect && !clearSelection) return;
 
         if (doSelect && clearSelection) {

@@ -76,7 +76,7 @@ export function addBoard(): Board {
 
     boards.push(newBoard);
     saveData("Add Board " + newBoard.name);//+ " (" + boards.length + ")");
-    mainState.selectedBoard = newBoard;
+    if(!mainState.loadingData) mainState.selectedBoard = newBoard;
     return newBoard;
 };
 

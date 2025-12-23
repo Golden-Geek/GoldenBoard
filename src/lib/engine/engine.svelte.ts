@@ -69,6 +69,7 @@ export const menuContext = $state({
 export const mainState = $state(
     {
         editor: defaultEditorData as EditorData,
+        loadingData: false,
         servers: [] as OSCQueryClient[],
         boards: [] as Board[],
         globalSettings: new GlobalSettings(),
@@ -79,12 +80,14 @@ export const mainState = $state(
 
 const defaultMainData = {
     editor: defaultEditorData as EditorData,
+    loadingData: false,
     servers: [],
     boards: [],
     globalSettings: null,
     selectedBoard: null,
     selectedServer: null
 }
+
 
 // -----------------------------
 // Undo/Redo (snapshot-based)
@@ -129,12 +132,14 @@ function persistSnapshotOnly() {
 
 function applySnapshot(snap: any) {
     // Assign per-field to keep the top-level reactive object stable.
-    mainState.editor = snap.editor ?? $state.snapshot(defaultMainData.editor);
+    mainState.loadingData = true;
     applyServersSnapshot(snap.servers);
     applyBoardsSnapshot(snap.boards);
     applyGlobalSettingsSnapshot(snap.globalSettings);
+    mainState.loadingData = false;
     mainState.selectedServer = getServerByID(snap.selectedServerID);
     mainState.selectedBoard = getBoardByID(snap.selectedBoardID);
+    mainState.editor = snap.editor ?? $state.snapshot(defaultMainData.editor);
 }
 
 function commitUndoPoint(label: string | null = null, coalesceID?: string) {
@@ -233,7 +238,11 @@ export function loadData() {
         applySnapshot($state.snapshot(defaultMainData));
     }
 
-    mainState.selectedBoard = mainState.boards.length > 0 ? mainState.boards[0] : null;    if (mainState.globalSettings.modeOnLoad != 'last') mainState.editor.editMode = mainState.globalSettings.modeOnLoad as EditMode;
+    if(!mainState.selectedBoard)
+    {
+        mainState.selectedBoard = mainState.boards.length > 0 ? mainState.boards[0] : null;
+    }
+    if (mainState.globalSettings.modeOnLoad != 'last') mainState.editor.editMode = mainState.globalSettings.modeOnLoad as EditMode;
 
     let persistedHistoryStr = localStorage.getItem('history');
     if (persistedHistoryStr) {
@@ -248,8 +257,7 @@ export function loadData() {
     }
 }
 
-export function getAllWidgets()
-{
+export function getAllWidgets() {
     return Object.values(widgetsMap);
 }
 
