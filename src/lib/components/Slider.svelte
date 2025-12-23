@@ -31,10 +31,9 @@
 		midZero ? (value >= 0 ? value / max : value / min) : (value - min) / (max - min)
 	);
 	let relativeZero = $derived(midZero ? Math.abs(min) / (max - min) : 0);
-	let relativeMax = $derived(1 - relativeZero);
 
 	let targetLeft = $derived(
-		!midZero ? 0 : value >= 0 ? relativeZero : relativeZero - relativeValue
+		!midZero ? 0 : value >= 0 ? relativeZero : relativeZero * (1 - relativeValue)
 	);
 
 	let targetRight = $derived(
@@ -42,11 +41,11 @@
 			(!midZero
 				? relativeValue
 				: value >= 0
-					? relativeZero + relativeValue * relativeMax
+					? relativeZero + relativeValue * (1 - relativeZero)
 					: relativeZero)
 	);
 
-	$inspect(midZero, targetLeft, targetRight);
+	$inspect(midZero, relativeValue);
 
 	function startDrag(e: MouseEvent) {
 		isDragging = true;
