@@ -8,6 +8,7 @@
 		getIcon = null,
 		getTitle,
 		getStyle = null,
+		getWarningsAndErrors = null,
 		isContainer = null,
 		highlightColor = '',
 		onSelect = null,
@@ -26,6 +27,7 @@
 			{getIcon}
 			{getTitle}
 			{getStyle}
+			{getWarningsAndErrors}
 			{isContainer}
 			{highlightColor}
 			{onSelect}

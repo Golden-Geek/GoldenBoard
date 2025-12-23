@@ -1,4 +1,4 @@
-import { PropertyContainer, PropertyType, Property, type PropertyContainerDefinition, type PropertyNode, type PropertySingleDefinition } from "./property.svelte";
+import { PropertyContainer, PropertyType, Property, type PropertyContainerDefinition, type PropertyNode, type PropertySingleDefinition, type WarningError } from "./property.svelte";
 
 export const activeUserIDs: { [key: string]: InspectableWithProps } = $state({});
 
@@ -24,8 +24,17 @@ export class InspectableWithProps {
     props: { [key: string]: PropertyNode } = $state({});
     definitions = $derived(this.getPropertyDefinitions());
     userID = $derived((this.getSingleProp('userID').get() as string));
-
     autoID = $derived(this.userID || this.getAutoID());
+
+    warningsAndErrors = $derived.by(() => {
+        let result: { property: Property, warningAndErrors: { [key: string]: WarningError } }[] = [];
+        const allProps = this.getAllSingleProps();
+        for (const prop of allProps) {
+            if(!prop.warningsAndErrors || Object.keys(prop.warningsAndErrors).length === 0) continue;
+            result.push({ property: prop, warningAndErrors: prop.warningsAndErrors });
+        }
+        return result;
+    });
 
     private _activeUserIDKey = '';
 
@@ -54,17 +63,27 @@ export class InspectableWithProps {
         }
     });
 
+
     constructor(iType: string, id?: string) {
         this.iType = iType;
         this.id = id ?? (iType + '-' + crypto.randomUUID());
 
     }
 
-    getAutoID(): string {
-        return '';
+
+    cleanup() {
+        if (this._activeUserIDKey !== '') {
+            unregisterActiveUserID(this._activeUserIDKey);
+            this._activeUserIDKey = '';
+        }
+
+        this.unloadPropsTree(this.props);
     }
 
 
+    getAutoID(): string {
+        return '';
+    }
 
     private unloadPropsTree(props: { [key: string]: PropertyNode } | undefined = this.props) {
         if (!props) return;
@@ -169,14 +188,6 @@ export class InspectableWithProps {
         this.props = this.buildPropsFromDefinitions(this.definitions || {});
     }
 
-    cleanup() {
-        if (this._activeUserIDKey !== '') {
-            unregisterActiveUserID(this._activeUserIDKey);
-            this._activeUserIDKey = '';
-        }
-
-        this.unloadPropsTree(this.props);
-    }
 
     getUserIDDefinition(): PropertySingleDefinition {
         return {
@@ -246,6 +257,19 @@ export class InspectableWithProps {
     getSingleProp(propKey: string): Property {
         const prop = this.getProp(propKey);
         return prop! as Property;
+    }
+
+    getAllSingleProps(): Property[] {
+        const result: Property[] = [];
+        for (const key of Object.keys(this.props)) {
+            const prop = this.props[key];
+            if (prop instanceof Property) {
+                result.push(prop);
+            } else if (prop instanceof PropertyContainer) {
+                result.push(...prop.getAllSingleProps());
+            }
+        }
+        return result;
     }
 
     toSnapshot(includeID: boolean = true): any {

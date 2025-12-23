@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { history, redo, undo } from '$lib/engine/engine.svelte';
+	import { activeExpressions } from '$lib/property/expression.svelte';
 	import { activeUserIDs } from '$lib/property/inspectable.svelte';
 	import { selectedWidgets, widgetsMap } from '$lib/widget/widgets.svelte';
+
+	let numExpressions = $derived(activeExpressions.length);
+	let runningExpressions = $derived(activeExpressions.filter((e) => e.mode == 'expression').length);
 </script>
 
 <div class="footer">
@@ -42,6 +46,10 @@
 	/
 	<div class="userid-info">
 		{Object.keys(activeUserIDs).length} active user IDs
+	</div>
+
+	<div class="expressions-info">
+		{numExpressions} expressions, {runningExpressions} active
 	</div>
 </div>
 
@@ -84,7 +92,14 @@
 		color: #4793d1;
 	}
 
-	.widget-info, .userid-info {
+	.widget-info,
+	.userid-info {
+		font-size: 0.7rem;
+		color: rgba(from var(--text-color) r g b / 50%);
+		padding: 0 0.5rem;
+	}
+
+	.expressions-info {
 		font-size: 0.7rem;
 		color: rgba(from var(--text-color) r g b / 50%);
 		padding: 0 0.5rem;

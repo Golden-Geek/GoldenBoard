@@ -15,7 +15,7 @@
 </script>
 
 {#key targets}
-<div class="inspector">
+<div class="inner-inspector">
 	{#if target && definitions}
 		{#each orderedDefs as [key]}
 			<div class="property-item">
@@ -35,9 +35,8 @@
 {/key}
 
 <style>
-	.inspector {
+	.inner-inspector {
 		width: 100%;
-		height: 100%;
 		font-size: 0.8rem;
 	}
 </style>

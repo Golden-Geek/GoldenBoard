@@ -3,6 +3,7 @@ import { InspectableWithProps } from "./inspectable.svelte";
 import { Expression, type ExpressionMode } from "./expression.svelte";
 
 
+
 export enum PropertyType {
     BOOLEAN = 'boolean',
     FLOAT = 'float',
@@ -58,6 +59,11 @@ export type ResolvedProperty<T> = {
     warning?: string; // If there was a non-fatal issue
 };
 
+export type WarningError = {
+    type: 'warning' | 'error';
+    message: string;
+};
+
 
 export abstract class PropertyNodeBase<TDefinition extends PropertySingleDefinition | PropertyContainerDefinition> {
     owner: InspectableWithProps | undefined;
@@ -87,15 +93,17 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
     private _value: PropertyValueType;
 
     enabled: boolean | undefined = $state(undefined);
-    expression: Expression = new Expression()
-    bindingMode = $derived(this.expression.bindingMode);
+    expression: Expression | undefined = $state(undefined);
+    bindingMode = $derived(this.expression?.bindingMode || false);
+
+    warningsAndErrors: { [key: string]: WarningError } = $state({});
 
     private _destroy: (() => void) | null = null;
 
     enableEffectDestroy = $effect.root(() => {
         $effect(() => {
             if (!this.enabled) {
-                this.expression.disable();
+                this.expression?.disable();
             }
         });
         return () => {
@@ -137,11 +145,12 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
 
     override cleanup() {
         super.cleanup();
-        this.expression.cleanup();
+        this.expression?.cleanup();
         this._destroy?.();
         this._destroy = null;
         this.enableEffectDestroy();
         this.rangeEffectDestroy();
+        this.warningsAndErrors = {};
     }
 
 
@@ -150,26 +159,45 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
     }
 
     get mode(): PropertyMode | undefined {
-        return this.expression.mode as PropertyMode | undefined;
+        return this.expression?.mode as PropertyMode | PropertyMode.VALUE;
     }
 
     set mode(value: PropertyMode | undefined) {
-        this.expression.mode = value as ExpressionMode | undefined;
-        if (value === PropertyMode.EXPRESSION) {
-            this.expression.setup();
-        } else {
-            this.expression.disable();
+
+        if (value == PropertyMode.EXPRESSION) {
+            if (this.expression === undefined) {
+                this.expression = new Expression();
+            }
+        } else if (this.expression?.text === undefined || this.expression.text.trim() === '') {
+            this.expression?.cleanup();
+            delete this.warningsAndErrors['Expression'];
+            this.expression = undefined;
+        }
+
+        if (this.expression) {
+            this.expression.mode = value as ExpressionMode | undefined;
+            if (value === PropertyMode.EXPRESSION) {
+                this.expression.setup();
+            } else {
+                delete this.warningsAndErrors['Expression'];
+                this.expression.disable(); 
+            }
         }
     }
 
     get expressionValue(): string | undefined {
-        return this.expression.text;
+        return this.expression?.text;
     }
 
     set expressionValue(value: string | undefined) {
-        this.expression.text = value;
+        if (this.expression === undefined) {
+            this.expression = new Expression();
+        }
+
+        this.expression!.text = value;
         if (this.mode === PropertyMode.EXPRESSION) {
-            this.expression.setup();
+            this.expression!.mode = PropertyMode.EXPRESSION as ExpressionMode;
+            this.expression!.setup();
         }
     }
 
@@ -210,7 +238,12 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
             return { current: raw, raw };
         }
 
-        return this.expression.evaluate<T>({
+        if (!this.expression) {
+            console.warn("Property in expression mode but has no expression?", this);
+            return { current: raw, raw, error: 'Internal error: Missing expression.' };
+        }
+
+        let result = this.expression!.evaluate<T>({
             owner: this.owner,
             selfKeyPath: this.keyPath,
             rawValue: raw,
@@ -221,6 +254,17 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
                 this.setRaw(v as any, 'binding');
             }
         });
+
+        queueMicrotask(() => {
+            let hasWarningOrError = result.error || result.warning;
+            if (!hasWarningOrError) {
+                delete this.warningsAndErrors['Expression'];
+            } else {
+                this.warningsAndErrors['Expression'] = { type: result.error ? 'error' : 'warning', message: result.error ?? result.warning ?? '' };
+            }
+        });
+
+        return result;
     }
 
     setRaw(value: PropertyValueType, source: 'local' | 'binding' = 'local') {
@@ -241,10 +285,8 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         this._value = raw;
 
         if (this.mode === PropertyMode.EXPRESSION) {
-            this.expression.onRawValueChanged(this._value, this.definition.type);
+            this.expression?.onRawValueChanged(this._value, this.definition.type);
         }
-
-
     }
 
     set(value: PropertyValueType) {
@@ -263,9 +305,9 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
             value: $state.snapshot(this._value)
         };
         if (this.enabled !== undefined) out.enabled = this.enabled;
-        const exprSnap = this.expression.toSnapshot();
-        if (exprSnap.mode !== undefined) out.mode = exprSnap.mode;
-        if (exprSnap.expression !== undefined) out.expression = exprSnap.expression;
+        const exprSnap = this.expression?.toSnapshot();
+        if (exprSnap?.mode !== undefined) out.mode = exprSnap.mode;
+        if (exprSnap?.expression !== undefined) out.expression = exprSnap.expression;
         return out;
     }
 
@@ -273,9 +315,13 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         if (!snapshot || typeof snapshot !== 'object') return;
 
         if ('enabled' in snapshot) this.enabled = snapshot.enabled;
-        this.expression.applySnapshot(snapshot);
+        if ('mode' in snapshot) {
+            this.mode = snapshot.mode;
+        }
+
+        this.expression?.applySnapshot(snapshot);
         if (this.mode === PropertyMode.EXPRESSION) {
-            this.expression.setup();
+            this.expression?.setup();
         }
 
         if ('value' in snapshot) {
@@ -286,12 +332,14 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
     resetToDefault() {
         this._value = this.coerce(this.definition.default);
         this.enabled = undefined;
-        this.expression.cleanup();
+        this.mode = PropertyMode.VALUE;
+        this.expression?.cleanup();
+        this.expression = undefined;
     }
 
     isValueOverridden(trueIfHasExpression: boolean = true): boolean {
         // special types
-        if (trueIfHasExpression && this.expression.isOverridden()) return true;
+        if (trueIfHasExpression && this.expression?.isOverridden()) return true;
 
         switch (this.definition.type) {
             case PropertyType.COLOR:
@@ -339,6 +387,22 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
 export class PropertyContainer extends PropertyNodeBase<PropertyContainerDefinition> {
     children: { [key: string]: PropertyNode };
     collapsed: boolean | undefined;
+
+    // warningsAndErrors : { warnings : [string | undefined], errors: string | undefined] = $derived.by(
+    //     () => {
+    //         let result = '';
+    //         for (const key of Object.keys(this.children)) {
+    //             const child = this.children[key];
+    //             if (child instanceof PropertyContainer) {
+    //                 let wAndE = (child as PropertyContainer).warningsAndErrors;
+    //                 if (child.warningsAndErrors[0]) result.push(child.warningsAndErrors[0]);
+    //                 if (child.warningsAndErrors[1]) result.push(child.warningsAndErrors[1]);
+    //             } else if (child instanceof Property) {
+    //                 const prop = child as Property;
+    //                 if (prop.warningsAndErrors[0]) result.push(prop.warningsAndErrors[0]);
+    //                 if (prop.warningsAndErrors[1]) result.push(prop.warningsAndErrors[1]);
+    //             } 
+
 
     constructor(
         definition: PropertyContainerDefinition,
@@ -402,6 +466,19 @@ export class PropertyContainer extends PropertyNodeBase<PropertyContainerDefinit
         for (const key of Object.keys(this.children)) {
             this.children[key]?.resetToDefault?.();
         }
+    }
+
+    getAllSingleProps(): Property[] {
+        const result: Property[] = [];
+        for (const key of Object.keys(this.children)) {
+            const child = this.children[key];
+            if ('children' in child) {
+                result.push(...(child as PropertyContainer).getAllSingleProps());
+            } else {
+                result.push(child as Property);
+            }
+        }
+        return result;
     }
 }
 

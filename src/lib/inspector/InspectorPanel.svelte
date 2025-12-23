@@ -40,6 +40,20 @@
 </script>
 
 <div class="inspector">
+	<div class="inspector-header">
+		<span class="target-id"
+			>{targets.length > 0 ? (targets.length === 1 ? targets[0].autoID : targets.length) : ''}
+			<button
+				class="copy-button"
+				title="Copy ID to Clipboard"
+				onclick={() => {
+					if (targets.length === 1) {
+						navigator.clipboard.writeText(targets[0].autoID);
+					}
+				}}>📋</button
+			>
+		</span>
+	</div>
 	<div class="menu-bar">
 		{#each Object.values(Menu) as menu}
 			<button
@@ -73,13 +87,31 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		
+	}
+
+	.inspector-header .target-id {
+		font-size: 0.7rem;
+		padding: 0.5em 0.8em;
+		border-radius: 0.5em;
+		background-color: rgba(from var(--panel-bg-color) r g b / 6%);
+		color: var(--text-color);
+	}
+
+	.inspector-header .copy-button {
+		cursor: pointer;
+		opacity: 0.5;
+		transition: opacity 0.2s ease;
+		cursor: pointer;
+	}
+
+	.inspector-header .copy-button:hover {
+		opacity: 1;
 	}
 
 	.menu-bar {
 		position: relative;
-		margin: 1em 0 0.5rem;
 		display: flex;
+		margin-top: 0.25em;
 		justify-content: space-around;
 		background-color: var(--panel-background-color);
 		border-bottom: 1px solid var(--border-color);

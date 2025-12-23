@@ -15,6 +15,7 @@
 		getTitle={(node: any) => node.sanitizedIdentifier}
 		getIcon={(node: any) => (node as Widget).icon}
 		getStyle={(node: any) => (node.userID != '' ? 'font-style: italic;' : '')}
+		getWarningsAndErrors={(node: any) => node.warningsAndErrors}
 		highlightColor={'var(--widget-color)'}
 		onSelect={(node: any, e: MouseEvent) => {
 			if (e.ctrlKey || e.metaKey) {

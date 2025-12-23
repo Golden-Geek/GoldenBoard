@@ -9,6 +9,7 @@
 		getIcon = null,
 		getTitle,
 		getStyle = null,
+		getWarningsAndErrors = null,
 		isContainer = null,
 		highlightColor = '',
 		onSelect = null,
@@ -20,6 +21,8 @@
 
 	let children: any = $derived(getChildren(node));
 	let hasChildren: any = $derived(isContainer ? isContainer(node) : children.length > 0);
+
+	let warningsAndErrors: any = $derived(getWarningsAndErrors ? getWarningsAndErrors(node) : []);
 </script>
 
 <div
@@ -64,6 +67,23 @@
 				</span>
 			{/if}
 			{getTitle(node)}
+			{#if warningsAndErrors.length > 0}
+				<span
+					class="warnings-errors"
+					title={warningsAndErrors
+						.map(({ property, warningAndErrors }) =>
+							Object.entries(warningAndErrors)
+								.map(
+									([key, issue]) =>
+										`${issue.type == 'warning' ? '⚠️' : '❌'} ${property.definition.name} > ${key} : ${issue.message}`
+								)
+								.join('\n')
+						)
+						.join('\n')}
+				>
+					⚠️
+				</span>
+			{/if}
 		</p>
 	{/if}
 	{#if isExpanded && node != null && hasChildren}
@@ -79,6 +99,7 @@
 					{getIcon}
 					{getTitle}
 					{getStyle}
+					{getWarningsAndErrors}
 					{isContainer}
 					{highlightColor}
 					{onSelect}

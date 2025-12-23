@@ -12,6 +12,8 @@ export type ExpressionResult<T> = {
     binding?: boolean;
 };
 
+export const activeExpressions = $state([] as Expression[]);
+
 /**
  * Expression encapsulates expression text, mode, compilation and evaluation.
  *
@@ -69,6 +71,7 @@ export class Expression {
     private _pendingRewrites: Array<{ kind: 'prop' | 'osc'; fromKey: string; fromRaw: string; to: string }> = [];
 
     constructor() {
+        activeExpressions.push(this);
     }
 
     cleanup() {
@@ -86,6 +89,8 @@ export class Expression {
         this._linkedTokenById.clear();
         this._pendingRewrites = [];
         this._rewriteQueued = false;
+
+        activeExpressions.splice(activeExpressions.indexOf(this), 1);
     }
 
     disable() {

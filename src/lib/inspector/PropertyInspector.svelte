@@ -19,11 +19,15 @@
 	let canDisable = $derived(definition.canDisable ?? false);
 	let enabled = $derived(canDisable ? (property.enabled ?? false) : true);
 	let visible = $derived(
-		definition?.visible instanceof Function ? definition.visible(target) : (definition?.visible ?? true)
+		definition?.visible instanceof Function
+			? definition.visible(target)
+			: (definition?.visible ?? true)
 	);
 
 	//Expression
-	let usingExpression = $derived(property.mode == PropertyMode.EXPRESSION);
+	let usingExpression = $derived(
+		property.mode == PropertyMode.EXPRESSION && property.expression != undefined
+	);
 
 	let resolvedValue = $derived(usingExpression ? (property as Property).getResolved() : null);
 	let expressionResultTag = $derived(
@@ -124,7 +128,7 @@
 				>
 			</div>
 
-			{#if property.mode == PropertyMode.EXPRESSION && (property?.enabled || !canDisable)}
+			{#if property.mode == PropertyMode.EXPRESSION && property.expression && (property?.enabled || !canDisable)}
 				<div class="property-expression" transition:slide={{ duration: 200 }}>
 					<ExpressionEditor
 						{targets}
