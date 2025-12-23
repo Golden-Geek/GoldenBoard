@@ -158,6 +158,14 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         return this.getResolved<T>(defaultValue).current;
     }
 
+    get value(): PropertyValueType {
+        return (this.getRaw(this.definition.default) as PropertyValueType) ?? (this.definition.default as any);
+    }
+
+    set value(v: PropertyValueType) {
+        this.setRaw(v);
+    }
+
     getRaw(defaultValue: any = null): PropertyValueType | null {
         const def = this.definition;
         const canDisable = !!def.canDisable;

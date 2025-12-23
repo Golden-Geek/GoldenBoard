@@ -2,6 +2,10 @@ import { PropertyContainer, PropertyType, Property, type PropertyContainerDefini
 
 export const activeUserIDs: { [key: string]: InspectableWithProps } = $state({});
 
+// Maps (old) sanitized userID/autoID strings -> stable InspectableWithProps.id.
+// Used for recovering expressions after renames.
+export const inspectableIdAliases: { [key: string]: string } = $state({});
+
 function registerActiveUserID(userID: string, obj: InspectableWithProps) {
     if (userID == '') return;
     activeUserIDs[userID] = obj;
@@ -10,6 +14,20 @@ function registerActiveUserID(userID: string, obj: InspectableWithProps) {
 function unregisterActiveUserID(userID: string) {
     if (userID == '') return;
     delete activeUserIDs[userID];
+}
+
+function registerInspectableAlias(oldKey: string, obj: InspectableWithProps) {
+    const key = sanitizeUserID(oldKey);
+    if (key === '') return;
+    inspectableIdAliases[key] = obj.id;
+}
+
+function unregisterInspectableAlias(oldKey: string, obj: InspectableWithProps) {
+    const key = sanitizeUserID(oldKey);
+    if (key === '') return;
+    if (inspectableIdAliases[key] === obj.id) {
+        delete inspectableIdAliases[key];
+    }
 }
 
 export function sanitizeUserID(userID: string): string {
@@ -29,9 +47,18 @@ export class InspectableWithProps {
 
     private _activeUserIDKey = '';
 
+    private _lastAutoIDKey = '';
+    private _ownedAliasKeys: string[] = [];
+
     userIDDestroy = $effect.root(() => {
         $effect(() => {
             if (this.userID === this._activeUserIDKey) return;
+
+            // Record alias from old userID -> stable id so expressions can recover.
+            if (this._activeUserIDKey !== '' && this.userID !== '' && this._activeUserIDKey !== this.userID) {
+                registerInspectableAlias(this._activeUserIDKey, this);
+                this._ownedAliasKeys.push(this._activeUserIDKey);
+            }
 
             if (this._activeUserIDKey !== '') {
                 unregisterActiveUserID(this._activeUserIDKey);
@@ -52,6 +79,25 @@ export class InspectableWithProps {
                 this._activeUserIDKey = '';
             };
         }
+    });
+
+    autoIDDestroy = $effect.root(() => {
+        $effect(() => {
+            const current = this.autoID;
+            if (current === this._lastAutoIDKey) return;
+
+            // Record alias from old autoID -> stable id so expressions can recover.
+            if (this._lastAutoIDKey !== '' && current !== '' && this._lastAutoIDKey !== current) {
+                registerInspectableAlias(this._lastAutoIDKey, this);
+                this._ownedAliasKeys.push(this._lastAutoIDKey);
+            }
+
+            this._lastAutoIDKey = current;
+        });
+
+        return () => {
+            // no-op; cleanup() handles alias removal
+        };
     });
 
     constructor(iType: string, id?: string) {
@@ -174,6 +220,11 @@ export class InspectableWithProps {
             unregisterActiveUserID(this._activeUserIDKey);
             this._activeUserIDKey = '';
         }
+
+        for (const oldKey of this._ownedAliasKeys) {
+            unregisterInspectableAlias(oldKey, this);
+        }
+        this._ownedAliasKeys = [];
 
         this.unloadPropsTree(this.props);
     }

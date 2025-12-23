@@ -56,7 +56,17 @@ export class Expression {
         coerce?: ((value: unknown) => unknown) | undefined;
     } | null = null;
 
-    private _oscSyncToken = 0;
+    private _oscSyncQueued = false;
+    private _oscSyncPending: Map<string, 'osc' | 'binding'> | null = null;
+
+    // Self-healing links for userID/autoID changes.
+    // We learn links while expressions evaluate successfully, and use them to recover
+    // when a previously-valid token stops resolving.
+    private _linkedIdByToken: Map<string, string> = new Map();
+    private _linkedTokenById: Map<string, string> = new Map();
+
+    private _rewriteQueued = false;
+    private _pendingRewrites: Array<{ kind: 'prop' | 'osc'; fromKey: string; fromRaw: string; to: string }> = [];
 
     constructor() {
     }
@@ -71,19 +81,128 @@ export class Expression {
         this._setupError = null;
 
         this.clearOscListeners();
+
+        this._linkedIdByToken.clear();
+        this._linkedTokenById.clear();
+        this._pendingRewrites = [];
+        this._rewriteQueued = false;
     }
 
     disable() {
         this.clearOscListeners();
     }
 
-    private parseOscPath(path: string): { selector: 'default' | 'user'; userID: string | null; address: string } {
+    private escapeRegExp(s: string): string {
+        return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    private tokenKey(kind: 'prop' | 'osc', token: string): string {
+        return `${kind}|${sanitizeUserID(token)}`;
+    }
+
+    private linkInspectable(kind: 'prop' | 'osc', token: string, inspectable: any) {
+        if (!inspectable || typeof inspectable !== 'object') return;
+        const id = String((inspectable as any).id ?? '');
+        if (!id) return;
+
+        const key = this.tokenKey(kind, token);
+        const tokenSan = key.split('|', 2)[1] ?? '';
+        if (!tokenSan) return;
+
+        // Maintain both directions. One inspectable per kind maps to the latest token we saw.
+        const idKey = `${kind}|${id}`;
+        this._linkedIdByToken.set(key, id);
+        this._linkedTokenById.set(idKey, tokenSan);
+    }
+
+    private preferredToken(inspectable: any): string {
+        const userID = sanitizeUserID(String((inspectable as any).userID ?? ''));
+        if (userID) return userID;
+        const autoID = sanitizeUserID(String((inspectable as any).autoID ?? ''));
+        return autoID;
+    }
+
+    private findInspectableById(id: string): any | null {
+        if (!id) return null;
+        const srv = mainState.servers.find((s: any) => (s as any).id === id);
+        if (srv) return srv;
+        const brd = mainState.boards.find((b: any) => (b as any).id === id);
+        if (brd) return brd;
+        const allWidgets = getAllWidgets();
+        for (const w of allWidgets) {
+            if ((w as any).id === id) return w;
+        }
+        return null;
+    }
+
+    private requestExpressionRewrite(kind: 'prop' | 'osc', fromTokenRaw: string, toTokenRaw: string) {
+        const fromKey = sanitizeUserID(fromTokenRaw);
+        const to = sanitizeUserID(toTokenRaw);
+        const fromRaw = String(fromTokenRaw ?? '').trim();
+        if (!fromKey || !to || !fromRaw) return;
+
+        // Coalesce: keep newest target per (kind, fromKey).
+        let existing: { kind: 'prop' | 'osc'; fromKey: string; fromRaw: string; to: string } | null = null;
+        for (let i = this._pendingRewrites.length - 1; i >= 0; i--) {
+            const r = this._pendingRewrites[i];
+            if (r.kind === kind && r.fromKey === fromKey) {
+                existing = r;
+                break;
+            }
+        }
+        if (existing) {
+            existing.to = to;
+            existing.fromRaw = fromRaw;
+        } else {
+            this._pendingRewrites.push({ kind, fromKey, fromRaw, to });
+        }
+
+        if (this._rewriteQueued) return;
+        this._rewriteQueued = true;
+
+        queueMicrotask(() => {
+            this._rewriteQueued = false;
+            if (!this.text || this.mode !== 'expression') {
+                this._pendingRewrites = [];
+                return;
+            }
+
+            let nextText = this.text;
+            for (const r of this._pendingRewrites) {
+                const fromEsc = this.escapeRegExp(r.fromRaw);
+                if (r.kind === 'prop') {
+                    const rx = new RegExp("\\bprop\\s*\\(\\s*(['\"`])" + fromEsc + ":", 'g');
+                    nextText = nextText.replace(rx, 'prop($1' + r.to + ':');
+                } else {
+                    const rx = new RegExp("\\b(osc|bind)\\s*\\(\\s*(['\"`])" + fromEsc + ":\\/", 'g');
+                    nextText = nextText.replace(rx, '$1($2' + r.to + ':/');
+                }
+            }
+
+            this._pendingRewrites = [];
+            if (nextText !== this.text) {
+                this.text = nextText;
+                // Force recompile next evaluation.
+                this._setupFor = null;
+                this._compiledFor = null;
+            }
+        });
+    }
+
+    private parseOscPath(path: string): {
+        selector: 'default' | 'user';
+        userID: string | null;
+        rawUserID: string | null;
+        address: string;
+    } {
+        let rawServerID: string | null = null;
         let serverID = '';
         let address = path.trim();
 
         // Support: osc('server:/path/to/node')
         const match = /^([^:]+):(\/.*)$/.exec(address);
         if (match) {
+            rawServerID = match[1];
             serverID = sanitizeUserID(match[1]);
             address = match[2];
         }
@@ -93,23 +212,51 @@ export class Expression {
         }
 
         if (serverID) {
-            return { selector: 'user', userID: serverID, address };
+            return { selector: 'user', userID: serverID, rawUserID: rawServerID, address };
         }
-        return { selector: 'default', userID: null, address };
+        return { selector: 'default', userID: null, rawUserID: null, address };
     }
 
     private oscKey(dep: { selector: 'default' | 'user'; userID: string | null; address: string }): string {
         return dep.selector === 'default' ? `default|${dep.address}` : `user:${dep.userID}|${dep.address}`;
     }
 
-    private resolveOscServer(dep: { selector: 'default' | 'user'; userID: string | null }): any | null {
+    private resolveOscServer(dep: { selector: 'default' | 'user'; userID: string | null; rawUserID?: string | null }): any | null {
         if (dep.selector === 'user') {
             if (!dep.userID) return null;
-            let server = (activeUserIDs as any)[dep.userID];
+            const token = dep.userID;
+            const rawToken = dep.rawUserID ?? dep.userID;
+            let server = (activeUserIDs as any)[token];
             if (!server) {
-                server = mainState.servers.find((s: any) => s.autoID === dep.userID) ?? null;
+                server = mainState.servers.find((s: any) => sanitizeUserID((s as any).autoID ?? '') === token) ?? null;
             }
-            return server;
+
+            if (server) {
+                this.linkInspectable('osc', token, server);
+
+                // Converge expression to the current canonical token.
+                const preferred = this.preferredToken(server);
+                if (preferred && sanitizeUserID(rawToken) !== preferred) {
+                    this.requestExpressionRewrite('osc', rawToken, preferred);
+                }
+                return server;
+            }
+
+            // Recovery: if token no longer resolves, fall back through our learned id link.
+            const linkedId = this._linkedIdByToken.get(this.tokenKey('osc', token));
+            if (linkedId) {
+                const recovered = this.findInspectableById(linkedId);
+                if (recovered) {
+                    const nextToken = this.preferredToken(recovered);
+                    if (nextToken) {
+                        this.linkInspectable('osc', nextToken, recovered);
+                        this.requestExpressionRewrite('osc', rawToken, nextToken);
+                    }
+                    return recovered;
+                }
+            }
+
+            return null;
         }
         return mainState.servers.at(0) ?? null;
     }
@@ -390,11 +537,15 @@ export class Expression {
         // OSCQueryClient.addNodeListener/removeNodeListener mutates $state (listeners arrays)
         // which is forbidden during derived/template evaluation (state_unsafe_mutation).
         // Defer add/remove operations to a microtask.
-        const snapshot = new Map(desiredTags);
-        const token = ++this._oscSyncToken;
+        this._oscSyncPending = new Map(desiredTags);
+        if (this._oscSyncQueued) return;
+        this._oscSyncQueued = true;
         queueMicrotask(() => {
-            if (token !== this._oscSyncToken) return;
-            this.syncOscListeners(snapshot);
+            this._oscSyncQueued = false;
+            const pending = this._oscSyncPending;
+            this._oscSyncPending = null;
+            if (!pending) return;
+            this.syncOscListeners(pending);
         });
     }
 
@@ -414,26 +565,58 @@ export class Expression {
             let target: InspectableWithProps | undefined = args.owner;
             let tKey = key;
             if (keySplit.length > 1) {
-                const targetId = keySplit[0];
-                target = targetId === 'this' || targetId === '' ? args.owner : activeUserIDs[targetId];
+                const rawToken = keySplit[0];
+                const token = sanitizeUserID(rawToken);
+
+                if (rawToken === 'this' || rawToken === '') {
+                    target = args.owner;
+                } else {
+                    // Primary: userID registry
+                    target = (activeUserIDs as any)[token] as any;
+
+                    // Secondary: widget autoID scan
+                    if (!target) {
+                        const allWidgets = getAllWidgets();
+                        for (const w of allWidgets) {
+                            if (sanitizeUserID((w as any).autoID ?? '') === token) {
+                                target = w as any;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Recovery: fall back through learned token->id link, then rewrite expression.
+                    if (!target) {
+                        const linkedId = this._linkedIdByToken.get(this.tokenKey('prop', token));
+                        if (linkedId) {
+                            const recovered = this.findInspectableById(linkedId);
+                            if (recovered) {
+                                const nextToken = this.preferredToken(recovered);
+                                if (nextToken) {
+                                    this.linkInspectable('prop', nextToken, recovered);
+                                    this.requestExpressionRewrite('prop', token, nextToken);
+                                }
+                                target = recovered as any;
+                            }
+                        }
+                    }
+
+                    if (target) {
+                        this.linkInspectable('prop', token, target);
+
+                        // Converge expression to the current canonical token (so reloads keep working).
+                        const preferred = this.preferredToken(target);
+                        if (preferred && token !== preferred) {
+                            this.requestExpressionRewrite('prop', rawToken, preferred);
+                        }
+                    }
+                }
                 tKey = keySplit[1];
             }
 
 
             if (!target) {
-
-                const allWidgets = getAllWidgets();
-                for (const w of allWidgets) {
-                    console.log(`Checking widget ${w.autoID} against targetId ${keySplit[0]}`);
-                    if (w?.autoID === keySplit[0]) {
-                        target = w;
-                        break;
-                    }
-                }
-
-                if (!target) {
-                    throw new Error(`Target '${keySplit[0]}' not found for prop('${key}').`);
-                }
+                throw new Error(`Target '${keySplit[0]}' not found for prop('${key}').`);
             }
 
             // prevent obvious circular references
