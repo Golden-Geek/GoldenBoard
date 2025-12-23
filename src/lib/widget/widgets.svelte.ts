@@ -351,13 +351,13 @@ function getGlobalWidgetProperties(name: string): { [key: string]: (PropertySing
             }
         },
         position: {
-            name: 'Position', color: '#1a73e8ff', collapsedByDefault: true, children: {
-                left: { name: 'Left', type: PropertyType.CSSSIZE, default: 0, canDisable: true },
-                top: { name: 'Top', type: PropertyType.CSSSIZE, default: 0, canDisable: true },
-                right: { name: 'Right', type: PropertyType.CSSSIZE, default: 0, canDisable: true },
-                bottom: { name: 'Bottom', type: PropertyType.CSSSIZE, default: 0, canDisable: true },
+            name: 'Position', color: '#1a73e8ff', collapsedByDefault: true, visible: (i, p) => !i.isRoot, children: {
+                left: { name: 'Left', type: PropertyType.CSSSIZE, default: 0, canDisable: true, visible: (i, p) => i.parent?.getSingleProp('layout').get() == 'free' || false },
+                top: { name: 'Top', type: PropertyType.CSSSIZE, default: 0, canDisable: true, visible: (i, p) => i.parent?.getSingleProp('layout').get() == 'free' || false },
+                right: { name: 'Right', type: PropertyType.CSSSIZE, default: 0, canDisable: true, visible: (i, p) => i.parent?.getSingleProp('layout').get() == 'free' || false },
+                bottom: { name: 'Bottom', type: PropertyType.CSSSIZE, default: 0, canDisable: true, visible: (i, p) => i.parent?.getSingleProp('layout').get() == 'free' || false },
                 width: { name: 'Width', type: PropertyType.CSSSIZE, default: 100, canDisable: true },
-                height: { name: 'Height', type: PropertyType.CSSSIZE, default: 100, canDisable: true },
+                height: { name: 'Height', type: PropertyType.CSSSIZE, default: 20, canDisable: true },
             }
         }
     }

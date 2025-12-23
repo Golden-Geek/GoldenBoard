@@ -18,6 +18,9 @@
 	let isContainer = $derived(definition.children != null);
 	let canDisable = $derived(definition.canDisable ?? false);
 	let enabled = $derived(canDisable ? (property.enabled ?? false) : true);
+	let visible = $derived(
+		definition?.visible instanceof Function ? definition.visible(target) : (definition?.visible ?? true)
+	);
 
 	//Expression
 	let usingExpression = $derived(property.mode == PropertyMode.EXPRESSION);
@@ -53,87 +56,89 @@
 	}
 </script>
 
-<div
-	class="property-inspector {isContainer ? 'container' : 'single'} {'level-' + level} {enabled
-		? ''
-		: 'disabled'}
+{#if visible}
+	<div
+		class="property-inspector {isContainer ? 'container' : 'single'} {'level-' + level} {enabled
+			? ''
+			: 'disabled'}
 		{definition.readOnly ? 'readonly' : ''}"
->
-	{#if isContainer}
-		<PropertyContainerInspector {targets} bind:property {propKey} {definition} {level} />
-	{:else if target != null && property != null}
-		<div class="firstline">
-			<div class="property-label {expressionResultTag}">
-				{#if canDisable}
-					<button
-						class="enable-property"
-						onclick={() => {
-							property.enabled = !enabled ? true : undefined;
-							checkAndSaveProperty(true);
-						}}
-					>
-						{enabled ? '🟢' : '⚪'}
-					</button>
-				{/if}
-				{definition.name}
-				{#if canManuallyEdit && property.isValueOverridden()}
-					<button
-						class="reset-property"
-						aria-label="Reset Property"
-						onclick={() => {
-							property.resetToDefault();
-							saveData('Reset Property', {
-								coalesceID: `${target.id}-property-${level}-${definition.name}-reset`
-							});
-						}}
-						transition:fade={{ duration: 200 }}
-					>
-						⟲
-					</button>
-				{/if}
+	>
+		{#if isContainer}
+			<PropertyContainerInspector {targets} bind:property {propKey} {definition} {level} />
+		{:else if target != null && property != null}
+			<div class="firstline">
+				<div class="property-label {expressionResultTag}">
+					{#if canDisable}
+						<button
+							class="enable-property"
+							onclick={() => {
+								property.enabled = !enabled ? true : undefined;
+								checkAndSaveProperty(true);
+							}}
+						>
+							{enabled ? '🟢' : '⚪'}
+						</button>
+					{/if}
+					{definition.name}
+					{#if canManuallyEdit && property.isValueOverridden()}
+						<button
+							class="reset-property"
+							aria-label="Reset Property"
+							onclick={() => {
+								property.resetToDefault();
+								saveData('Reset Property', {
+									coalesceID: `${target.id}-property-${level}-${definition.name}-reset`
+								});
+							}}
+							transition:fade={{ duration: 200 }}
+						>
+							⟲
+						</button>
+					{/if}
+				</div>
+
+				<div class="spacer"></div>
+				<div class="property-wrapper {expressionMode} {canManuallyEdit ? '' : 'readonly'}">
+					<PropertyClass
+						{targets}
+						bind:property
+						onStartEdit={() => (valueOnFocus = property.getRaw())}
+						onUpdate={() => checkAndSaveProperty()}
+						{definition}
+						{propKey}
+						{expressionMode}
+						{expressionResultTag}
+					/>
+				</div>
+
+				<button
+					class="expression-toggle {expressionMode}"
+					disabled={definition.readOnly}
+					onclick={() => {
+						property.mode =
+							property.mode == PropertyMode.EXPRESSION ? undefined : PropertyMode.EXPRESSION;
+						saveData('Set Property Mode', {
+							coalesceID: `${target.id}-property-${level}-${definition.name}-mode`
+						});
+					}}>ƒ</button
+				>
 			</div>
 
-			<div class="spacer"></div>
-			<div class="property-wrapper {expressionMode} {canManuallyEdit ? '' : 'readonly'}">
-				<PropertyClass
-					{targets}
-					bind:property
-					onStartEdit={() => (valueOnFocus = property.getRaw())}
-					onUpdate={() => checkAndSaveProperty()}
-					{definition}
-					{propKey}
-					{expressionMode}
-					{expressionResultTag}
-				/>
-			</div>
-
-			<button
-				class="expression-toggle {expressionMode}"
-				disabled={definition.readOnly}
-				onclick={() => {
-					property.mode =
-						property.mode == PropertyMode.EXPRESSION ? undefined : PropertyMode.EXPRESSION;
-					saveData('Set Property Mode', {
-						coalesceID: `${target.id}-property-${level}-${definition.name}-mode`
-					});
-				}}>ƒ</button
-			>
-		</div>
-
-		{#if property.mode == PropertyMode.EXPRESSION && (property?.enabled || !canDisable)}
-			<div class="property-expression" transition:slide={{ duration: 200 }}>
-				<ExpressionEditor
-					{targets}
-					bind:property
-					{definition}
-					onUpdate={() => checkAndSaveProperty(true)}
-				></ExpressionEditor>
-			</div>
+			{#if property.mode == PropertyMode.EXPRESSION && (property?.enabled || !canDisable)}
+				<div class="property-expression" transition:slide={{ duration: 200 }}>
+					<ExpressionEditor
+						{targets}
+						bind:property
+						{definition}
+						onUpdate={() => checkAndSaveProperty(true)}
+					></ExpressionEditor>
+				</div>
+			{/if}
+		{:else}
+			{definition.type} - {target} - {property}
 		{/if}
-	{:else}
-		{definition.type} - {target} - {property}
-	{/if}
-</div>
+	</div>
+{/if}
 
 <style>
 	.property-inspector.level-0 {
@@ -223,7 +228,6 @@
 		opacity: 0.5;
 		transition: opacity 0.1s;
 	}
-
 
 	.expression-toggle:hover {
 		opacity: 1;

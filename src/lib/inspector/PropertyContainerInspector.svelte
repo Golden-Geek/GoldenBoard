@@ -8,47 +8,55 @@
 
 	let collapsed = $derived(property.collapsed ?? definition.collapsedByDefault ?? false);
 	let color = $derived(definition.color || 'var(--border-color)');
+
+	let visible = $derived(
+		definition?.visible instanceof Function
+			? definition.visible(target)
+			: (definition?.visible ?? true)
+	);
 </script>
 
-<div class="property-container" style="--container-color: {color}">
-	<div class="property-container-header" tabindex="0">
-		<span
-			class="title-text"
-			onclick={() => {
-				property.collapsed =
-					!collapsed != (definition.collapsedByDefault ?? false) ? !collapsed : undefined;
-				saveData('Collapse Container', {
-					coalesceID: `${target.id}-property-${level}-${definition.name}-collapse`
-				});
-			}}
-			role="switch"
-			aria-checked={!collapsed}
-		>
-			<span class="arrow {collapsed ? '' : 'expanded'}"></span>
-			{definition.name || 'Container'}
-		</span>
-	</div>
+{#if visible}
+	<div class="property-container" style="--container-color: {color}">
+		<div class="property-container-header" tabindex="0">
+			<span
+				class="title-text"
+				onclick={() => {
+					property.collapsed =
+						!collapsed != (definition.collapsedByDefault ?? false) ? !collapsed : undefined;
+					saveData('Collapse Container', {
+						coalesceID: `${target.id}-property-${level}-${definition.name}-collapse`
+					});
+				}}
+				role="switch"
+				aria-checked={!collapsed}
+			>
+				<span class="arrow {collapsed ? '' : 'expanded'}"></span>
+				{definition.name || 'Container'}
+			</span>
+		</div>
 
-	<div class="property-container-content">
-		{#if !collapsed}
-			<div class="property-container-children" transition:slide|local={{ duration: 200 }}>
-				{#if property && definition.children}
-					{#each Object.entries(definition.children) as [key, childDefinition]}
-						<PropertyInspector
-							{targets}
-							bind:property={property.children[key]}
-							definition={childDefinition}
-							level={level + 1}
-							propKey={propKey + '.' + key}
-						></PropertyInspector>
-					{/each}
-				{:else}
-					<p>No child properties to display.</p>
-				{/if}
-			</div>
-		{/if}
+		<div class="property-container-content">
+			{#if !collapsed}
+				<div class="property-container-children" transition:slide|local={{ duration: 200 }}>
+					{#if property && definition.children}
+						{#each Object.entries(definition.children) as [key, childDefinition]}
+							<PropertyInspector
+								{targets}
+								bind:property={property.children[key]}
+								definition={childDefinition}
+								level={level + 1}
+								propKey={propKey + '.' + key}
+							></PropertyInspector>
+						{/each}
+					{:else}
+						<p>No child properties to display.</p>
+					{/if}
+				</div>
+			{/if}
+		</div>
 	</div>
-</div>
+{/if}
 
 <style>
 	.property-container {
