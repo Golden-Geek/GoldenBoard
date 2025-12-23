@@ -14,6 +14,7 @@
 	);
 </script>
 
+{#key targets}
 <div class="inspector">
 	{#if target && definitions}
 		{#each orderedDefs as [key]}
@@ -31,6 +32,7 @@
 		<p>Select something to edit here</p>
 	{/if}
 </div>
+{/key}
 
 <style>
 	.inspector {
