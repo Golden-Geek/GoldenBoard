@@ -366,7 +366,7 @@ function getGlobalWidgetProperties(name: string): { [key: string]: (PropertySing
 const rangeContainerDefinition: PropertyContainerDefinition = {
     name: 'Range', collapsedByDefault: true, children: {
         min: { name: 'Min', type: PropertyType.FLOAT, default: 0, canDisable: true },
-        max: { name: 'Max', type: PropertyType.FLOAT, default: 1, canDisable: true },
+        max: { name: 'Max', type: PropertyType.FLOAT, default: 1, canDisable: true, min: (i, p) => i.getSingleProp('range.min').get() + 0.00001 },
         step: { name: 'Step', type: PropertyType.FLOAT, default: 0, canDisable: true },
     }
 };

@@ -42,8 +42,8 @@ export type PropertySingleDefinition = {
     description?: string;
     options?: { [key: string]: string }; // For ENUM type
     visible?: boolean | ((inspectable: any, property: Property) => boolean); // Whether the property is visible in the UI
-    min?: number | ((inspectable: any, property: Property) => number); 
-    max?: number | ((inspectable: any, property: Property) => number); 
+    min?: number | ((inspectable: any, property: Property) => number);
+    max?: number | ((inspectable: any, property: Property) => number);
     step?: number | ((inspectable: any, property: Property) => number);
     filterFunction?: (value: any) => any; // Function to filter/validate the value
 };
@@ -83,14 +83,16 @@ export abstract class PropertyNodeBase<TDefinition extends PropertySingleDefinit
 
 
 export class Property extends PropertyNodeBase<PropertySingleDefinition> {
-    _value: PropertyValueType;
+
+    private _value: PropertyValueType;
+
     enabled: boolean | undefined = $state(undefined);
     expression: Expression = new Expression()
     bindingMode = $derived(this.expression.bindingMode);
 
     private _destroy: (() => void) | null = null;
 
-    enableDestroy = $effect.root(() => {
+    enableEffectDestroy = $effect.root(() => {
         $effect(() => {
             if (!this.enabled) {
                 this.expression.disable();
@@ -100,6 +102,21 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
 
         };
     });
+
+    rangeEffectDestroy = $effect.root(() => {
+        $effect(() => {
+            if (this.definition.min || this.definition.max) {
+                let min = this.definition.min instanceof Function ? this.definition.min(this.owner, this) : this.definition.min;
+                let max = this.definition.max instanceof Function ? this.definition.max(this.owner, this) : this.definition.max;
+                let ranged = Math.min(Math.max(this.getRaw() as number, min ?? -Infinity), max ?? Infinity);
+                this.set(ranged);
+            }
+            return () => {
+
+            };
+        });
+    });
+
 
     constructor(definition: PropertySingleDefinition, owner?: InspectableWithProps, keyPath?: string) {
         super(definition, owner, keyPath);
@@ -123,7 +140,8 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         this.expression.cleanup();
         this._destroy?.();
         this._destroy = null;
-        this.enableDestroy();
+        this.enableEffectDestroy();
+        this.rangeEffectDestroy();
     }
 
 
@@ -206,10 +224,27 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
     }
 
     setRaw(value: PropertyValueType, source: 'local' | 'binding' = 'local') {
-        this._value = value;
+
+        const coerced = this.coerce(value);
+        let raw = this.definition.filterFunction
+            ? this.definition.filterFunction(coerced)
+            : coerced;
+
+        if (this.definition.min || this.definition.max) {
+            let min = this.definition.min instanceof Function ? this.definition.min(this.owner, this) : this.definition.min;
+            let max = this.definition.max instanceof Function ? this.definition.max(this.owner, this) : this.definition.max;
+            if (typeof raw === 'number') {
+                raw = Math.min(Math.max(raw, min ?? -Infinity), max ?? Infinity);
+            }
+        }
+
+        this._value = raw;
+
         if (this.mode === PropertyMode.EXPRESSION) {
             this.expression.onRawValueChanged(this._value, this.definition.type);
         }
+
+
     }
 
     set(value: PropertyValueType) {
@@ -244,10 +279,7 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
         }
 
         if ('value' in snapshot) {
-            const raw = this.definition.filterFunction
-                ? this.definition.filterFunction(snapshot.value)
-                : snapshot.value;
-            this._value = this.coerce(raw);
+            this.set(this.coerce(snapshot.value));
         }
     }
 

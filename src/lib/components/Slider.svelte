@@ -14,7 +14,6 @@
 		fgColor = 'var(--slider-fg)'
 	} = $props();
 
-	$inspect(min, max);
 	let infiniteMode = $derived(min === undefined || max === undefined);
 	let sliderDiv = $state(null as HTMLDivElement | null);
 	let sliderWidth = $derived(infiniteMode ? 100 : sliderDiv!.getBoundingClientRect().width);
@@ -44,8 +43,6 @@
 					? relativeZero + relativeValue * (1 - relativeZero)
 					: relativeZero)
 	);
-
-	$inspect(midZero, relativeValue);
 
 	function startDrag(e: MouseEvent) {
 		isDragging = true;
