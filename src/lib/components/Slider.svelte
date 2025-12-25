@@ -1,8 +1,8 @@
 <script lang="ts">
 	let {
 		value = $bindable(),
-		min,
-		max,
+		min = undefined,
+		max= undefined,
 		step = 0,
 		sensitivity = 1,
 		orientation = 'horizontal',

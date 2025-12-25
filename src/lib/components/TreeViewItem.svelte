@@ -68,12 +68,12 @@
 			{#if warningsAndErrors.length > 0}
 				<span
 					class="warnings-errors"
-					title={warningsAndErrors
+					title={(warningsAndErrors as Array<any>)
 						.map(({ property, warningAndErrors }) =>
 							Object.entries(warningAndErrors)
 								.map(
 									([key, issue]) =>
-										`${issue.type == 'warning' ? '⚠️' : '❌'} ${property.definition.name} > ${key} : ${issue.message}`
+										`${(issue as { type: string; message: string }).type == 'warning' ? '⚠️' : '❌'} ${property.definition.name} > ${key} : ${(issue as { type: string; message: string }).message}`
 								)
 								.join('\n')
 						)
