@@ -85,6 +85,28 @@ export class InspectableWithProps {
         return '';
     }
 
+    /**
+     * Optional parent relationship for relative expression lookups.
+     * Subclasses should override when they have a meaningful hierarchy.
+     */
+    getParent(): InspectableWithProps | null {
+        return null;
+    }
+
+    /**
+     * Walk up the parent chain by `levelsUp` steps.
+     * Returns null if the chain ends before reaching the requested ancestor.
+     */
+    getAncestor(levelsUp: number): InspectableWithProps | null {
+        if (!Number.isFinite(levelsUp) || levelsUp <= 0) return this;
+        let current: InspectableWithProps | null = this;
+        for (let i = 0; i < levelsUp; i++) {
+            current = current?.getParent?.() ?? null;
+            if (!current) return null;
+        }
+        return current;
+    }
+
     private unloadPropsTree(props: { [key: string]: PropertyNode } | undefined = this.props) {
         if (!props) return;
         for (const key of Object.keys(props)) {

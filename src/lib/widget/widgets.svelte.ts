@@ -55,6 +55,10 @@ export class Widget extends InspectableWithProps {
         registerWidget(this);
     }
 
+    override getParent(): InspectableWithProps | null {
+        return this.parent;
+    }
+
     cleanup() {
         super.cleanup();
         selectedWidgets.splice(selectedWidgets.indexOf(this), 1);
