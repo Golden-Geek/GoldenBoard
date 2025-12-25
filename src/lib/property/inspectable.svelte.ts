@@ -30,7 +30,7 @@ export class InspectableWithProps {
         let result: { property: Property, warningAndErrors: { [key: string]: WarningError } }[] = [];
         const allProps = this.getAllSingleProps();
         for (const prop of allProps) {
-            if(!prop.warningsAndErrors || Object.keys(prop.warningsAndErrors).length === 0) continue;
+            if (!prop.warningsAndErrors || Object.keys(prop.warningsAndErrors).length === 0) continue;
             result.push({ property: prop, warningAndErrors: prop.warningsAndErrors });
         }
         return result;
@@ -223,9 +223,13 @@ export class InspectableWithProps {
         }
     }
 
-    getPropertyDefinitions(): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } | null {
-        return {
+    getPropertyDefinitions(beforeOrAfter?: 'before' | 'after' | undefined): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } | null {
+        let beforeDefs: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {
             userID: this.getUserIDDefinition(),
+        };
+        if (beforeOrAfter === 'before') return beforeDefs;
+        let afterDefs: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {
+
             custom: {
                 name: 'Custom',
                 collapsedByDefault: true,
@@ -245,6 +249,9 @@ export class InspectableWithProps {
                 }
             } as PropertyContainerDefinition
         };
+
+        if (beforeOrAfter === 'after') return afterDefs;
+        return { ...beforeDefs, ...afterDefs };
     }
 
     getDefinitionForProp(propKey: string): PropertySingleDefinition | null {

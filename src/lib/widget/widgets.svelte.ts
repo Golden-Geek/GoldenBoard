@@ -82,7 +82,7 @@ export class Widget extends InspectableWithProps {
     }
 
     getFullPath(): string {
-        if(!this.parent || this.parent.isRoot) return this.sanitizedIdentifier;
+        if (!this.parent || this.parent.isRoot) return this.sanitizedIdentifier;
         return this.parent!.autoID + '.' + this.sanitizedIdentifier;
     }
 
@@ -105,7 +105,12 @@ export class Widget extends InspectableWithProps {
 
 
     getPropertyDefinitions(): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition); } | null {
-        return { ...super.getPropertyDefinitions(), ...getWidgetDefinitionForType(this.type)?.props || null };
+
+        return {
+            ...super.getPropertyDefinitions('before'),
+            ...getWidgetDefinitionForType(this.type)?.props || null,
+            ...super.getPropertyDefinitions('after')
+        };
     }
 
     toSnapshot(includeID: boolean = true): any {
