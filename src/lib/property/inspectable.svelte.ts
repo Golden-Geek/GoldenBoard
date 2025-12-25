@@ -224,7 +224,27 @@ export class InspectableWithProps {
     }
 
     getPropertyDefinitions(): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } | null {
-        return { userID: this.getUserIDDefinition() };
+        return {
+            userID: this.getUserIDDefinition(),
+            custom: {
+                name: 'Custom',
+                collapsedByDefault: true,
+                children: {
+                    css: {
+                        name: 'Custom CSS',
+                        type: PropertyType.TEXT,
+                        default: '',
+                        syntax: 'css'
+                    } as PropertySingleDefinition,
+                    script: {
+                        name: 'Custom Script',
+                        type: PropertyType.TEXT,
+                        default: '',
+                        syntax: 'js'
+                    } as PropertySingleDefinition
+                }
+            } as PropertyContainerDefinition
+        };
     }
 
     getDefinitionForProp(propKey: string): PropertySingleDefinition | null {

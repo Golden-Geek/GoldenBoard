@@ -1,4 +1,8 @@
 <script lang="ts">
+	import CodeMirror from 'svelte-codemirror-editor';
+	import { javascript } from '@codemirror/lang-javascript';
+    import { oneDark } from "@codemirror/theme-one-dark";
+
 	let {
 		targets,
 		expressionMode,
@@ -11,7 +15,23 @@
 	let target = $derived(targets.length > 0 ? targets[0] : null);
 </script>
 
-<textarea
+<CodeMirror
+	value={property.get()}
+	class="text-editor-property {expressionMode} {expressionResultTag}"
+	theme={oneDark}
+	onchange={(value: string) => {
+		// Apply filter function if defined
+		let newValue = value;
+		if (definition.filterFunction) {
+			newValue = definition.filterFunction(newValue);
+		}
+		property.set(newValue);
+		onUpdate && onUpdate();
+	}}
+	lang={javascript()}
+/>
+
+<!-- <textarea
 	class="text-editor-property {expressionMode} {expressionResultTag}"
 	disabled={definition.readOnly}
 	onchange={(e) => {
@@ -25,17 +45,14 @@
 	}}
 	onfocus={() => onStartEdit && onStartEdit()}
 	onblur={() => onUpdate && onUpdate()}>{property.get()}</textarea
->
+> -->
 
 <style>
-	/* .text-editor-property {
-	} */
-
-	.text-editor-property.expression-mode {
-		color: var(--expression-color);
-	}
-
-	.text-editor-property.error {
-		color: var(--error-color);
+	:global {
+		.text-editor-property {
+			width: 100%;
+			min-height: 10rem;
+			background-color: var(--panel-bg-color);
+		}
 	}
 </style>

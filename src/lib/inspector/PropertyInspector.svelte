@@ -42,9 +42,12 @@
 		!definition.readOnly && (!usingExpression || expressionMode === 'binding')
 	);
 
-	let PropertyClass: any = $derived(
+	let propertyInfo: any = $derived(
 		propertiesInspectorClass[propertyType as keyof typeof propertiesInspectorClass]
 	);
+
+	let PropertyClass: any = $derived(propertyInfo ? propertyInfo.component : null);
+	let useFullSpace = $derived(propertyInfo ? (propertyInfo.useFullSpace ?? false) : false);
 
 	let valueOnFocus = undefined as PropertyValueType | undefined;
 
@@ -58,7 +61,6 @@
 			coalesceID: `${target.id}-property-${level}-${definition.name}`
 		});
 	}
-
 </script>
 
 {#if visible}
@@ -102,31 +104,40 @@
 					{/if}
 				</div>
 
-				<div class="spacer"></div>
-				<div class="property-wrapper {expressionMode} {canManuallyEdit ? '' : 'readonly'}">
-					<PropertyClass
-						{targets}
-						bind:property
-						onStartEdit={() => (valueOnFocus = property.getRaw())}
-						onUpdate={() => checkAndSaveProperty()}
-						{definition}
-						{propKey}
-						{expressionMode}
-						{expressionResultTag}
-					/>
-				</div>
+				{#if !useFullSpace}
+					<div class="spacer"></div>
+				{/if}
 
-				<button
-					class="expression-toggle {expressionMode}"
-					disabled={definition.readOnly}
-					onclick={() => {
-						property.mode =
-							property.mode == PropertyMode.EXPRESSION ? undefined : PropertyMode.EXPRESSION;
-						saveData('Set Property Mode', {
-							coalesceID: `${target.id}-property-${level}-${definition.name}-mode`
-						});
-					}}>ƒ</button
-				>
+				{#if PropertyClass}
+					<div
+						class="property-wrapper {expressionMode} {canManuallyEdit
+							? ''
+							: 'readonly'} {useFullSpace ? 'full-space' : ''}"
+					>
+						<PropertyClass
+							{targets}
+							bind:property
+							onStartEdit={() => (valueOnFocus = property.getRaw())}
+							onUpdate={() => checkAndSaveProperty()}
+							{definition}
+							{propKey}
+							{expressionMode}
+							{expressionResultTag}
+						/>
+					</div>
+
+					<button
+						class="expression-toggle {expressionMode}"
+						disabled={definition.readOnly}
+						onclick={() => {
+							property.mode =
+								property.mode == PropertyMode.EXPRESSION ? undefined : PropertyMode.EXPRESSION;
+							saveData('Set Property Mode', {
+								coalesceID: `${target.id}-property-${level}-${definition.name}-mode`
+							});
+						}}>ƒ</button
+					>
+				{/if}
 			</div>
 
 			{#if property.mode == PropertyMode.EXPRESSION && property.expression && (property?.enabled || !canDisable)}
@@ -163,7 +174,8 @@
 		width: 100%;
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
+		justify-content: stretch;
+		gap: 0.25rem;
 	}
 
 	.property-inspector.disabled,
@@ -176,6 +188,16 @@
 
 	.spacer {
 		flex-grow: 1;
+	}
+
+	.property-wrapper {
+		display: flex;
+		align-items: center;
+	}
+
+	.property-wrapper.full-space {
+		flex-grow: 1;
+		width: 100%;
 	}
 
 	.property-wrapper.readonly {
@@ -193,6 +215,7 @@
 	.property-label {
 		display: flex;
 		align-items: center;
+		min-width: max-content;
 	}
 
 	.property-label.error {

@@ -46,6 +46,7 @@ export type PropertySingleDefinition = {
     min?: number | ((inspectable: any, property: Property) => number);
     max?: number | ((inspectable: any, property: Property) => number);
     step?: number | ((inspectable: any, property: Property) => number);
+    syntax?: 'css' | 'js' | undefined; // For TEXT type, syntax highlighting mode
     filterFunction?: (value: any) => any; // Function to filter/validate the value
 };
 
