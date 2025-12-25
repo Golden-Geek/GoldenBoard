@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { history, redo, undo } from '$lib/engine/engine.svelte';
+	import { urlInfo } from '$lib/engine/url.svelte';
 	import { activeExpressions } from '$lib/property/expression.svelte';
 	import { activeUserIDs } from '$lib/property/inspectable.svelte';
 	import { selectedWidgets, widgetsMap } from '$lib/widget/widgets.svelte';
@@ -10,6 +11,8 @@
 
 <div class="footer">
 	<div class="spacer"></div>
+
+	<!--
 	<div class="history-info">
 		{#if history.present != null}
 			{#each history.past as h, index (index)}
@@ -38,6 +41,7 @@
 			<button> No history </button>
 		{/if}
 	</div>
+	-->
 	<div class="spacer"></div>
 
 	<div class="widget-info">
@@ -50,6 +54,11 @@
 
 	<div class="expressions-info">
 		{numExpressions} expressions, {runningExpressions} active
+	</div>
+
+	<div class="url-info">
+		{urlInfo.method}
+		{Object.entries(urlInfo.query).map(([key, value]) => `${key}:${value}`).join(',')}
 	</div>
 </div>
 
@@ -100,6 +109,12 @@
 	}
 
 	.expressions-info {
+		font-size: 0.7rem;
+		color: rgba(from var(--text-color) r g b / 50%);
+		padding: 0 0.5rem;
+	}
+
+	.url-info {
 		font-size: 0.7rem;
 		color: rgba(from var(--text-color) r g b / 50%);
 		padding: 0 0.5rem;

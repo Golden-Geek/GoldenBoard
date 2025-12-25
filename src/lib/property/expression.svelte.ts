@@ -1,4 +1,5 @@
 import { mainState, getAllWidgets } from '$lib/engine/engine.svelte';
+import { urlGet } from '$lib/engine/url.svelte';
 import { activeUserIDs, sanitizeUserID, type InspectableWithProps } from './inspectable.svelte';
 import { PropertyType } from './property.svelte';
 
@@ -32,7 +33,8 @@ export class Expression {
             m: Math,
             p: (key?: string, fallback?: unknown) => unknown,
             o: (path: string, fallback?: unknown) => unknown,
-            b: (path: string) => unknown
+            b: (path: string) => unknown,
+            u: (path: string, fallback?: unknown) => unknown
         ) => unknown)
         | null = null;
 
@@ -524,7 +526,7 @@ export class Expression {
 
         try {
             if (this._compiledFor !== js) {
-                this._compiledFn = new Function('Math', 'prop', 'osc', 'bind', `return (${js});`) as any;
+                this._compiledFn = new Function('Math', 'prop', 'osc', 'bind', 'url', `return (${js});`) as any;
                 this._compiledFor = js;
             }
         } catch (e: unknown) {
@@ -762,6 +764,12 @@ export class Expression {
 
         const osc = this.createOscSolver({ desiredOscTags, tag: 'osc', rawValue: args.rawValue });
         const bind = this.createOscSolver({ desiredOscTags, tag: 'binding', rawValue: args.rawValue });
+            const url = (path: string, fallback?: unknown): unknown => {
+                if (typeof path !== 'string') {
+                    throw new Error(`url(path) expects a string path.`);
+                }
+                return urlGet(path, fallback);
+            };
         let bindingUsed = false;
         const bindWrapped = (path: string, fallback?: unknown): unknown => {
             bindingUsed = true;
@@ -785,7 +793,7 @@ export class Expression {
                 throw new Error('Expression is not compiled.');
             }
 
-            const computed = this._compiledFn(Math, prop, osc, bindWrapped);
+            const computed = this._compiledFn(Math, prop, osc, bindWrapped, url);
 
             const bindingActive = bindingUsed || Array.from(desiredOscTags.values()).some((t) => t === 'binding');
             if (bindingActive) {
