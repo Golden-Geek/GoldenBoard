@@ -97,6 +97,7 @@ export class Expression {
         this.clearOscListeners();
     }
 
+
     private escapeRegExp(s: string): string {
         return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
@@ -125,6 +126,29 @@ export class Expression {
         if (userID) return userID;
         const autoID = sanitizeUserID(String((inspectable as any).autoID ?? ''));
         return autoID;
+    }
+
+    private hopParents(target: InspectableWithProps, hops: number): InspectableWithProps | null {
+        if (hops <= 0) return target;
+        let current: InspectableWithProps | null = target;
+        for (let i = 0; i < hops; i++) {
+            const next = (current as any)?.getParent?.() ?? (current as any)?.parent ?? null;
+            current = next as InspectableWithProps | null;
+            if (!current) return null;
+        }
+        return current;
+    }
+
+    private resolveRelativeWidgetPath(base: InspectableWithProps, relativePath: string): InspectableWithProps | null {
+        const baseAuto = String((base as any).autoID ?? '').trim();
+        if (!baseAuto) return null;
+        const wanted = sanitizeUserID(`${baseAuto}.${relativePath}`);
+        if (!wanted) return null;
+        const allWidgets = getAllWidgets();
+        for (const w of allWidgets) {
+            if (sanitizeUserID(String((w as any).autoID ?? '')) === wanted) return w as any;
+        }
+        return null;
     }
 
     private findInspectableById(id: string): any | null {
@@ -570,50 +594,99 @@ export class Expression {
             let target: InspectableWithProps | undefined = args.owner;
             let tKey = key;
             if (keySplit.length > 1) {
-                const rawToken = keySplit[0];
-                const token = sanitizeUserID(rawToken);
+                const rawSelector = keySplit[0];
 
-                if (rawToken === 'this' || rawToken === '') {
-                    target = args.owner;
+                const selParts = String(rawSelector ?? '')
+                    .trim()
+                    .split('.')
+                    .map((p) => p.trim())
+                    .filter(Boolean);
+
+                const startsWithThis = selParts[0]?.toLowerCase() === 'this';
+                if (startsWithThis) selParts.shift();
+
+                const isRelativeSelector =
+                    String(rawSelector ?? '').trim() === '' ||
+                    startsWithThis ||
+                    selParts[0]?.toLowerCase() === 'parent';
+
+                if (isRelativeSelector) {
+                    // Relative selector:
+                    // - `parent.parent` means ancestor of the current owner
+                    // - `parent.parent.slider` means a descendant widget under that ancestor
+                    let parentHops = 0;
+                    while (selParts[0]?.toLowerCase() === 'parent') {
+                        parentHops++;
+                        selParts.shift();
+                    }
+
+                    const base = this.hopParents(args.owner, parentHops);
+                    if (!base) {
+                        target = undefined;
+                    } else if (selParts.length > 0) {
+                        const relPath = selParts.join('.');
+                        target = this.resolveRelativeWidgetPath(base, relPath) ?? undefined;
+                    } else {
+                        target = base;
+                    }
                 } else {
-                    // Primary: userID registry
-                    target = (activeUserIDs as any)[token] as any;
-
-                    // Secondary: widget autoID scan
-                    if (!target) {
-                        const allWidgets = getAllWidgets();
-                        for (const w of allWidgets) {
-                            if (sanitizeUserID((w as any).autoID ?? '') === token) {
-                                target = w as any;
-                                break;
-                            }
-                        }
+                    // Absolute selector with optional trailing `.parent` hops.
+                    let trailingParents = 0;
+                    while (selParts.length > 0 && selParts[selParts.length - 1].toLowerCase() === 'parent') {
+                        trailingParents++;
+                        selParts.pop();
                     }
 
-                    // Recovery: fall back through learned token->id link, then rewrite expression.
-                    if (!target) {
-                        const linkedId = this._linkedIdByToken.get(this.tokenKey('prop', token));
-                        if (linkedId) {
-                            const recovered = this.findInspectableById(linkedId);
-                            if (recovered) {
-                                const nextToken = this.preferredToken(recovered);
-                                if (nextToken) {
-                                    this.linkInspectable('prop', nextToken, recovered);
-                                    this.requestExpressionRewrite('prop', token, nextToken);
+                    const rawToken = selParts.join('.');
+                    const token = sanitizeUserID(rawToken);
+
+                    if (rawToken === 'this' || rawToken === '') {
+                        target = args.owner;
+                    } else {
+                        // Primary: userID registry
+                        target = (activeUserIDs as any)[token] as any;
+
+                        // Secondary: widget autoID scan
+                        if (!target) {
+                            const allWidgets = getAllWidgets();
+                            for (const w of allWidgets) {
+                                if (sanitizeUserID((w as any).autoID ?? '') === token) {
+                                    target = w as any;
+                                    break;
                                 }
-                                target = recovered as any;
+                            }
+                        }
+
+                        // Recovery: fall back through learned token->id link, then rewrite expression.
+                        if (!target) {
+                            const linkedId = this._linkedIdByToken.get(this.tokenKey('prop', token));
+                            if (linkedId) {
+                                const recovered = this.findInspectableById(linkedId);
+                                if (recovered) {
+                                    const nextToken = this.preferredToken(recovered);
+                                    if (nextToken) {
+                                        this.linkInspectable('prop', nextToken, recovered);
+                                        this.requestExpressionRewrite('prop', token, nextToken);
+                                    }
+                                    target = recovered as any;
+                                }
+                            }
+                        }
+
+                        if (target) {
+                            this.linkInspectable('prop', token, target);
+
+                            // Converge expression to the current canonical token (so reloads keep working).
+                            const preferred = this.preferredToken(target);
+                            if (preferred && token !== preferred) {
+                                this.requestExpressionRewrite('prop', rawToken, preferred);
                             }
                         }
                     }
 
-                    if (target) {
-                        this.linkInspectable('prop', token, target);
-
-                        // Converge expression to the current canonical token (so reloads keep working).
-                        const preferred = this.preferredToken(target);
-                        if (preferred && token !== preferred) {
-                            this.requestExpressionRewrite('prop', rawToken, preferred);
-                        }
+                    if (target && trailingParents > 0) {
+                        const hopped = this.hopParents(target, trailingParents);
+                        target = hopped ?? undefined;
                     }
                 }
                 tKey = keySplit[1];
