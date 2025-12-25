@@ -78,14 +78,8 @@ export class Widget extends InspectableWithProps {
     }
 
     getFullPath(): string {
-        let path = this.sanitizedIdentifier;
-        let p: Widget | null = this.parent;
-        while (p) {
-            path = p.sanitizedIdentifier + '.' + path;
-            p = p.parent;
-        }
-
-        return path;
+        if(!this.parent || this.parent.isRoot) return this.sanitizedIdentifier;
+        return this.parent!.autoID + '.' + this.sanitizedIdentifier;
     }
 
     static createFromDefinition(def: WidgetDefinition): Widget {

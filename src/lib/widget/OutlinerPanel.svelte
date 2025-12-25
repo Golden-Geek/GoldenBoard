@@ -1,7 +1,6 @@
 <script lang="ts">
 	import TreeView from '$lib/components/TreeView.svelte';
 	import { mainState, menuContext, MenuContextType } from '$lib/engine/engine.svelte';
-	import { activeUserIDs } from '$lib/property/inspectable.svelte';
 	import { Widget } from '$lib/widget/widgets.svelte';
 
 	let selectedBoard = $derived(mainState.selectedBoard);
@@ -14,7 +13,7 @@
 		getChildren={(node: any) => node.children || []}
 		getTitle={(node: any) => node.sanitizedIdentifier}
 		getIcon={(node: any) => (node as Widget).icon}
-		getStyle={(node: any) => (node.userID != '' ? 'font-style: italic;' : '')}
+		getLabelStyle={(node: any) => (node.userID != '' ? 'font-style: italic;' : '')}
 		getWarningsAndErrors={(node: any) => node.warningsAndErrors}
 		highlightColor={'var(--widget-color)'}
 		onSelect={(node: any, e: MouseEvent) => {

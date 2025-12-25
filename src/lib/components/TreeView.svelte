@@ -7,7 +7,7 @@
 		getChildren,
 		getIcon = null,
 		getTitle,
-		getStyle = null,
+		getLabelStyle = null,
 		getWarningsAndErrors = null,
 		isContainer = null,
 		highlightColor = '',
@@ -26,7 +26,7 @@
 			{getChildren}
 			{getIcon}
 			{getTitle}
-			{getStyle}
+			{getLabelStyle}
 			{getWarningsAndErrors}
 			{isContainer}
 			{highlightColor}

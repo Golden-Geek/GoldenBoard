@@ -8,7 +8,7 @@
 		getChildren,
 		getIcon = null,
 		getTitle,
-		getStyle = null,
+		getLabelStyle = null,
 		getWarningsAndErrors = null,
 		isContainer = null,
 		highlightColor = '',
@@ -27,9 +27,7 @@
 
 <div
 	class="treeview-item {isExpanded ? 'expanded' : 'collapsed'} "
-	style="{highlightColor != '' ? `--highlight-color: ${highlightColor}` : ''}; {getStyle
-		? getStyle(node)
-		: ''}"
+	style="{highlightColor != '' ? `--highlight-color: ${highlightColor}` : ''};"
 >
 	{#if level > 0 || showRoot}
 		<p
@@ -66,7 +64,7 @@
 					{getIcon(node)}
 				</span>
 			{/if}
-			{getTitle(node)}
+			<span style={getLabelStyle ? getLabelStyle(node) : ''}>{getTitle(node)}</span>
 			{#if warningsAndErrors.length > 0}
 				<span
 					class="warnings-errors"
@@ -98,7 +96,7 @@
 					{getChildren}
 					{getIcon}
 					{getTitle}
-					{getStyle}
+					{getLabelStyle}
 					{getWarningsAndErrors}
 					{isContainer}
 					{highlightColor}
