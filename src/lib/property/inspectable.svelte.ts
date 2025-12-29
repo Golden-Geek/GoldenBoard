@@ -1,4 +1,13 @@
-import { PropertyContainer, PropertyType, Property, type PropertyContainerDefinition, type PropertyNode, type PropertySingleDefinition, type WarningError } from "./property.svelte";
+import {
+    PropertyContainer,
+    PropertyType,
+    Property,
+    type PropertyContainerDefinition,
+    type PropertyNode,
+    type PropertySingleDefinition,
+    type PropertyValueType,
+    type WarningError
+} from "./property.svelte";
 
 export const activeUserIDs: { [key: string]: InspectableWithProps } = $state({});
 
@@ -37,6 +46,9 @@ export class InspectableWithProps {
     });
 
     private _activeUserIDKey = '';
+
+    /** User-defined property definitions (persisted in snapshot). */
+    private _customPropDefs: { [key: string]: PropertySingleDefinition } = $state({});
 
     userIDDestroy = $effect.root(() => {
         $effect(() => {
@@ -223,6 +235,117 @@ export class InspectableWithProps {
         }
     }
 
+    /** Returns a stable view of custom property definitions. */
+    getCustomPropertyDefinitions(): { [key: string]: PropertySingleDefinition } {
+        return this._customPropDefs;
+    }
+
+    private sanitizeCustomPropKey(key: string): string {
+        const raw = String(key ?? '').trim().replace(/\./g, '_');
+        return sanitizeUserID(raw);
+    }
+
+    private normalizeCustomPropDef(def: Partial<PropertySingleDefinition> & { type: PropertyType; default?: unknown }): PropertySingleDefinition {
+        const type = def.type;
+        const allowed = new Set<PropertyType>([
+            PropertyType.STRING,
+            PropertyType.TEXT,
+            PropertyType.BOOLEAN,
+            PropertyType.FLOAT,
+            PropertyType.INTEGER,
+            PropertyType.ENUM,
+            PropertyType.CSSSIZE
+        ]);
+
+        if (!allowed.has(type)) {
+            throw new Error(`Unsupported custom property type '${type}'.`);
+        }
+
+        const name = String(def.name ?? 'Custom Property');
+        const canDisable = !!def.canDisable;
+        const readOnly = !!def.readOnly;
+        const description = def.description != null ? String(def.description) : undefined;
+
+        let options = def.options;
+        if (type === PropertyType.ENUM) {
+            if (!options || typeof options !== 'object') {
+                options = { option1: 'Option 1' };
+            }
+        } else {
+            options = undefined;
+        }
+
+        let dflt: PropertyValueType;
+        switch (type) {
+            case PropertyType.BOOLEAN:
+                dflt = Boolean(def.default ?? false);
+                break;
+            case PropertyType.INTEGER:
+                dflt = Number.isFinite(Number(def.default)) ? Math.trunc(Number(def.default)) : 0;
+                break;
+            case PropertyType.FLOAT:
+                dflt = Number.isFinite(Number(def.default)) ? Number(def.default) : 0;
+                break;
+            case PropertyType.ENUM: {
+                const keys = Object.keys(options ?? {});
+                const v = String(def.default ?? keys[0] ?? 'option1');
+                dflt = keys.includes(v) ? v : (keys[0] ?? 'option1');
+                break;
+            }
+            case PropertyType.CSSSIZE:
+                dflt = (def.default as any) ?? 0;
+                break;
+            case PropertyType.TEXT:
+            case PropertyType.STRING:
+            default:
+                dflt = String(def.default ?? '');
+                break;
+        }
+
+        const out: PropertySingleDefinition = {
+            name,
+            type,
+            default: dflt,
+            canDisable,
+            readOnly,
+            description,
+            options
+        };
+
+        if (type === PropertyType.TEXT && def.syntax) {
+            out.syntax = def.syntax;
+        }
+
+        if (typeof def.min === 'number') out.min = def.min;
+        if (typeof def.max === 'number') out.max = def.max;
+        if (typeof def.step === 'number') out.step = def.step;
+
+        return out;
+    }
+
+    /**
+     * Add or update a user-defined custom property.
+     * The property will appear under `customProps.<key>`.
+     */
+    addCustomProperty(key: string, def: Partial<PropertySingleDefinition> & { type: PropertyType; default?: unknown }) {
+        const k = this.sanitizeCustomPropKey(key);
+        if (!k) throw new Error('Custom property key is empty.');
+        const normalized = this.normalizeCustomPropDef({ ...def, name: def.name ?? key });
+        this._customPropDefs[k] = normalized;
+    }
+
+    removeCustomProperty(key: string) {
+        const k = this.sanitizeCustomPropKey(key);
+        if (!k) return;
+        delete this._customPropDefs[k];
+    }
+
+    clearCustomProperties() {
+        for (const k of Object.keys(this._customPropDefs)) {
+            delete this._customPropDefs[k];
+        }
+    }
+
     getPropertyDefinitions(beforeOrAfter?: 'before' | 'after' | undefined): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } | null {
         let beforeDefs: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {
             userID: this.getUserIDDefinition(),
@@ -231,7 +354,7 @@ export class InspectableWithProps {
         let afterDefs: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {
 
             custom: {
-                name: 'Custom',
+                name: 'Advanced',
                 collapsedByDefault: true,
                 children: {
                     css: {
@@ -246,8 +369,15 @@ export class InspectableWithProps {
                         default: '',
                         syntax: 'js'
                     } as PropertySingleDefinition
+
                 }
-            } as PropertyContainerDefinition
+            } as PropertyContainerDefinition,
+
+            customProps: {
+                name: 'Custom Properties',
+                isCustomProperties: true,
+                children: this.getCustomPropertyDefinitions()
+            } as PropertyContainerDefinition,
         };
 
         if (beforeOrAfter === 'after') return afterDefs;
@@ -331,14 +461,65 @@ export class InspectableWithProps {
             if (snap !== undefined) propsSnapshot[key] = snap;
         }
 
+        const customPropDefsSnapshot: any = {};
+        for (const key of Object.keys(this._customPropDefs)) {
+            const d = this._customPropDefs[key];
+            // Keep this JSON-safe (no functions)
+            customPropDefsSnapshot[key] = {
+                name: d.name,
+                type: d.type,
+                default: d.default,
+                canDisable: d.canDisable ?? false,
+                readOnly: d.readOnly ?? false,
+                description: d.description,
+                options: d.options,
+                min: typeof d.min === 'number' ? d.min : undefined,
+                max: typeof d.max === 'number' ? d.max : undefined,
+                step: typeof d.step === 'number' ? d.step : undefined,
+                syntax: d.syntax
+            };
+        }
+
         return {
             id: includeID ? this.id : undefined,
-            props: propsSnapshot
+            props: propsSnapshot,
+            customPropDefs: customPropDefsSnapshot
         };
     }
 
     applySnapshot(snapshot: any, options?: { mode?: 'patch' | 'replace' }) {
         if (snapshot === null || snapshot === undefined) return;
+
+        // Restore custom property definitions first so the props tree can be reconciled.
+        if (snapshot.customPropDefs && typeof snapshot.customPropDefs === 'object') {
+            const mode = options?.mode ?? 'patch';
+            if (mode === 'replace') {
+                this.clearCustomProperties();
+            }
+
+            for (const k of Object.keys(snapshot.customPropDefs)) {
+                const raw = snapshot.customPropDefs[k];
+                if (!raw || typeof raw !== 'object') continue;
+                try {
+                    const type = (raw as any).type as PropertyType;
+                    this.addCustomProperty(k, {
+                        name: (raw as any).name,
+                        type,
+                        default: (raw as any).default,
+                        canDisable: (raw as any).canDisable,
+                        readOnly: (raw as any).readOnly,
+                        description: (raw as any).description,
+                        options: (raw as any).options,
+                        min: (raw as any).min,
+                        max: (raw as any).max,
+                        step: (raw as any).step,
+                        syntax: (raw as any).syntax
+                    });
+                } catch {
+                    // ignore invalid custom defs
+                }
+            }
+        }
 
 
         const newID = snapshot.id ?? this.id;

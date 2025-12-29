@@ -3,6 +3,7 @@ import { Board, applyBoardsSnapshot, toBoardsSnaphot, getBoardByID } from "../bo
 import { applyServersSnapshot, getServerByID, toServersSnapshot, type OSCQueryClient } from "../servers/oscquery.svelte.ts";
 import { getWidgetContextMenuItems, widgetsMap } from "../widget/widgets.svelte.ts";
 import { GlobalSettings, toGlobalSettingsSnapshot, applyGlobalSettingsSnapshot } from "./globalsettings.svelte.ts";
+import { PropertyType } from "$lib/property/property.svelte";
 //-----------------------------
 // Editor
 //-----------------------------
@@ -34,7 +35,8 @@ export const defaultEditorData: EditorData = {
 export enum MenuContextType {
     Widget = "widget",
     Board = "board",
-    Server = "server"
+    Server = "server",
+    CustomPropertyAdd = "custom-property-add"
 }
 
 export type ContextMenuItem = {
@@ -48,11 +50,25 @@ export type ContextMenuItem = {
     submenu?: (source: any) => ContextMenuItem[];
 };
 
+function getCustomPropertyAddMenuItems(source: any): ContextMenuItem[] {
+	const addOfType = (t: PropertyType) => (source as any)?.addOfType?.(t);
+	return [
+		{ label: "String", icon: "🔤", action: () => addOfType(PropertyType.STRING) },
+		{ label: "Text", icon: "📝", action: () => addOfType(PropertyType.TEXT) },
+		{ label: "Boolean", icon: "🔘", action: () => addOfType(PropertyType.BOOLEAN) },
+		{ label: "Integer", icon: "#️⃣", action: () => addOfType(PropertyType.INTEGER) },
+		{ label: "Float", icon: "📈", action: () => addOfType(PropertyType.FLOAT) },
+		{ label: "Enum", icon: "🔽", action: () => addOfType(PropertyType.ENUM) },
+		{ label: "CSS Size", icon: "📏", action: () => addOfType(PropertyType.CSSSIZE) }
+	];
+}
+
 //using null as separators
 export const contextMenus: Record<MenuContextType, ((source: any) => ContextMenuItem[]) | undefined> = $state({
     [MenuContextType.Widget]: getWidgetContextMenuItems,
     [MenuContextType.Board]: undefined,
-    [MenuContextType.Server]: undefined
+    [MenuContextType.Server]: undefined,
+    [MenuContextType.CustomPropertyAdd]: getCustomPropertyAddMenuItems
 });
 
 export const menuContext = $state({
@@ -244,6 +260,9 @@ export function loadData() {
     }
     if (mainState.globalSettings.modeOnLoad != 'last') mainState.editor.editMode = mainState.globalSettings.modeOnLoad as EditMode;
 
+
+
+
     let persistedHistoryStr = localStorage.getItem('history');
     if (persistedHistoryStr) {
         const persistedHistory = JSON.parse(persistedHistoryStr);
@@ -255,12 +274,11 @@ export function loadData() {
         history.future = [];
         history.present = { label: "Initial Load", data: snapshotMain() };
     }
+
 }
 
 export function getAllWidgets() {
     return Object.values(widgetsMap);
 }
 
-
-
-loadData(); //only called here
+loadData();

@@ -12,7 +12,6 @@
 <div class="footer">
 	<div class="spacer"></div>
 
-	<!--
 	<div class="history-info">
 		{#if history.present != null}
 			{#each history.past as h, index (index)}
@@ -41,7 +40,6 @@
 			<button> No history </button>
 		{/if}
 	</div>
-	-->
 	<div class="spacer"></div>
 
 	<div class="widget-info">

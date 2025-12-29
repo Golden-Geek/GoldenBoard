@@ -30,6 +30,8 @@ export type PropertyContainerDefinition = {
     color?: string;
     children?: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) };
     collapsedByDefault?: boolean;
+    /** Marks a container as the user-defined custom properties editor. */
+    isCustomProperties?: boolean;
 }
 
 export type PropertyValueType = number | string | boolean | number[] | Color;
