@@ -46,7 +46,10 @@
 	let completionIndex = $state(0);
 	let displayValue = $derived(isFocused ? draft : (property?.expressionValue ?? ''));
 
-	type SyntaxToken = { text: string; kind: 'plain' | 'fn' | 'string' | 'punct' | 'target' | 'property' };
+	type SyntaxToken = {
+		text: string;
+		kind: 'plain' | 'fn' | 'string' | 'punct' | 'target' | 'property' | 'server' | 'address';
+	};
 
 	function tokenizeForSyntax(textRaw: string): SyntaxToken[] {
 		const text = String(textRaw ?? '');
@@ -56,6 +59,9 @@
 		let i = 0;
 		let inQuote: string | null = null;
 		let escaped = false;
+		let depth = 0;
+		let pendingCall: 'prop' | 'osc' | 'bind' | null = null;
+		const callStack: Array<{ name: 'prop' | 'osc' | 'bind'; openDepth: number; stage: 'beforeArg1' | 'afterArg1' }> = [];
 
 		const push = (kind: SyntaxToken['kind'], t: string) => {
 			if (!t) return;
@@ -71,6 +77,8 @@
 			const ch = text[i];
 
 			if (inQuote) {
+				// Should not happen because we parse full strings below,
+				// but keep as a safety fallback.
 				push('string', ch);
 				if (escaped) {
 					escaped = false;
@@ -82,17 +90,65 @@
 					i++;
 					continue;
 				}
-				if (ch === inQuote) {
-					inQuote = null;
-				}
+				if (ch === inQuote) inQuote = null;
 				i++;
 				continue;
 			}
 
+			// strings (optionally context-colored for prop/osc/bind first arg)
 			if (ch === "'" || ch === '"' || ch === '`') {
-				inQuote = ch;
-				push('string', ch);
-				i++;
+				const quote = ch;
+				// find matching quote (best-effort, respecting escapes)
+				let j = i + 1;
+				let esc = false;
+				for (; j < text.length; j++) {
+					const cj = text[j];
+					if (esc) {
+						esc = false;
+						continue;
+					}
+					if (cj === '\\') {
+						esc = true;
+						continue;
+					}
+					if (cj === quote) break;
+				}
+				const hasClose = j < text.length && text[j] === quote;
+				const content = text.slice(i + 1, hasClose ? j : text.length);
+
+				const top = callStack.at(-1);
+				const callName = top?.stage === 'beforeArg1' ? top.name : null;
+				push('string', quote);
+
+				if (callName === 'prop') {
+					const colon = content.indexOf(':');
+					if (colon === -1) {
+						push('target', content);
+					} else {
+						push('target', content.slice(0, colon));
+						push('punct', ':');
+						push('property', content.slice(colon + 1));
+					}
+				} else if (callName === 'osc' || callName === 'bind') {
+					const sep = content.indexOf(':/');
+					if (sep === -1) {
+						if (content.startsWith('/')) {
+							push('address', content);
+						} else {
+							push('server', content);
+						}
+					} else {
+						push('server', content.slice(0, sep));
+						push('punct', ':/');
+						push('address', content.slice(sep + 2));
+					}
+				} else {
+					push('string', content);
+				}
+
+				push('string', quote);
+				if (top && top.stage === 'beforeArg1') top.stage = 'afterArg1';
+				i = hasClose ? j + 1 : text.length;
 				continue;
 			}
 
@@ -101,14 +157,39 @@
 				let j = i + 1;
 				while (j < text.length && isIdentPart(text[j])) j++;
 				const ident = text.slice(i, j);
-				if (ident === 'prop' || ident === 'osc' || ident === 'bind') push('fn', ident);
-				else push('plain', ident);
+				if (ident === 'prop' || ident === 'osc' || ident === 'bind') {
+					push('fn', ident);
+					pendingCall = ident;
+				} else {
+					push('plain', ident);
+					pendingCall = null;
+				}
 				i = j;
 				continue;
 			}
 
 			// highlight separators that matter
-			if (ch === ':' || ch === '(' || ch === ')' || ch === ',' ) {
+			if (ch === '(') {
+				push('punct', ch);
+				depth++;
+				if (pendingCall) {
+					callStack.push({ name: pendingCall, openDepth: depth, stage: 'beforeArg1' });
+					pendingCall = null;
+				}
+				i++;
+				continue;
+			}
+			if (ch === ')') {
+				push('punct', ch);
+				depth = Math.max(0, depth - 1);
+				while (callStack.length > 0 && callStack[callStack.length - 1].openDepth > depth) {
+					callStack.pop();
+				}
+				pendingCall = null;
+				i++;
+				continue;
+			}
+			if (ch === ':' || ch === ',' ) {
 				push('punct', ch);
 				i++;
 				continue;
@@ -717,7 +798,7 @@
 	<div class="input-wrapper">
 		<div class="syntax-overlay" aria-hidden="true">
 			{#each syntaxTokens as t, idx (idx)}
-				<span class={[`tok-${t.kind}`]}>{t.text}</span>
+				<span class={"tok-" + t.kind}>{t.text}</span>
 			{/each}
 		</div>
 	<input
@@ -877,6 +958,7 @@
 		font-size: 0.75rem;
 		line-height: normal;
 		color: var(--text-color);
+		background-color: var(--panel-bg-color);
 	}
 
 	/* Make the input text transparent so the overlay shows through */
@@ -907,6 +989,12 @@
 	}
 	.tok-property {
 		color: rgba(from var(--binding-color) r g b / 90%);
+	}
+	.tok-server {
+		color: rgba(from var(--accent-color) r g b / 90%);
+	}
+	.tok-address {
+		color: rgba(from var(--expression-color) r g b / 90%);
 	}
 
 	.text-property.binding {
