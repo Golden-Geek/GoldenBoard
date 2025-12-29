@@ -5,6 +5,15 @@ import { Property, PropertyMode, PropertyType } from '../property/property.svelt
 import { ColorUtil, type Color } from '$lib/property/Color.svelte';
 import { InspectableWithProps, sanitizeUserID } from "../property/inspectable.svelte.ts";
 import { Board } from "$lib/board/boards.svelte.js";
+import ButtonWidget from './widgets/ButtonWidget.svelte';
+import SliderWidget from './widgets/SliderWidget.svelte';
+import ColorPickerWidget from './widgets/ColorPickerWidget.svelte';
+import TextInputWidget from './widgets/TextInputWidget.svelte';
+import CheckboxWidget from './widgets/CheckboxWidget.svelte';
+import DropdownWidget from './widgets/DropdownWidget.svelte';
+import StepperWidget from './widgets/StepperWidget.svelte';
+import ButtonBarWidget from './widgets/ButtonBarWidget.svelte';
+import CommentWidget from './widgets/CommentWidget.svelte';
 
 //WIDGET
 type WidgetDefinition = {
@@ -13,6 +22,7 @@ type WidgetDefinition = {
     icon: string;
     type: string;
     isContainer?: boolean;
+    component?: any;
     props?: {
         [key: string]: PropertySingleDefinition | PropertyContainerDefinition
     }
@@ -29,6 +39,7 @@ export class Widget extends InspectableWithProps {
     isContainer: boolean = $state(false);
     isSelected: boolean = $state(false);
 
+    definition = $derived(getWidgetDefinitionForType(this.type)!);
 
     //derived properties
     name = $derived(this.getSingleProp('label.text').get() as string);
@@ -48,8 +59,7 @@ export class Widget extends InspectableWithProps {
 
         this.isContainer = isContainer ?? false;
         if (this.isContainer) this.children = [];
-        const def = getWidgetDefinitionForType(type);
-        this.icon = def?.icon;
+        this.icon = this.definition.icon;
 
         this.setupProps();
         registerWidget(this);
@@ -377,8 +387,10 @@ export const widgetDefinitions: WidgetDefinition[] = [
     {
         name: 'Button', icon: '🔘', type: 'button', description: 'A clickable button widget', props: {
             ...getGlobalWidgetProperties('Button'),
-            value: { name: 'Value', type: PropertyType.BOOLEAN, default: false }
-        }
+            value: { name: 'Value', type: PropertyType.BOOLEAN, default: false },
+            momentary: { name: 'Momentary', type: PropertyType.BOOLEAN, default: false }
+        },
+        component: ButtonWidget
 
     },
     {
@@ -390,40 +402,46 @@ export const widgetDefinitions: WidgetDefinition[] = [
                 max: (i, p) => i.getSingleProp('range.max').get(),
                 step: (i, p) => i.getSingleProp('range.step').get()
             },
-            range: rangeContainerDefinition
-        }
+            range: rangeContainerDefinition,
+        },
+        component: SliderWidget
     },
     {
         name: 'ColorPicker', icon: '🎨', type: 'color-picker', description: 'A widget for selecting colors', props: {
             ...getGlobalWidgetProperties('ColorPicker'),
             value: { name: 'Value', type: PropertyType.COLOR, default: ColorUtil.fromHex("#ffffffff") }
-        }
+        },
+        component: ColorPickerWidget
     },
     {
         name: 'Text Input', icon: '⌨️', type: 'text-input', description: 'A widget for entering text', props: {
             ...getGlobalWidgetProperties('Text Input'),
             value: { name: 'Value', type: PropertyType.STRING, default: '' },
             placeholder: { name: 'Placeholder', type: PropertyType.STRING, default: 'Enter text...' },
-        }
+        },
+        component: TextInputWidget
     },
     {
         name: 'Checkbox', icon: '☑️', type: 'checkbox', description: 'A widget for toggling a boolean value', props: {
             ...getGlobalWidgetProperties('Checkbox'),
             value: { name: 'Value', type: PropertyType.BOOLEAN, default: false }
-        }
+        },
+        component: CheckboxWidget
     },
     {
         name: 'Dropdown', icon: '⬇️', type: 'dropdown', description: 'A widget for selecting an option from a dropdown list', props: {
             ...getGlobalWidgetProperties('Dropdown'),
             value: { name: 'Value', type: PropertyType.ENUM, default: 'option1', options: { 'option1': 'Option 1', 'option2': 'Option 2', 'option3': 'Option 3' } }
-        }
+        },
+        component: DropdownWidget
     },
     {
         name: 'Numeric Stepper', icon: '🔢', type: 'numeric-stepper', description: 'A widget for incrementing or decrementing a numeric value', props: {
             ...getGlobalWidgetProperties('Numeric Stepper'),
             value: { name: 'Value', type: PropertyType.INTEGER, default: 0 },
             range: rangeContainerDefinition
-        }
+        },
+        component: StepperWidget
     },
     {
         name: 'Button Bar', icon: '🔳', type: 'button-bar', description: 'A widget that displays a bar of buttons', props: {
@@ -431,14 +449,16 @@ export const widgetDefinitions: WidgetDefinition[] = [
             value: { name: 'Value', type: PropertyType.ENUM, default: 'option1', options: { 'option1': 'Option 1', 'option2': 'Option 2', 'option3': 'Option 3' } },
             orientation: { name: 'Orientation', type: PropertyType.ENUM, default: 'horizontal', options: { 'horizontal': 'Horizontal', 'vertical': 'Vertical' } },
             showLabels: { name: 'Show Labels', type: PropertyType.BOOLEAN, default: true }
-        }
+        },
+        component: ButtonBarWidget
     },
     {
         name: 'Comment', icon: '🏷️', type: 'comment', description: 'A comment text', props: {
             ...getGlobalWidgetProperties('Comment'),
             text: { name: 'Text', type: PropertyType.STRING, default: 'Comment' },
             fontSize: { name: 'Font Size', type: PropertyType.INTEGER, default: 14, canDisable: true },
-        }
+        },
+        component: CommentWidget
     }];
 
 export const widgetContainerDefinitions: WidgetDefinition[] = [

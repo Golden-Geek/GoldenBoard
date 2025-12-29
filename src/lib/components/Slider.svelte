@@ -2,7 +2,7 @@
 	let {
 		value = $bindable(),
 		min = undefined,
-		max= undefined,
+		max = undefined,
 		step = 0,
 		sensitivity = 1,
 		orientation = 'horizontal',
@@ -11,7 +11,11 @@
 		onEndEdit = null,
 		onValueChange = null,
 		bgColor = 'var(--slider-bg)',
-		fgColor = 'var(--slider-fg)'
+		fgColor = 'var(--slider-fg)',
+		width = 'auto',
+		height = '1rem',
+		label = '',
+		showValue = false
 	} = $props();
 
 	let infiniteMode = $derived(min === undefined || max === undefined);
@@ -107,13 +111,19 @@
 		class="slider"
 		bind:this={sliderDiv}
 		onmousedown={startDrag}
-		style="--bg-color: {bgColor}; --fg-color: {fgColor}"
+		style="--bg-color: {bgColor}; --fg-color: {fgColor}; width: {width}; height: {height};"
 	>
 		<div
 			class="slider-foreground {midZero ? 'mid-zero' : ''}"
 			style="--value: {(value - min) / (max - min)};  --left:{targetLeft *
 				100}%; --right:{targetRight * 100}%"
 		></div>
+
+		<div class="slider-label">
+			{label}
+			{label && showValue ? ' : ' : ''}
+			{showValue ? value.toFixed(3) : ''}
+		</div>
 	</div>
 {/if}
 
@@ -127,6 +137,19 @@
 		overflow: hidden;
 		background: var(--bg-color);
 		border: none;
+	}
+
+	.slider-label {
+		position: absolute;
+		width: 100%;
+		text-align: center;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		font-size: 0.8rem;
+		font-weight: bold;
+		color: rgba(from var(--text-color) r g b / 70%);
+		pointer-events: none;
 	}
 
 	.slider-foreground {

@@ -14,6 +14,7 @@
     --border-radius-medium: 0.25rem;
 
     --button-bg-color: #343434;
+    --button-active-bg-color: #b01d6e;
 
     --widget-color: #d08413;
     --server-color: #54ab19;
@@ -146,7 +147,7 @@ input[type="checkbox"].editor-checkbox:disabled {
 
 input:focus {
     outline: none;
-    border-color: rgba(from var(--accent-color) r g b / 30%);
+    /* border-color: rgba(from var(--accent-color) r g b / 30%); */
 }
 
 select:focus {
