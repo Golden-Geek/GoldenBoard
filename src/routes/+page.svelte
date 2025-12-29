@@ -143,6 +143,20 @@
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
+		const isTypingIntoEditor = (node: EventTarget | null): boolean => {
+			if (!(node instanceof HTMLElement)) return false;
+			const el = node;
+			const tag = el.tagName;
+			if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+			if (el.isContentEditable) return true;
+			if (el.closest('[contenteditable="true"]')) return true;
+			// CodeMirror 6
+			if (el.closest('.cm-editor')) return true;
+			const role = el.getAttribute('role');
+			if (role === 'textbox' || role === 'combobox') return true;
+			return false;
+		};
+
 		const mod = event.ctrlKey || event.metaKey;
 		if (mod && (event.key === 'z' || event.key === 'Z')) {
 			event.preventDefault();
@@ -161,12 +175,9 @@
 			saveData('Toggle Edit Mode', { skipHistory: true });
 		}
 		if (event.key === 'Delete' || event.key === 'Backspace') {
-			//should not be active when focused on input or textarea
+			// Don't delete widgets while typing in any editor control (inputs, textarea, contenteditable, CodeMirror).
 			const activeElement = document.activeElement;
-			if (
-				activeElement &&
-				(activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')
-			) {
+			if (isTypingIntoEditor(event.target) || isTypingIntoEditor(activeElement)) {
 				return;
 			}
 
