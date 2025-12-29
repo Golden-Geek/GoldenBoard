@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { contextMenus, menuContext, type ContextMenuItem } from '$lib/engine/engine.svelte';
-	import { onMount, tick } from 'svelte';
+	import { onMount } from 'svelte';
 	import Self from './ContextMenu.svelte';
 	import { fly } from 'svelte/transition';
 
@@ -31,9 +31,51 @@
 		activeSubMenu.items = null;
 	}
 
-	$effect(() => {
-		if (menuDiv) menuDiv?.focus();
-	});
+	function clampPosition(node: HTMLElement, desiredLeft: number, desiredTop: number) {
+		const padding = 8;
+		const rect = node.getBoundingClientRect();
+		const vw = window.innerWidth;
+		const vh = window.innerHeight;
+
+		const left = Math.min(Math.max(padding, desiredLeft), Math.max(padding, vw - rect.width - padding));
+		const top = Math.min(Math.max(padding, desiredTop), Math.max(padding, vh - rect.height - padding));
+		return { left, top };
+	}
+
+	function positionMenu(x: number, y: number) {
+		return (node: HTMLDivElement) => {
+			menuDiv = node;
+			node.tabIndex = -1;
+			queueMicrotask(() => node.focus());
+
+			let raf = 0;
+			cancelAnimationFrame(raf);
+			raf = requestAnimationFrame(() => {
+				const desiredLeft = x;
+				const desiredTop = y;
+				node.style.left = `${desiredLeft}px`;
+				node.style.top = `${desiredTop}px`;
+
+				const clamped = clampPosition(node, desiredLeft, desiredTop);
+				node.style.left = `${clamped.left}px`;
+				node.style.top = `${clamped.top}px`;
+			});
+
+			return () => {
+				cancelAnimationFrame(raf);
+				if (menuDiv === node) menuDiv = null;
+			};
+		};
+	}
+
+	function captureSubmenuContainer() {
+		return (node: HTMLDivElement) => {
+			submenuDiv = node;
+			return () => {
+				if (submenuDiv === node) submenuDiv = null;
+			};
+		};
+	}
 
 	function handleDocumentPointer(e: PointerEvent) {
 		if (!menuDiv) return;
@@ -58,12 +100,11 @@
 
 {#if showMenu}
 	<div
-		bind:this={menuDiv}
 		class="context-menu"
-		style="--x: {pos.y + offsetY}px; --y:{pos.x + offsetX}px"
+		{@attach positionMenu(pos.x + offsetX, pos.y + offsetY)}
 		transition:fly={{ x: -5, duration: 100 }}
 	>
-		{#each menuItems as item}
+		{#each menuItems as item, i (i)}
 			{#if item.visible || true}
 				{#if item.separator}
 					<hr />
@@ -79,6 +120,23 @@
 							closeMenu();
 						}}
 						onmouseover={(e) => {
+							if (item.submenu) {
+								activeSubMenu.items = item.submenu(target);
+								activeSubMenu.offsetX = offsetX + (menuDiv ? menuDiv.offsetWidth : 0);
+								activeSubMenu.offsetY =
+									offsetY +
+									(menuDiv
+										? menuDiv.children[
+												Array.from(menuDiv.children).indexOf(e.currentTarget as Element)
+										].getBoundingClientRect().top - menuDiv.getBoundingClientRect().top
+										: 0);
+							} else {
+								activeSubMenu.items = null;
+								activeSubMenu.offsetX = 0;
+								activeSubMenu.offsetY = 0;
+							}
+						}}
+						onfocus={(e) => {
 							if (item.submenu) {
 								activeSubMenu.items = item.submenu(target);
 								activeSubMenu.offsetX = offsetX + (menuDiv ? menuDiv.offsetWidth : 0);
@@ -109,7 +167,7 @@
 {/if}
 
 {#if showMenu && activeSubMenu.items && activeSubMenu.items.length > 0}
-	<div bind:this={submenuDiv} class="submenu-container">
+	<div class="submenu-container" {@attach captureSubmenuContainer()}>
 		<Self
 			submenu={activeSubMenu.items}
 			offsetX={activeSubMenu.offsetX}
@@ -121,8 +179,6 @@
 <style>
 	.context-menu {
 		position: fixed;
-		top: var(--x);
-		left: var(--y);
 		background-color: rgb(30, 30, 30);
 		border: 1px solid var(--border-color);
 		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);

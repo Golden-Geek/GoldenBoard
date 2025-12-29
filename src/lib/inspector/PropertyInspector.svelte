@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import {
 		PropertyMode,
 		PropertyType,
@@ -51,6 +52,19 @@
 
 	let valueOnFocus = undefined as PropertyValueType | undefined;
 
+	let customPropKey = $derived.by((): string | null => {
+		const pk = typeof propKey === 'string' ? propKey : String(propKey ?? '');
+		if (!pk) return null;
+		if (!pk.startsWith('customProps.')) return null;
+		const parts = pk.split('.');
+		const last = parts[parts.length - 1];
+		return last ? String(last) : null;
+	});
+	let isCustomProperty = $derived(customPropKey != null);
+
+	let isRenaming = $state(false);
+	let renameDraft = $state('');
+
 	function checkAndSaveProperty(force: boolean = false) {
 		if (property.getRaw() === valueOnFocus && !force) {
 			// console.log('No changes detected, skipping save.');
@@ -60,6 +74,50 @@
 		saveData('Update ' + definition.name, {
 			coalesceID: `${target.id}-property-${level}-${definition.name}`
 		});
+	}
+
+	function reconcileTargetsAndSave(label: string, coalesceID: string) {
+		for (const t of targets ?? []) {
+			if (!t?.applySnapshot || !t?.toSnapshot) continue;
+			t.applySnapshot(t.toSnapshot(false), { mode: 'patch' });
+		}
+		saveData(label, { coalesceID });
+	}
+
+	async function beginRename() {
+		if (!isCustomProperty || definition.readOnly) return;
+		renameDraft = definition.name;
+		isRenaming = true;
+		await tick();
+	}
+
+	function commitRename() {
+		if (!customPropKey) return;
+		const nextName = String(renameDraft ?? '').trim();
+		if (!nextName) {
+			isRenaming = false;
+			return;
+		}
+
+		for (const t of targets ?? []) {
+			if (!t?.addCustomProperty) continue;
+			t.addCustomProperty(customPropKey, {
+				type: definition.type as PropertyType,
+				name: nextName,
+				default: definition.default,
+				canDisable: definition.canDisable,
+				readOnly: definition.readOnly,
+				description: definition.description,
+				options: definition.options,
+				min: typeof definition.min === 'number' ? definition.min : undefined,
+				max: typeof definition.max === 'number' ? definition.max : undefined,
+				step: typeof definition.step === 'number' ? definition.step : undefined,
+				syntax: definition.syntax
+			});
+		}
+
+		reconcileTargetsAndSave('Rename Custom Property', `custom-prop-rename-${customPropKey}`);
+		isRenaming = false;
 	}
 </script>
 
@@ -86,7 +144,33 @@
 							{enabled ? '🟢' : '⚪'}
 						</button>
 					{/if}
-					{definition.name}
+					{#if isCustomProperty && !definition.readOnly}
+						{#if isRenaming}
+							<input
+								class="custom-prop-name"
+								autofocus
+								bind:value={renameDraft}
+								onblur={commitRename}
+								onkeydown={(e) => {
+									if (e.key === 'Enter') commitRename();
+									if (e.key === 'Escape') {
+										isRenaming = false;
+										renameDraft = definition.name;
+									}
+								}}
+							/>
+						{:else}
+							<span
+								class="custom-prop-name-text"
+								ondblclick={beginRename}
+								title="Double-click to rename"
+							>
+								{definition.name}
+							</span>
+						{/if}
+					{:else}
+						{definition.name}
+					{/if}
 					{#if !definition.readOnly && property.isValueOverridden()}
 						<button
 							class="reset-property"
@@ -245,6 +329,20 @@
 
 	.reset-property:hover {
 		opacity: 1;
+	}
+
+	.custom-prop-name-text {
+		cursor: text;
+	}
+
+	.custom-prop-name {
+		height: 1.5rem;
+		background-color: var(--bg-color);
+		color: var(--text-color);
+		font-size: 0.8rem;
+		border: 1px solid rgba(from var(--border-color) r g b / 20%);
+		border-radius: 0.25rem;
+		padding: 0 0.35rem;
 	}
 
 	.expression-toggle {

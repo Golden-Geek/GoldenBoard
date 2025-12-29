@@ -17,7 +17,7 @@
 		contextMenu = null
 	} = $props();
 
-	let isExpanded: any = $derived(() => level < 3);
+	let isExpanded: any = $derived(level < 3);
 
 	let children: any = $derived(getChildren(node));
 	let hasChildren: any = $derived(isContainer ? isContainer(node) : children.length > 0);

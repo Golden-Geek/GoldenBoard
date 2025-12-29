@@ -181,7 +181,6 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	applySnapshot(data: any) {
 		super.applySnapshot(data);
-		this.connect();
 	}
 
 	//OSCQuery structure
@@ -560,7 +559,7 @@ export function applyServersSnapshot(data: any[]) {
 	mainState.servers = data.map((sData: any) => {
 		let server = servers.find(s => s.id === sData.id);
 		if (!server) {
-			server = new OSCQueryClient(false);
+			server = new OSCQueryClient();
 		}
 
 
