@@ -353,7 +353,7 @@ export class InspectableWithProps {
         if (beforeOrAfter === 'before') return beforeDefs;
         let afterDefs: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {
 
-            custom: {
+            advanced: {
                 name: 'Advanced',
                 collapsedByDefault: true,
                 children: {
