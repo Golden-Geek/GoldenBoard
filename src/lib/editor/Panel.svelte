@@ -29,6 +29,8 @@
 		color: rgba(from var(--text-color) r g b / 10%);
 		text-transform: uppercase;
 		margin: 0 0 0.5rem 0;
+		pointer-events: none;
+		user-select: none;
 	}
 
 	:global(.mode-live) .panel-title {

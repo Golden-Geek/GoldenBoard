@@ -34,7 +34,6 @@
 		align-items: center;
 		justify-content: center;
 		background-color: rgba(from var(--panel-bg-color) r g b / 1%);
-		border: 0.15rem dashed var(--panel-bg-color);
 		box-sizing: border-box;
 		color: var(--gb-color-text-secondary);
 		text-align: center;

@@ -388,7 +388,7 @@ export const widgetDefinitions: WidgetDefinition[] = [
         name: 'Button', icon: '🔘', type: 'button', description: 'A clickable button widget', props: {
             ...getGlobalWidgetProperties('Button'),
             value: { name: 'Value', type: PropertyType.BOOLEAN, default: false },
-            momentary: { name: 'Momentary', type: PropertyType.BOOLEAN, default: false }
+            momentary: { name: 'Momentary', type: PropertyType.BOOLEAN, default: true }
         },
         component: ButtonWidget
 
@@ -401,6 +401,14 @@ export const widgetDefinitions: WidgetDefinition[] = [
                 min: (i, p) => i.getSingleProp('range.min').get(),
                 max: (i, p) => i.getSingleProp('range.max').get(),
                 step: (i, p) => i.getSingleProp('range.step').get()
+            },
+            slider:
+            {
+                name: 'Slider', children: {
+                    fgColor: { name: 'Foreground Color', type: PropertyType.COLOR, default: ColorUtil.fromHex("#be0f73ff"), canDisable: true },
+                    bgColor: { name: 'Background Color', type: PropertyType.COLOR, default: ColorUtil.fromHex("#333333cc"), canDisable: true },
+                }
+
             },
             range: rangeContainerDefinition,
         },

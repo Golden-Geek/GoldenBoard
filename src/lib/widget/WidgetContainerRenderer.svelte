@@ -1,23 +1,30 @@
 <script lang="ts">
+	import AccordionWidget from './containers/AccordionWidget.svelte';
 	import WidgetRenderer from './WidgetRenderer.svelte';
 
 	let { board, widget } = $props();
 	let layout = $derived(widget.getSingleProp('layout')?.get());
 
-	let label = $derived(widget.getSingleProp('label.text').get());
 	let showLabel = $derived(widget.getSingleProp('label.showLabel').get());
 	let labelPlacement = $derived(widget.getSingleProp('label.labelPlacement').get());
+
+	let type = $derived(widget.type);
 </script>
 
 <div class="widget-container-renderer">
 	{#if showLabel && labelPlacement == 'inside'}
-		<label class="widget-label">{label}</label>
+		<label class="widget-label">{widget.name}</label>
 	{/if}
-	<div class="widget-children-container layout-{layout}">
-		{#each widget.children as childWidget}
-			<WidgetRenderer {board} widget={childWidget} />
-		{/each}
-	</div>
+
+	{#if type == 'accordion'}
+		<AccordionWidget {board} {widget} {layout} {showLabel} {labelPlacement} />
+	{:else if type == 'tabbedContainer'}{:else}
+		<div class="widget-children-container layout-{layout}">
+			{#each widget.children as childWidget}
+				<WidgetRenderer {board} widget={childWidget} />
+			{/each}
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -25,6 +32,7 @@
 		width: 100%;
 		height: 100%;
 		position: relative;
+		border: 0.05rem dashed var(--panel-bg-color);
 	}
 
 	label.widget-label {
@@ -35,6 +43,8 @@
 		color: rgba(from var(--panel-bg-color) r g b / 6%);
 		text-transform: uppercase;
 		font-weight: bold;
+		pointer-events: none;
+		user-select: none;
 	}
 
 	.widget-children-container {
@@ -55,11 +65,11 @@
 	}
 
 	.widget-children-container.layout-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-        gap: 0.25rem;
-        align-content: stretch;
-        align-items: stretch;
-        justify-items: stretch;
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+		gap: 0.25rem;
+		align-content: stretch;
+		align-items: stretch;
+		justify-items: stretch;
 	}
 </style>

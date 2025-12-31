@@ -203,7 +203,7 @@ select:focus {
     transition: transform 0.2s ease, -webkit-transform 0.2s ease;
 }
 
-.arrow.expanded {
+.arrow.expanded, .arrow.down{
     transform: rotate(45deg) translateX(-.1rem) translateY(-.1rem);
     -webkit-transform: rotate(45deg) translateX(-.1rem) translateY(-.1rem);
 }
