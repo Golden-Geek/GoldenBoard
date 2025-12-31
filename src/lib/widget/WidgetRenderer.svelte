@@ -4,7 +4,7 @@
 	let { board, widget } = $props();
 
 	let isContainer = $derived(widget.isContainer);
-	let WidgetClass = widget.definition.component || undefined;
+	let WidgetClass = $derived(widget.definition.component || undefined);
 
 	let label = $derived(widget.getSingleProp('label.text').get());
 	let showLabel = $derived(widget.getSingleProp('label.showLabel').get());
