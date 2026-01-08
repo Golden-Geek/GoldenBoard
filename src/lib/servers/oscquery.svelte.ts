@@ -215,7 +215,7 @@ export class OSCQueryClient extends InspectableWithProps {
 	}
 
 	setNodeValueAndSend(nMap: any, rawValue: any, excludeNotify?: any) {
-		this.setValueAndNotify(nMap, rawValue, excludeNotify);
+		this.setValueAndNotify(nMap, rawValue.isArray ? rawValue : [rawValue], excludeNotify);
 		this.sendNodeValue(nMap);
 	}
 
@@ -235,7 +235,6 @@ export class OSCQueryClient extends InspectableWithProps {
 		} else {
 			args = [val];
 		}
-
 		this.sendOSCPacket(address, args);
 	}
 
@@ -489,11 +488,12 @@ export class OSCQueryClient extends InspectableWithProps {
 	}
 
 	setValueAndNotify(nMap: any, value: any, exclude?: any): void {
+		nMap.node.VALUE = value;
+
 		if (nMap.node.TYPE == "T" || nMap.node.TYPE == "F") {
 			nMap.node.TYPE = value[0] ? "T" : "F";
 		}
 
-		nMap.node.VALUE = value;
 		nMap.listeners.forEach((listener: any) => {
 
 			if (listener == exclude) return;
