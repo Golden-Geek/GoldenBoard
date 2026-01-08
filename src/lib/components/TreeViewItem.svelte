@@ -16,7 +16,8 @@
 		highlightColor = '',
 		onSelect = null,
 		isSelected = null,
-		contextMenu = null
+		contextMenu = null,
+		onDrop = null
 	} = $props();
 
 	let isExpanded: any = $derived(level < 3);
@@ -77,7 +78,9 @@
 
 	let isSelfDrag = $derived(draggedNodes.includes(node));
 	let isInsideDraggedNode = $derived(draggedNodes.some((dragged) => isDescendant(dragged, node)));
-	let canShowDrop = $derived(level > 0 && isDragging && !isSelfDrag && !isInsideDraggedNode);
+	let canShowDrop = $derived(
+		onDrop != null && level > 0 && isDragging && !isSelfDrag && !isInsideDraggedNode
+	);
 
 	function handleDragEnter(e: DragEvent) {
 		if (!canShowDrop) return;
@@ -132,12 +135,16 @@
 			startDrag([{ type: 'tree-item', htmlElement: e.currentTarget, data: node }]);
 
 			//set img to this element, force a transparent background$
-	
+
 			e.dataTransfer?.setDragImage(e.currentTarget as HTMLElement, 10, 10);
 
 			e.stopPropagation();
 		}}
 		ondragend={(e) => {
+			if (onDrop && dndState.dropCandidate) {
+				onDrop(node);
+			}
+
 			dropPosition = null;
 			stopDrag();
 			e.preventDefault();
@@ -222,6 +229,7 @@
 							{onSelect}
 							{isSelected}
 							{contextMenu}
+							{onDrop}
 						></Self>
 					</div>
 				{/each}
