@@ -851,7 +851,7 @@ export class Expression {
             const nMap = server.addressMap?.[entry.address];
             if (!nMap) continue;
 
-            server.sendNodeValue(nMap, rawValue);
+            server.setNodeValueAndSend(nMap, rawValue, entry.callback);
         }
     }
 }

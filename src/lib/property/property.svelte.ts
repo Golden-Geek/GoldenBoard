@@ -117,10 +117,10 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
     rangeEffectDestroy = $effect.root(() => {
         $effect(() => {
             if (this.definition.min || this.definition.max) {
-                let min = this.definition.min instanceof Function ? this.definition.min(this.owner, this) : this.definition.min;
-                let max = this.definition.max instanceof Function ? this.definition.max(this.owner, this) : this.definition.max;
-                let ranged = Math.min(Math.max(this.getRaw() as number, min ?? -Infinity), max ?? Infinity);
-                this.set(ranged);
+                if (this._value < this.definition.min! || this._value > this.definition.max!) {
+                    console.log("Value out of range, reapplying:", this._value);
+                    this.set(this._value); // Re-apply to enforce range
+                }
             }
             return () => {
 
@@ -183,7 +183,7 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
                 this.expression.setup();
             } else {
                 delete this.warningsAndErrors['Expression'];
-                this.expression.disable(); 
+                this.expression.disable();
             }
         }
     }
@@ -285,10 +285,19 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
             }
         }
 
+        //check if value actually changed
+        if (this.checkValueIsTheSame(this._value, raw)) {
+            return;
+        }
+
         this._value = raw;
 
         if (this.mode === PropertyMode.EXPRESSION) {
-            this.expression?.onRawValueChanged(this._value, this.definition.type);
+            if (source != 'binding') {
+                this.expression?.onRawValueChanged(this._value, this.definition.type);
+            } else {
+                // console.log("Raw value changed from binding, not notifying expression.");
+            }
         }
     }
 
@@ -384,6 +393,23 @@ export class Property extends PropertyNodeBase<PropertySingleDefinition> {
             default:
                 return value;
         }
+    }
+
+    private checkValueIsTheSame(a: any, b: any): boolean {
+
+        if (Array.isArray(a) && Array.isArray(b)) {
+            if (a.length !== b.length) return false;
+            for (let i = 0; i < a.length; i++) {
+                if (a[i] !== b[i]) return false;
+            }
+            return true;
+        }
+
+        if (this.definition.type == PropertyType.COLOR) {
+            return ColorUtil.equals(a, b);
+        }
+
+        return a === b;
     }
 };
 

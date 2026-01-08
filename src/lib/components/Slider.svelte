@@ -109,6 +109,7 @@
 {:else}
 	<div
 		class="slider"
+		class:disabled={disabled}
 		bind:this={sliderDiv}
 		onmousedown={startDrag}
 		style="--bg-color: {bgColor}; --fg-color: {fgColor}; width: {width}; height: {height};"
@@ -137,6 +138,10 @@
 		overflow: hidden;
 		background: var(--bg-color);
 		border: none;
+	}
+
+	.slider.disabled {
+		pointer-events: none;
 	}
 
 	.slider-label {

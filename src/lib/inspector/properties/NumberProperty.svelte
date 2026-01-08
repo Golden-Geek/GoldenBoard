@@ -72,7 +72,6 @@
 		onblur={setValueFromField}
 		onkeydown={(e) => {
 			if (e.key === 'Enter') {
-				setValueFromField();
 				numberInput!.blur();
 			} else if (e.key === 'Escape') {
 				numberInput!.value = property.getRaw();

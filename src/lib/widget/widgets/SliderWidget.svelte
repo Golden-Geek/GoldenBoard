@@ -9,6 +9,9 @@
 	let max = $derived(widget.getSingleProp('range.max').get());
 	let fgColor = $derived(ColorUtil.toHex(widget.getSingleProp('slider.fgColor').get()));
 	let bgColor = $derived(ColorUtil.toHex(widget.getSingleProp('slider.bgColor').get()));
+
+	let readOnly = $derived(widget.getSingleProp('readOnly').get());
+	let canEdit = $derived(!readOnly && (valueProp.expression == null || valueProp.bindingMode));
 </script>
 
 <Slider
@@ -19,6 +22,7 @@
 	{label}
 	{fgColor}
 	{bgColor}
+	disabled={!canEdit}
 	showValue={true}
 	width="100%"
 	height="2rem"

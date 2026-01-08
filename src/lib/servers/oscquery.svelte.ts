@@ -48,13 +48,13 @@ export class OSCQueryClient extends InspectableWithProps {
 
 	pendingMessages: string[] = [];
 
-	constructor(autoConnect: boolean = true) {
+	constructor() {
 		super("server");
 		this.setupProps();
 		this.ws = null;
-		if (autoConnect) {
-			this.connect();
-		}
+		// if (autoConnect) {
+		// 	this.connect();
+		// }
 	}
 
 
@@ -176,11 +176,14 @@ export class OSCQueryClient extends InspectableWithProps {
 		if (save) {
 			saveData("Update Server " + this.name);
 		}
+		if (this.ip.length === 0 || this.port === 0) return;
 		this.connect();
 	}
 
 	applySnapshot(data: any) {
 		super.applySnapshot(data);
+		if (this.status === ConnectionStatus.Disconnected &&
+			this.ip.length !== 0 && this.port !== 0) this.connect();
 	}
 
 	//OSCQuery structure
@@ -211,20 +214,26 @@ export class OSCQueryClient extends InspectableWithProps {
 			});
 	}
 
-	sendNodeValue(nMap: any, rawValue: any) {
+	setNodeValueAndSend(nMap: any, rawValue: any, excludeNotify?: any) {
+		this.setValueAndNotify(nMap, rawValue, excludeNotify);
+		this.sendNodeValue(nMap);
+	}
+
+	sendNodeValue(nMap: any) {
 		const address = nMap.node.FULL_PATH;
 		const typeTag = nMap.node.TYPE;
 		let args: any[] = [];
+		let val: any = nMap.node.VALUE;
 		if (typeTag === 'T') {
 			args = [true];
 		} else if (typeTag === 'F') {
 			args = [false];
-		} else if (Array.isArray(rawValue)) {
-			args = rawValue;
+		} else if (Array.isArray(val)) {
+			args = val;
 		} else if (typeTag == 'r') {
-			args = [{ type: 'r', value: rawValue }];
+			args = [{ type: 'r', value: val }];
 		} else {
-			args = [rawValue];
+			args = [val];
 		}
 
 		this.sendOSCPacket(address, args);
@@ -552,7 +561,8 @@ export function applyServersSnapshot(data: any[]) {
 			removeServer(servers[0]);
 		}
 
-		addServer();
+		const server = addServer();
+		server.setIPAndPort("127.0.0.1", 42000, false); //default to Chataigne's settings
 		return;
 	}
 
@@ -598,7 +608,7 @@ export function getNodeIcon(node: any): string {
 const serverPropertyDefinitions: { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } = {
 	name: { name: "Name", type: PropertyType.STRING, default: "New Server", readOnly: true },
 	ip: { name: "IP", type: PropertyType.STRING, default: "127.0.0.1" },
-	port: { name: "Port", type: PropertyType.INTEGER, default: 42000 }
+	port: { name: "Port", type: PropertyType.INTEGER, default: 0 }
 };
 
 

@@ -61,7 +61,7 @@
 		width: 100%;
 		height: 100%;
 		background-color: rgba(from var(--panel-bg-color) r g b / 1%);
-		border-radius: 1rem;
+		border-radius: .25rem;
 		transition: outline 0.1s ease-in-out;
 	}
 
