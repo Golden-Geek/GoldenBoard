@@ -5,7 +5,7 @@
 	import WidgetContainerRenderer from './WidgetContainerRenderer.svelte';
 	import { selectedWidgets } from './widgets.svelte';
 
-	let { board, widget, canDrag = true} = $props();
+	let { board, widget, canDrag = true } = $props();
 
 	let editMode = $derived(mainState.editor.editMode);
 
@@ -23,7 +23,7 @@
 	let isDragging = $derived(draggedWidgets.length > 0);
 	let dropPosition: 'before' | 'after' | null = $derived(
 		dndState.dropCandidate?.type === 'widget' && dndState.dropCandidate?.target === widget
-			? dndState.dropCandidate.position ?? null
+			? (dndState.dropCandidate.position ?? null)
 			: null
 	);
 	let dropInto = $derived(
@@ -51,9 +51,13 @@
 	}
 
 	let isSelfDrag = $derived(draggedWidgets.includes(widget));
-	let isInsideDraggedNode = $derived(draggedWidgets.some((dragged) => isDescendant(dragged, widget)));
+	let isInsideDraggedNode = $derived(
+		draggedWidgets.some((dragged) => isDescendant(dragged, widget))
+	);
+
+	let isRoot = $derived(board.rootWidget === widget);
 	let canShowDrop = $derived(
-		editMode === 'edit' && isDragging && !isSelfDrag && !isInsideDraggedNode
+		!isRoot && editMode === 'edit' && isDragging && !isSelfDrag && !isInsideDraggedNode
 	);
 
 	function updateDropCandidate(e: DragEvent) {
@@ -104,7 +108,7 @@
 			widget.select(true, true, false);
 		}
 	}}
-	draggable={canDrag && (editMode === 'edit') ? 'true' : undefined}
+	draggable={canDrag && editMode === 'edit' ? 'true' : undefined}
 	ondragstart={(e) => {
 		if (editMode !== 'edit') return;
 		e.dataTransfer?.setData('text/plain', 'widget');
@@ -175,7 +179,7 @@
 		width: 100%;
 		height: 100%;
 		background-color: rgba(from var(--panel-bg-color) r g b / 1%);
-		border-radius: .25rem;
+		border-radius: 0.25rem;
 		transition: outline 0.1s ease-in-out;
 		position: relative;
 	}
@@ -192,7 +196,6 @@
 	}
 
 	:global(.mode-edit) {
-		
 		.widget-renderer {
 			outline: 2px dashed rgba(from var(--panel-bg-color) r g b / 5%);
 		}
