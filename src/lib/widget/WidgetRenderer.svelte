@@ -20,8 +20,8 @@
 
 <div
 	class="widget-renderer label-placement-{labelPlacement}  {isContainer
-		? 'container'
-		: 'single-widget'}"
+		? 'widget-container'
+		: 'widget-single'}"
 	class:widget-highlight={editMode == 'edit' && highlighted}
 	class:widget-selected={editMode == 'edit' && selected}
 	onmouseenter={() => {
@@ -61,7 +61,7 @@
 		width: 100%;
 		height: 100%;
 		background-color: rgba(from var(--panel-bg-color) r g b / 1%);
-		border-radius: 0.25rem;
+		border-radius: 1rem;
 		transition: outline 0.1s ease-in-out;
 	}
 
@@ -96,7 +96,7 @@
 			background-color: rgba(from var(--widget-color) r g b / 10%);
 		}
 
-		.widget-renderer.single-widget .widget-renderer-wrapper {
+		.widget-renderer.widget-single .widget-renderer-wrapper {
 			pointer-events: none;
 			touch-action: none;
 			user-select: none;
