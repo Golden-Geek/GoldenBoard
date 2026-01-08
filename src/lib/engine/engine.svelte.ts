@@ -29,6 +29,9 @@ export const defaultEditorData: EditorData = {
     layout: null
 };
 
+
+
+
 // -----------------------------
 // Context Menu
 // -----------------------------
@@ -52,16 +55,16 @@ export type ContextMenuItem = {
 };
 
 function getCustomPropertyAddMenuItems(source: any): ContextMenuItem[] {
-	const addOfType = (t: PropertyType) => (source as any)?.addOfType?.(t);
-	return [
-		{ label: "String", icon: "🔤", action: () => addOfType(PropertyType.STRING) },
-		{ label: "Text", icon: "📝", action: () => addOfType(PropertyType.TEXT) },
-		{ label: "Boolean", icon: "🔘", action: () => addOfType(PropertyType.BOOLEAN) },
-		{ label: "Integer", icon: "#️⃣", action: () => addOfType(PropertyType.INTEGER) },
-		{ label: "Float", icon: "📈", action: () => addOfType(PropertyType.FLOAT) },
-		{ label: "Enum", icon: "🔽", action: () => addOfType(PropertyType.ENUM) },
-		{ label: "CSS Size", icon: "📏", action: () => addOfType(PropertyType.CSSSIZE) }
-	];
+    const addOfType = (t: PropertyType) => (source as any)?.addOfType?.(t);
+    return [
+        { label: "String", icon: "🔤", action: () => addOfType(PropertyType.STRING) },
+        { label: "Text", icon: "📝", action: () => addOfType(PropertyType.TEXT) },
+        { label: "Boolean", icon: "🔘", action: () => addOfType(PropertyType.BOOLEAN) },
+        { label: "Integer", icon: "#️⃣", action: () => addOfType(PropertyType.INTEGER) },
+        { label: "Float", icon: "📈", action: () => addOfType(PropertyType.FLOAT) },
+        { label: "Enum", icon: "🔽", action: () => addOfType(PropertyType.ENUM) },
+        { label: "CSS Size", icon: "📏", action: () => addOfType(PropertyType.CSSSIZE) }
+    ];
 }
 
 //using null as separators
@@ -255,8 +258,7 @@ export function loadData() {
         applySnapshot($state.snapshot(defaultMainData));
     }
 
-    if(!mainState.selectedBoard)
-    {
+    if (!mainState.selectedBoard) {
         mainState.selectedBoard = mainState.boards.length > 0 ? mainState.boards[0] : null;
     }
     if (mainState.globalSettings.modeOnLoad != 'last') mainState.editor.editMode = mainState.globalSettings.modeOnLoad as EditMode;
