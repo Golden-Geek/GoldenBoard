@@ -16,8 +16,7 @@
 		highlightColor = '',
 		onSelect = null,
 		isSelected = null,
-		contextMenu = null,
-		isLast = false
+		contextMenu = null
 	} = $props();
 
 	let isExpanded: any = $derived(level < 3);
@@ -131,6 +130,11 @@
 			e.dataTransfer?.setData('text/plain', 'tree-item');
 			e.dataTransfer!.effectAllowed = 'move';
 			startDrag([{ type: 'tree-item', htmlElement: e.currentTarget, data: node }]);
+
+			//set img to this element, force a transparent background$
+	
+			e.dataTransfer?.setDragImage(e.currentTarget as HTMLElement, 10, 10);
+
 			e.stopPropagation();
 		}}
 		ondragend={(e) => {
@@ -208,7 +212,6 @@
 						<Self
 							node={child}
 							level={level + 1}
-							isLast={index === children.length - 1}
 							{getChildren}
 							{getIcon}
 							{getTitle}
@@ -235,6 +238,7 @@
 	.treeview-item {
 		--highlight-color: rgba(200, 200, 200);
 		position: relative;
+		background-color: transparent;
 	}
 
 	.treeview-item .title {
