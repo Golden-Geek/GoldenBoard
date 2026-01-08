@@ -4,7 +4,6 @@ import type { PropertyContainer, PropertyContainerDefinition, PropertySingleDefi
 import { Property, PropertyMode, PropertyType } from '../property/property.svelte.ts';
 import { ColorUtil, type Color } from '$lib/property/Color.svelte';
 import { InspectableWithProps, sanitizeUserID } from "../property/inspectable.svelte.ts";
-import { Board } from "$lib/board/boards.svelte.js";
 import ButtonWidget from './widgets/ButtonWidget.svelte';
 import SliderWidget from './widgets/SliderWidget.svelte';
 import ColorPickerWidget from './widgets/ColorPickerWidget.svelte';
@@ -14,6 +13,7 @@ import DropdownWidget from './widgets/DropdownWidget.svelte';
 import StepperWidget from './widgets/StepperWidget.svelte';
 import ButtonBarWidget from './widgets/ButtonBarWidget.svelte';
 import CommentWidget from './widgets/CommentWidget.svelte';
+import { getNodeType } from '../servers/oscquery.svelte.ts';
 
 //WIDGET
 type WidgetDefinition = {
@@ -43,11 +43,19 @@ export class Widget extends InspectableWithProps {
 
     //derived properties
     name = $derived(this.getSingleProp('label.text').get() as string);
+
     sanitizedIdentifier = $derived.by(() => {
         if (this.userID != '') return this.userID;
 
-        const p = this.getSingleProp('label.text');
-        if (p.mode === PropertyMode.EXPRESSION) return p.getRaw() as string; //safety to avoid circular calls
+        const p: Property = this.getSingleProp('label.text');
+        if (p.enabled) {
+            if (p.mode === PropertyMode.EXPRESSION) {
+                if (p.bindingMode) {
+                    return sanitizeUserID(p.getRaw()! as string);
+                }
+            }
+        }
+
         return sanitizeUserID(this.name) as string;
     });
 
@@ -176,7 +184,7 @@ export class Widget extends InspectableWithProps {
     }
 
 
-    addWidget(typeOrChild: string | Widget, options?: { select?: boolean, save?: boolean, id?: string, after?: Widget }): Widget {
+    addWidget(typeOrChild: string | Widget, options?: { select?: boolean, save?: boolean, id?: string, after?: Widget, before?: Widget }): Widget {
 
         let child: Widget;
         if (typeof typeOrChild === 'string') {
@@ -198,12 +206,20 @@ export class Widget extends InspectableWithProps {
         }
 
         let afterWidget = options?.after;
+        let beforeWidget = options?.before;
         if (afterWidget) {
             let index = this.children.indexOf(afterWidget);
             if (index === -1) {
                 throw new Error("After widget not found in container");
             }
             this.children.splice(index + 1, 0, child);
+            child.parent = this;
+        } else if (beforeWidget) {
+            let index = this.children.indexOf(beforeWidget!);
+            if (index === -1) {
+                throw new Error("Before widget not found in container");
+            }
+            this.children.splice(index, 0, child);
             child.parent = this;
         } else {
             this.children.push(child);
@@ -316,6 +332,41 @@ export class Widget extends InspectableWithProps {
 export const widgetsMap: { [key: string]: Widget } = $state({});
 export const selectedWidgets: Widget[] = $state([]);
 
+
+export const selectWidgets = function (widgets: Widget[], clearSelection: boolean = true, save: boolean = true) {
+    if (clearSelection) {
+        deselectAllWidgets();
+    }
+    for (let w of widgets) {
+        w.select(true, false, save);
+    }
+};
+
+export const deselectAllWidgets = function () {
+    for (let w of selectedWidgets) {
+        w.isSelected = false;
+    }
+    while (selectedWidgets.length > 0) {
+        selectedWidgets.pop();
+    }
+
+}
+
+
+export function registerWidget(obj: Widget) {
+    widgetsMap[obj.id] = obj;
+}
+
+export function unregisterWidget(id: string) {
+    delete widgetsMap[id];
+}
+
+export function getWidgetByID(id: string | null): Widget | undefined {
+    if (!id) return undefined;
+    return widgetsMap[id];
+}
+
+
 function isAncestor(maybeAncestor: Widget | null, target: Widget | null): boolean {
     if (!maybeAncestor || !target) return false;
     let current = target.parent;
@@ -337,6 +388,7 @@ export function moveWidget(
     if (!dragged.parent) return false; // cannot move root
     if (isAncestor(dragged, target)) return false; // avoid cycles
 
+    console.log(`Moving widget ${dragged.name} to ${position} ${target.name}, insertInto=${options?.insertInto}, save=${options?.save}`);
     const insertInto = options?.insertInto === true && target.isContainer;
     const save = options?.save ?? true;
 
@@ -382,38 +434,7 @@ export function moveWidget(
     return true;
 }
 
-export const selectWidgets = function (widgets: Widget[], clearSelection: boolean = true, save: boolean = true) {
-    if (clearSelection) {
-        deselectAllWidgets();
-    }
-    for (let w of widgets) {
-        w.select(true, false, save);
-    }
-};
 
-export const deselectAllWidgets = function () {
-    for (let w of selectedWidgets) {
-        w.isSelected = false;
-    }
-    while (selectedWidgets.length > 0) {
-        selectedWidgets.pop();
-    }
-
-}
-
-
-export function registerWidget(obj: Widget) {
-    widgetsMap[obj.id] = obj;
-}
-
-export function unregisterWidget(id: string) {
-    delete widgetsMap[id];
-}
-
-export function getWidgetByID(id: string | null): Widget | undefined {
-    if (!id) return undefined;
-    return widgetsMap[id];
-}
 
 function getGlobalWidgetProperties(name: string): { [key: string]: (PropertySingleDefinition | PropertyContainerDefinition) } {
 
@@ -617,4 +638,58 @@ export const getWidgetContextMenuItems = function (source: any): ContextMenuItem
     }
 
     return result;
+};
+
+const getWidgetTypeForNodeType = function (nodeType: string): string | undefined {
+    switch (nodeType) {
+        case 'Boolean': return 'checkbox';
+        case 'Integer': return 'numeric-stepper';
+        case 'Float': return 'slider';
+        case 'String': return 'text-input';
+        case 'Color': return 'color-picker';
+        case 'Trigger': return 'button';
+        case 'Enum': return 'dropdown';
+        case 'Point2D': return 'point2d-widget';
+        case 'Point3D': return 'point3d-widget';
+        default: return undefined;
+    }
+};
+
+export const createWidgetFromOSCNode = function (node: any): Widget | undefined {
+    let nType = getNodeType(node);
+    let wType = getWidgetTypeForNodeType(nType);
+    if (!wType) return undefined;
+    let def = getWidgetDefinitionForType(wType);
+    if (!def) return undefined;
+
+    let widget = Widget.createFromDefinition(def);
+
+    //setup from osc node properties, with osc and binding expressions
+    let prop;
+    if (prop = widget.getSingleProp('label.text')) {
+        prop.enabled = true;
+        prop.mode = PropertyMode.EXPRESSION;
+        prop.expressionValue = `osc("${node.FULL_PATH}.name")`;
+    }
+
+    if (prop = widget.getSingleProp('value')) {
+        prop.enabled = true;
+        prop.mode = PropertyMode.EXPRESSION;
+        prop.expressionValue = `bind("${node.FULL_PATH}")`;
+    }
+
+    if (wType === 'slider' || wType === 'numeric-stepper') {
+        if (prop = widget.getSingleProp('range.min')) {
+            prop.enabled = true;
+            prop.mode = PropertyMode.EXPRESSION;
+            prop.expressionValue = `osc("${node.FULL_PATH}.min")`;
+        }
+        if (prop = widget.getSingleProp('range.max')) {
+            prop.enabled = true;
+            prop.mode = PropertyMode.EXPRESSION;
+            prop.expressionValue = `osc("${node.FULL_PATH}.max")`;
+        }
+    }
+
+    return widget;
 };

@@ -225,27 +225,36 @@ export class Expression {
         userID: string | null;
         rawUserID: string | null;
         address: string;
+        attr: 'name' | 'min' | 'max' | null;
     } {
         let rawServerID: string | null = null;
         let serverID = '';
-        let address = path.trim();
+        let addressWithAttr = path.trim();
 
         // Support: osc('server:/path/to/node')
-        const match = /^([^:]+):(\/.*)$/.exec(address);
+        const match = /^([^:]+):(\/.*)$/.exec(addressWithAttr);
         if (match) {
             rawServerID = match[1];
             serverID = sanitizeUserID(match[1]);
-            address = match[2];
+            addressWithAttr = match[2];
         }
 
+        let attr: 'name' | 'min' | 'max' | null = null;
+        const attrMatch = addressWithAttr.match(/\.((?:name|min|max))$/);
+        if (attrMatch) {
+            attr = attrMatch[1] as typeof attr;
+            addressWithAttr = addressWithAttr.slice(0, -attrMatch[0].length);
+        }
+
+        let address = addressWithAttr;
         if (!address.startsWith('/')) {
             address = '/' + address;
         }
 
         if (serverID) {
-            return { selector: 'user', userID: serverID, rawUserID: rawServerID, address };
+            return { selector: 'user', userID: serverID, rawUserID: rawServerID, address, attr };
         }
-        return { selector: 'default', userID: null, rawUserID: null, address };
+        return { selector: 'default', userID: null, rawUserID: null, address, attr };
     }
 
     private oscKey(dep: { selector: 'default' | 'user'; userID: string | null; address: string }): string {
@@ -348,10 +357,14 @@ export class Expression {
                 throw new Error(`OSC node '${dep.address}' not found for ${args.tag}('${path}').`);
             }
 
+            if (args.tag === 'binding' && dep.attr) {
+                throw new Error(`bind('${path}') cannot target '${dep.attr}'. Remove the attribute suffix to bind to VALUE.`);
+            }
+
             // In binding mode, bind() is purely wiring; expression returns the property's raw value.
             if (args.tag === 'binding') return args.rawValue;
 
-            const scalarOrArray = this.oscArgsToScalarOrArray((node as any).VALUE);
+            const scalarOrArray = this.readOscNodeField(node, dep.attr);
             if (scalarOrArray === undefined) return fallback;
             return scalarOrArray;
         };
@@ -365,6 +378,22 @@ export class Expression {
             return value;
         }
         return value;
+    }
+
+    private readOscNodeField(node: any, attr: 'name' | 'min' | 'max' | null): unknown {
+        if (!attr) {
+            return this.oscArgsToScalarOrArray((node as any).VALUE);
+        }
+
+        if (attr === 'name') {
+            return (node as any).DESCRIPTION ?? undefined;
+        }
+
+        const range = Array.isArray((node as any).RANGE) ? (node as any).RANGE[0] : (node as any).RANGE;
+        if (!range) return undefined;
+        if (attr === 'min') return range.MIN ?? range.min ?? undefined;
+        if (attr === 'max') return range.MAX ?? range.max ?? undefined;
+        return undefined;
     }
 
     private applyIncomingBindingValue(raw: unknown) {

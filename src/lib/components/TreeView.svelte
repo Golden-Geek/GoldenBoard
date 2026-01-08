@@ -14,7 +14,8 @@
 		onSelect = null,
 		isSelected = null,
 		contextMenu = null,
-		onDrop = null
+		onDrop = null,
+		dragDataType = 'tree-item'
 	} = $props();
 </script>
 
@@ -34,6 +35,7 @@
 			{onSelect}
 			{isSelected}
 			{contextMenu}
+			{dragDataType}
 		 	{onDrop}
 		/>
 	{:else}

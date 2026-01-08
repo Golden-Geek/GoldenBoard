@@ -1,20 +1,10 @@
 <script lang="ts">
 	import TreeView from '$lib/components/TreeView.svelte';
 	import { mainState, menuContext, MenuContextType } from '$lib/engine/engine.svelte';
-	import { dndState } from '$lib/engine/draganddrop.svelte';
+	import { dndState, handleWidgetDrop } from '$lib/engine/draganddrop.svelte';
 	import { moveWidget, Widget } from '$lib/widget/widgets.svelte';
 
 	let selectedBoard = $derived(mainState.selectedBoard);
-
-	function handleDrop(dragged: Widget) {
-		const candidate = dndState.dropCandidate;
-		if (!candidate || (candidate.type !== 'tree-item' && candidate.type !== 'widget')) return;
-		const target = candidate.target as Widget;
-		const position = candidate.position ?? 'after';
-		const insertInto = candidate.insertInto ?? false;
-
-		moveWidget(dragged, target, position, { insertInto, save: true });
-	}
 </script>
 
 {#if selectedBoard != null}
@@ -22,7 +12,7 @@
 		data={selectedBoard!.rootWidget}
 		showRoot={true}
 		getChildren={(node: any) => node.children || []}
-		getTitle={(node: any) => node.sanitizedIdentifier}
+		getTitle={(node: any) => node.name+ (node.userID != '' ? ` (${node.userID})` : '')}
 		getIcon={(node: any) => (node as Widget).icon}
 		getLabelStyle={(node: any) => (node.userID != '' ? 'font-style: italic;' : '')}
 		getWarningsAndErrors={(node: any) => node.warningsAndErrors}
@@ -42,6 +32,7 @@
 			menuContext.target = node;
 			menuContext.position = { x: e.clientX, y: e.clientY };
 		}}
-		onDrop={(widget: Widget) => handleDrop(widget)}
+		dragDataType="widget"
+		onDrop={handleWidgetDrop}
 	></TreeView>
 {/if}

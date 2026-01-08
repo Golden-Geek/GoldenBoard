@@ -1,3 +1,5 @@
+import { createWidgetFromOSCNode, moveWidget, Widget } from "$lib/widget/widgets.svelte";
+
 export type DndData = {
     type: string;
     htmlElement: any;
@@ -19,23 +21,9 @@ export const dndState = $state({
 
 
 export function startDrag(elements: any[]) {
-
-    // give the browser required drag data (some browsers need this)
-    // e.dataTransfer?.setData('text/plain', 'tree-item');
-    // e.dataTransfer!.effectAllowed = 'move';
-
-    // use the current element as the drag image to avoid layout shifts
-    // const el = e.currentTarget as HTMLElement;
-    // try {
-    //     e.dataTransfer?.setDragImage(el, 0, 0);
-    // } catch { }
-
-    // Defer the state update so Svelte won't re-render the dragged element
-    // during the browser's native dragstart (which can cause immediate dragend).
     setTimeout(() => {
         dndState.draggingElements = elements;
     }, 0);
-
 }
 
 export function updateDragOffset(x: number, y: number) {
@@ -45,4 +33,43 @@ export function updateDragOffset(x: number, y: number) {
 export function stopDrag() {
     dndState.draggingElements = [];
     dndState.dropCandidate = null;
+}
+
+
+export function handleWidgetDrop() {
+
+    const candidate = dndState.dropCandidate;
+    const dragged = dndState.draggingElements[0];
+
+    stopDrag();
+
+    if (dragged == null) return;
+
+    if (!candidate || candidate.type !== 'widget') return;
+
+    const target = candidate.target as Widget;
+    const position = candidate.position ?? 'after';
+    const insertInto = candidate.insertInto ?? false;
+
+    if (dragged.type == 'widget') {
+        moveWidget(dragged.data as Widget, target, position, { insertInto, save: true });
+        return;
+    }
+
+    if (dragged.type == 'osc-node') {
+        const newWidget = createWidgetFromOSCNode(dragged.data);
+        if (newWidget) {
+            const targetParent = insertInto ? target : target.parent;
+            if (targetParent) {
+                let options = { save: true, select: true, before: undefined as Widget | undefined, after: undefined as Widget | undefined };
+                if (position === 'after') {
+                    options.after = target;
+                } else if (position === 'before') {
+                    options.before = target;
+                }
+
+                targetParent.addWidget(newWidget, options);
+            }
+        }
+    }
 }

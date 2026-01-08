@@ -17,7 +17,8 @@
 		onSelect = null,
 		isSelected = null,
 		contextMenu = null,
-		onDrop = null
+		onDrop = null,
+		dragDataType
 	} = $props();
 
 	let isExpanded: any = $derived(level < 3);
@@ -61,7 +62,7 @@
 		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 		const midpoint = rect.top + rect.height / 2;
 		const position: 'before' | 'after' = e.clientY < midpoint ? 'before' : 'after';
-		dndState.dropCandidate = { type: 'tree-item', target: node, position };
+		dndState.dropCandidate = { type: dragDataType, target: node, position };
 	}
 
 	function isDescendant(root: any, target: any) {
@@ -130,9 +131,9 @@
 		ondragleave={handleDragLeave}
 		ondragstart={(e) => {
 			// give the browser required drag data (some browsers need this)
-			e.dataTransfer?.setData('text/plain', 'tree-item');
+			e.dataTransfer?.setData('application/json', JSON.stringify({ type: dragDataType }));
 			e.dataTransfer!.effectAllowed = 'move';
-			startDrag([{ type: 'tree-item', htmlElement: e.currentTarget, data: node }]);
+			startDrag([{ type: dragDataType, htmlElement: e.currentTarget, data: node }]);
 
 			//set img to this element, force a transparent background$
 
@@ -141,14 +142,17 @@
 			e.stopPropagation();
 		}}
 		ondragend={(e) => {
-			if (onDrop && dndState.dropCandidate) {
-				onDrop(node);
-			}
+			// if (onDrop && dndState.dropCandidate) {
+			// 	onDrop();
+			// }
 
 			dropPosition = null;
-			stopDrag();
 			e.preventDefault();
 			e.stopPropagation();
+		}}
+		ondrop={(e) => {
+			if (dropPosition) onDrop && onDrop();
+			e.preventDefault();
 		}}
 	>
 		{#if level > 0 || showRoot}
@@ -230,6 +234,7 @@
 							{isSelected}
 							{contextMenu}
 							{onDrop}
+							{dragDataType}
 						></Self>
 					</div>
 				{/each}

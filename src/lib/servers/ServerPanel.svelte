@@ -89,6 +89,7 @@
 			getIcon={getNodeIcon}
 			getTitle={(node: any) => node.DESCRIPTION || node.NAME || '/'}
 			highlightColor={'var(--server-color)'}
+			dragDataType="osc-node"
 		></TreeView>
 
 		<div class="server-extra">

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { mainState } from '$lib/engine/engine.svelte';
-	import { dndState, startDrag, stopDrag } from '$lib/engine/draganddrop.svelte';
+	import { dndState, handleWidgetDrop, startDrag, stopDrag } from '$lib/engine/draganddrop.svelte';
 	import { moveWidget } from './widgets.svelte';
 	import WidgetContainerRenderer from './WidgetContainerRenderer.svelte';
 	import { selectedWidgets } from './widgets.svelte';
@@ -22,14 +22,10 @@
 	let draggedWidgets = $derived(dndState.draggingElements.map((d) => d.data));
 	let isDragging = $derived(draggedWidgets.length > 0);
 	let dropPosition: 'before' | 'after' | null = $derived(
-		dndState.dropCandidate?.type === 'widget' && dndState.dropCandidate?.target === widget
-			? (dndState.dropCandidate.position ?? null)
-			: null
+		dndState.dropCandidate?.target === widget ? (dndState.dropCandidate?.position ?? null) : null
 	);
 	let dropInto = $derived(
-		dndState.dropCandidate?.type === 'widget' && dndState.dropCandidate?.target === widget
-			? dndState.dropCandidate.insertInto === true
-			: false
+		dndState.dropCandidate?.target === widget ? dndState.dropCandidate?.insertInto === true : false
 	);
 	let parentLayout: 'horizontal' | 'vertical' | 'grid' = $derived(
 		(widget.parent?.getSingleProp('layout')?.get() as 'horizontal' | 'vertical' | 'grid' | null) ??
@@ -139,14 +135,13 @@
 		e.stopPropagation();
 	}}
 	ondragend={(e) => {
-		if (dndState.dropCandidate?.type === 'widget') {
-			const candidate = dndState.dropCandidate;
-			moveWidget(widget, candidate.target as any, candidate.position ?? 'after', {
-				insertInto: candidate.insertInto,
-				save: true
-			});
-		}
-		stopDrag();
+		e.preventDefault();
+		e.stopPropagation();
+	}}
+
+	ondrop={(e) => {
+		if (!canShowDrop) return;
+		handleWidgetDrop();
 		e.preventDefault();
 		e.stopPropagation();
 	}}

@@ -592,7 +592,7 @@ const nodeTypes = [
 	{ type: "Point3D", icon: "🧊" },
 ]
 
-function getNodeType(node: any): string {
+export function getNodeType(node: any): string {
 	if (node.CONTENTS) return 'Container';
 	if (node.EXTENDED_TYPE) return node.EXTENDED_TYPE[0];
 	if (!node.CONTENTS && node.TYPE == 'N') return 'Trigger';
