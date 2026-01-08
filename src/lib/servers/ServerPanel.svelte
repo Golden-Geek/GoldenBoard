@@ -116,7 +116,7 @@
 		gap: 0.5rem;
 		width: 100%;
 		overflow: auto;
-		padding: 0.3em;
+		padding: 0.4em;
 	}
 
 	.server-info {
