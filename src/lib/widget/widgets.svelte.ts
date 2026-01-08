@@ -316,6 +316,72 @@ export class Widget extends InspectableWithProps {
 export const widgetsMap: { [key: string]: Widget } = $state({});
 export const selectedWidgets: Widget[] = $state([]);
 
+function isAncestor(maybeAncestor: Widget | null, target: Widget | null): boolean {
+    if (!maybeAncestor || !target) return false;
+    let current = target.parent;
+    while (current) {
+        if (current === maybeAncestor) return true;
+        current = current.parent;
+    }
+    return false;
+}
+
+export function moveWidget(
+    dragged: Widget,
+    target: Widget,
+    position: 'before' | 'after' = 'after',
+    options?: { insertInto?: boolean; save?: boolean }
+): boolean {
+    if (!dragged || !target) return false;
+    if (dragged === target) return false;
+    if (!dragged.parent) return false; // cannot move root
+    if (isAncestor(dragged, target)) return false; // avoid cycles
+
+    const insertInto = options?.insertInto === true && target.isContainer;
+    const save = options?.save ?? true;
+
+    const fromParent = dragged.parent;
+    const toParent = insertInto ? target : target.parent;
+    if (!toParent || !toParent.children) return false;
+
+    const oldIndex = fromParent?.children?.indexOf(dragged) ?? -1;
+
+    // Dropping into the same parent without changing position should be a no-op
+    if (insertInto && toParent === fromParent) return false;
+
+    // Compute insertion index before mutating arrays to detect no-op moves reliably
+    let insertIndex: number;
+    if (insertInto) {
+        insertIndex = toParent.children?.length ?? 0;
+    } else {
+        insertIndex = toParent.children.indexOf(target);
+        if (insertIndex === -1) return false;
+        if (toParent === fromParent) {
+            // If dropping before/after in the same parent and it results in no order change, skip
+            if (position === 'before' && oldIndex === insertIndex) return false;
+            if (position === 'after' && oldIndex === insertIndex + 1) return false;
+        }
+        if (position === 'after') insertIndex += 1;
+        if (fromParent === toParent && oldIndex !== -1 && oldIndex < insertIndex) {
+            insertIndex -= 1;
+        }
+    }
+
+    // Remove from old parent after all guards are done
+    if (fromParent && fromParent.children && oldIndex !== -1) {
+        fromParent.children.splice(oldIndex, 1);
+    }
+
+    toParent.children.splice(insertIndex, 0, dragged);
+    dragged.parent = toParent;
+
+    if (save) {
+        saveData('Reorder Widget');
+    }
+
+    return true;
+}
+
 export const selectWidgets = function (widgets: Widget[], clearSelection: boolean = true, save: boolean = true) {
     if (clearSelection) {
         deselectAllWidgets();

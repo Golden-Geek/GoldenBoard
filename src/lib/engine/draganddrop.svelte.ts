@@ -8,6 +8,7 @@ export type DndDropCandidate = {
     type: string;
     target: any;
     position?: 'before' | 'after';
+    insertInto?: boolean;
 };
 
 export const dndState = $state({

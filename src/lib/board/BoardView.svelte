@@ -6,7 +6,7 @@
 </script>
 
 <div class="board-view">
-	<WidgetRenderer {board} widget={board.rootWidget} />
+	<WidgetRenderer {board} widget={board.rootWidget} canDrag={false} />
 </div>
 
 <style>
