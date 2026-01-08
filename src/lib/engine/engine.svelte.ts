@@ -11,6 +11,7 @@ import { PropertyType } from "$lib/property/property.svelte";
 
 export type EditorData = {
     editMode: EditMode,
+    highlightedWidgetID?: string,
     fullScreen: boolean,
     inspectorMenu: Menu,
     layout: {} | null
