@@ -25,5 +25,5 @@
 	disabled={!canEdit}
 	showValue={true}
 	width="100%"
-	height="2rem"
+	height="100%"
 />

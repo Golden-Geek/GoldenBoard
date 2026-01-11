@@ -130,10 +130,12 @@
 		ondragover={handleDragOver}
 		ondragleave={handleDragLeave}
 		ondragstart={(e) => {
+			const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+			const pointerOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 			// give the browser required drag data (some browsers need this)
 			e.dataTransfer?.setData('application/json', JSON.stringify({ type: dragDataType }));
 			e.dataTransfer!.effectAllowed = 'move';
-			startDrag([{ type: dragDataType, htmlElement: e.currentTarget, data: node }]);
+			startDrag([{ type: dragDataType, htmlElement: e.currentTarget, data: node, pointerOffset }]);
 
 			//set img to this element, force a transparent background$
 

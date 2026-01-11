@@ -23,7 +23,7 @@
 <style>
 	.button {
 		width: 100%;
-		height: 2.5rem;
+		height: 100%;
 		font-size: 1rem;
 		font-weight: bold;
 	}

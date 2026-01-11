@@ -103,8 +103,24 @@
 
 	let isRoot = $derived(board.rootWidget === widget);
 	let canShowDrop = $derived(
-		!isRoot && editMode === 'edit' && isDragging && !isSelfDrag && !isInsideDraggedNode
+		!isRoot &&
+			editMode === 'edit' &&
+			isDragging &&
+			!isSelfDrag &&
+			!isInsideDraggedNode &&
+			parentLayout !== 'free'
 	);
+
+	function swallowSelfDrop(e: DragEvent): boolean {
+		// When the pointer is over the dragged widget itself (or inside its subtree),
+		// don't allow the event to bubble to parent containers.
+		// Otherwise the parent container may become the drop target (drop-into).
+		if (!isDragging) return false;
+		if (!isSelfDrag && !isInsideDraggedNode) return false;
+		if (dndState.dropCandidate) dndState.dropCandidate = null;
+		e.stopPropagation();
+		return true;
+	}
 
 	function updateDropCandidate(e: DragEvent) {
 		if (!canShowDrop) return;
@@ -123,6 +139,8 @@
 		? 'widget-container'
 		: 'widget-single'}
 		layout-{parentLayout}"
+	role="button"
+	data-widget-id={widget.id}
 	style:position={parentLayout === 'free' ? 'absolute' : undefined}
 	style:left={freeStyles?.left}
 	style:right={freeStyles?.right}
@@ -143,8 +161,9 @@
 			mainState.editor.highlightedWidgetID = undefined;
 		}
 	}}
-	onclick={(e) => {
+	onmousedown={(e) => {
 		if (editMode == 'edit') {
+			// if (e.currentTarget !== e.target) return;
 			e.stopPropagation();
 			widget.select(true, !e.shiftKey && !e.ctrlKey && !e.metaKey, false);
 		}
@@ -159,25 +178,32 @@
 	draggable={canDrag && editMode === 'edit' ? 'true' : undefined}
 	ondragstart={(e) => {
 		if (editMode !== 'edit') return;
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		const pointerOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 		e.dataTransfer?.setData('text/plain', 'widget');
 		e.dataTransfer!.effectAllowed = 'move';
-		startDrag([{ type: 'widget', htmlElement: e.currentTarget, data: widget }]);
+		startDrag([{ type: 'widget', htmlElement: e.currentTarget, data: widget, pointerOffset }]);
 		e.dataTransfer?.setDragImage(e.currentTarget as HTMLElement, 10, 10);
 		e.stopPropagation();
 	}}
 	ondragenter={(e) => {
+		if (parentLayout === 'free') return;
+		if (swallowSelfDrop(e)) return;
 		if (!canShowDrop) return;
 		updateDropCandidate(e);
 		e.preventDefault();
 		e.stopPropagation();
 	}}
 	ondragover={(e) => {
+		if (parentLayout === 'free') return;
+		if (swallowSelfDrop(e)) return;
 		if (!canShowDrop) return;
 		updateDropCandidate(e);
 		e.preventDefault();
 		e.stopPropagation();
 	}}
 	ondragleave={(e) => {
+		if (parentLayout === 'free') return;
 		if (!canShowDrop) return;
 		const next = e.relatedTarget as Node | null;
 		if (next && (e.currentTarget as HTMLElement).contains(next)) return;
@@ -187,10 +213,18 @@
 		e.stopPropagation();
 	}}
 	ondragend={(e) => {
+		if (swallowSelfDrop(e)) {
+			stopDrag();
+		}
 		e.preventDefault();
 		e.stopPropagation();
 	}}
 	ondrop={(e) => {
+		if (parentLayout === 'free') return;
+		if (swallowSelfDrop(e)) {
+			e.stopPropagation();
+			return;
+		}
 		if (!canShowDrop) return;
 		handleWidgetDrop();
 		e.preventDefault();
