@@ -16,6 +16,15 @@
 	let showLabel = $derived(widget.getSingleProp('label.showLabel').get());
 	let labelPlacement = $derived(widget.getSingleProp('label.labelPlacement').get());
 
+	type FreeLayoutStyle = Partial<{
+		left: string;
+		right: string;
+		top: string;
+		bottom: string;
+		width: string;
+		height: string;
+	}>;
+
 	let highlighted = $derived(mainState.editor.highlightedWidgetID == widget.id);
 	let selected = $derived(selectedWidgets.includes(widget));
 
@@ -27,13 +36,54 @@
 	let dropInto = $derived(
 		dndState.dropCandidate?.target === widget ? dndState.dropCandidate?.insertInto === true : false
 	);
-	let parentLayout: 'horizontal' | 'vertical' | 'grid' = $derived(
-		(widget.parent?.getSingleProp('layout')?.get() as 'horizontal' | 'vertical' | 'grid' | null) ??
-			'vertical'
+	let parentLayout: 'horizontal' | 'vertical' | 'grid' | 'free' = $derived(
+		(widget.parent?.getSingleProp('layout')?.get() as
+			| 'horizontal'
+			| 'vertical'
+			| 'grid'
+			| 'free'
+			| null) ?? 'vertical'
 	);
 	let orientation: 'horizontal' | 'vertical' = $derived(
 		parentLayout === 'horizontal' || parentLayout === 'grid' ? 'horizontal' : 'vertical'
 	);
+	let freeStyles = $derived(parentLayout === 'free' ? getFreeLayoutStyles() : null);
+
+	function toCssSize(value: unknown): string | null {
+		if (value === null || value === undefined) return null;
+		if (typeof value === 'number') return `${value}px`;
+		const str = String(value).trim();
+		return str.length ? str : null;
+	}
+
+	function getFreeLayoutStyles(): FreeLayoutStyle {
+		const leftProp = widget.getSingleProp('position.left');
+		const topProp = widget.getSingleProp('position.top');
+		const rightProp = widget.getSingleProp('position.right');
+		const bottomProp = widget.getSingleProp('position.bottom');
+		const widthProp = widget.getSingleProp('position.width');
+		const heightProp = widget.getSingleProp('position.height');
+
+		const styles: FreeLayoutStyle = {};
+
+		const left = leftProp?.enabled ? toCssSize(leftProp.get()) : null;
+		const right = rightProp?.enabled ? toCssSize(rightProp.get()) : null;
+		const top = topProp?.enabled ? toCssSize(topProp.get()) : null;
+		const bottom = bottomProp?.enabled ? toCssSize(bottomProp.get()) : null;
+		const width = toCssSize(widthProp.get())!;
+		const height = toCssSize(heightProp.get())!;
+
+		if (left) styles.left = left;
+		if (top) styles.top = top;
+
+		if (right) styles.right = right;
+		else styles.width = width;
+
+		if (bottom) styles.bottom = bottom;
+		else styles.height = height;
+
+		return styles;
+	}
 
 	function isDescendant(root: any, target: any): boolean {
 		if (!root || !root.children) return false;
@@ -61,14 +111,9 @@
 		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 		const useHorizontal = orientation === 'horizontal';
 		const midpoint = useHorizontal ? rect.left + rect.width / 2 : rect.top + rect.height / 2;
-		const position: 'before' | 'after' = useHorizontal
-			? e.clientX < midpoint
-				? 'before'
-				: 'after'
-			: e.clientY < midpoint
-				? 'before'
-				: 'after';
 
+		const isBefore = useHorizontal ? e.clientX < midpoint : e.clientY < midpoint;
+		const position: 'before' | 'after' = isBefore ? 'before' : 'after';
 		dndState.dropCandidate = { type: 'widget', target: widget, position };
 	}
 </script>
@@ -76,10 +121,17 @@
 <div
 	class="widget-renderer label-placement-{labelPlacement}  {isContainer
 		? 'widget-container'
-		: 'widget-single'}"
+		: 'widget-single'}
+		layout-{parentLayout}"
+	style:position={parentLayout === 'free' ? 'absolute' : undefined}
+	style:left={freeStyles?.left}
+	style:right={freeStyles?.right}
+	style:top={freeStyles?.top}
+	style:bottom={freeStyles?.bottom}
+	style:width={freeStyles?.width}
+	style:height={freeStyles?.height}
 	class:widget-highlight={editMode == 'edit' && highlighted}
 	class:widget-selected={editMode == 'edit' && selected}
-	role="button"
 	tabindex="0"
 	onmouseenter={() => {
 		if (editMode == 'edit') {
@@ -138,7 +190,6 @@
 		e.preventDefault();
 		e.stopPropagation();
 	}}
-
 	ondrop={(e) => {
 		if (!canShowDrop) return;
 		handleWidgetDrop();
@@ -171,12 +222,15 @@
 
 <style>
 	.widget-renderer {
-		width: 100%;
-		height: 100%;
 		background-color: rgba(from var(--panel-bg-color) r g b / 1%);
 		border-radius: 0.25rem;
 		transition: outline 0.1s ease-in-out;
 		position: relative;
+	}
+
+	.widget-renderer:not(.layout-free) {
+		width: 100%;
+		height: 100%;
 	}
 
 	.widget-renderer-wrapper {
@@ -190,7 +244,7 @@
 		text-align: center;
 	}
 
-	:global(.mode-edit) {
+	.widget-renderer :global(.mode-edit) {
 		.widget-renderer {
 			outline: 2px dashed rgba(from var(--panel-bg-color) r g b / 5%);
 		}

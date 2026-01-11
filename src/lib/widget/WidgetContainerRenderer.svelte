@@ -178,6 +178,13 @@
 		justify-items: stretch;
 	}
 
+	.widget-children-container.layout-free {
+		display: block;
+		position: relative;
+		padding: 0.25rem;
+		gap: 0;
+	}
+
 	.drop-into-overlay {
 		position: absolute;
 		inset: 0.5rem;

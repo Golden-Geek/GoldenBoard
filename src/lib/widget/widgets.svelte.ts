@@ -455,8 +455,8 @@ function getGlobalWidgetProperties(name: string): { [key: string]: (PropertySing
                 top: { name: 'Top', type: PropertyType.CSSSIZE, default: 0, canDisable: true, visible: (i, p) => i.parent?.getSingleProp('layout').get() == 'free' || false },
                 right: { name: 'Right', type: PropertyType.CSSSIZE, default: 0, canDisable: true, visible: (i, p) => i.parent?.getSingleProp('layout').get() == 'free' || false },
                 bottom: { name: 'Bottom', type: PropertyType.CSSSIZE, default: 0, canDisable: true, visible: (i, p) => i.parent?.getSingleProp('layout').get() == 'free' || false },
-                width: { name: 'Width', type: PropertyType.CSSSIZE, default: 100, canDisable: true },
-                height: { name: 'Height', type: PropertyType.CSSSIZE, default: 20, canDisable: true },
+                width: { name: 'Width', type: PropertyType.CSSSIZE, default: 100},
+                height: { name: 'Height', type: PropertyType.CSSSIZE, default: 20},
             }
         }
     }

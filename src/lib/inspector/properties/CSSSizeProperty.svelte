@@ -42,6 +42,7 @@
 		disabled={definition.readOnly}
 		onValueChange={(value: number) => {
 			numberValue = value;
+			compute();
 		}}
 		onStartEdit={() => onStartEdit && onStartEdit()}
 		onEndEdit={() => onUpdate && onUpdate()}
