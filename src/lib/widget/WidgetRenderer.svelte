@@ -244,7 +244,7 @@
 		text-align: center;
 	}
 
-	.widget-renderer :global(.mode-edit) {
+	:global(.mode-edit) {
 		.widget-renderer {
 			outline: 2px dashed rgba(from var(--panel-bg-color) r g b / 5%);
 		}
